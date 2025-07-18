@@ -678,6 +678,11 @@ function App() {
           className="activity-main"
           ref={mainRef}
           onScroll={handleScroll}
+          onClick={e => {
+            // 如果点击的是卡片内的按钮，不处理
+            if ((e.target as HTMLElement).tagName.toLowerCase() === 'button') return;
+            setSwipeDelete(null);
+          }}
         >
           {/* 日期时间区块 */}
           <div style={{
@@ -710,6 +715,7 @@ function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div className="activity-card-title">Now</div>
+                  {/* 当前活动卡片名称可编辑 */}
                   {editingCurrentName ? (
                     <input
                       style={{ fontSize: 24, fontWeight: 600, width: '100%', marginBottom: 8 }}
@@ -717,13 +723,23 @@ function App() {
                       autoFocus
                       onChange={e => setEditingName(e.target.value)}
                       onBlur={() => {
-                        setCurrent({ ...current, name: editingName });
-                        setEditingCurrentName(false);
+                        if (editingName.trim() === '') {
+                          setEditingName(current.name); // 恢复原标题
+                          setEditingCurrentName(false);
+                        } else {
+                          setCurrent({ ...current, name: editingName });
+                          setEditingCurrentName(false);
+                        }
                       }}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
-                          setCurrent({ ...current, name: editingName });
-                          setEditingCurrentName(false);
+                          if (editingName.trim() === '') {
+                            setEditingName(current.name); // 恢复原标题
+                            setEditingCurrentName(false);
+                          } else {
+                            setCurrent({ ...current, name: editingName });
+                            setEditingCurrentName(false);
+                          }
                         }
                       }}
                     />
@@ -773,7 +789,7 @@ function App() {
                   <div
                     className="activity-card-history"
                     key={idx}
-                    style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1 }}
+                    style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1, userSelect: 'none', touchAction: 'manipulation' }}
                     onTouchStart={() => {
                       longPressTimer = setTimeout(() => setSwipeDelete({ date: 'today', idx }), 600);
                     }}
@@ -821,16 +837,28 @@ function App() {
                         onBlur={() => {
                           const newHistory = [...history];
                           const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                          if (todayIdx !== -1) newHistory[todayIdx].name = editingName;
-                          setHistory(newHistory);
+                          if (todayIdx !== -1) {
+                            if (editingName.trim() === '') {
+                              setEditingName(history[todayIdx].name); // 恢复原标题
+                            } else {
+                              newHistory[todayIdx].name = editingName;
+                              setHistory(newHistory);
+                            }
+                          }
                           setEditingHistory(null);
                         }}
                         onKeyDown={e => {
                           if (e.key === 'Enter') {
                             const newHistory = [...history];
                             const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                            if (todayIdx !== -1) newHistory[todayIdx].name = editingName;
-                            setHistory(newHistory);
+                            if (todayIdx !== -1) {
+                              if (editingName.trim() === '') {
+                                setEditingName(history[todayIdx].name); // 恢复原标题
+                              } else {
+                                newHistory[todayIdx].name = editingName;
+                                setHistory(newHistory);
+                              }
+                            }
                             setEditingHistory(null);
                           }
                         }}
@@ -870,7 +898,7 @@ function App() {
                     <div
                       className="activity-card-history"
                       key={idx}
-                      style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1 }}
+                      style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1, userSelect: 'none', touchAction: 'manipulation' }}
                       onTouchStart={() => {
                         longPressTimer = setTimeout(() => setSwipeDelete({ date, idx }), 600);
                       }}
@@ -918,16 +946,28 @@ function App() {
                           onBlur={() => {
                             const newHistory = [...history];
                             const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                            if (histIdx !== -1) newHistory[histIdx].name = editingName;
-                            setHistory(newHistory);
+                            if (histIdx !== -1) {
+                              if (editingName.trim() === '') {
+                                setEditingName(history[histIdx].name); // 恢复原标题
+                              } else {
+                                newHistory[histIdx].name = editingName;
+                                setHistory(newHistory);
+                              }
+                            }
                             setEditingHistory(null);
                           }}
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
                               const newHistory = [...history];
                               const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                              if (histIdx !== -1) newHistory[histIdx].name = editingName;
-                              setHistory(newHistory);
+                              if (histIdx !== -1) {
+                                if (editingName.trim() === '') {
+                                  setEditingName(history[histIdx].name); // 恢复原标题
+                                } else {
+                                  newHistory[histIdx].name = editingName;
+                                  setHistory(newHistory);
+                                }
+                              }
                               setEditingHistory(null);
                             }
                           }}

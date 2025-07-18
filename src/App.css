@@ -76,6 +76,9 @@ body, .activity-bg {
   padding: 24px;
   width: 100%;
   box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .activity-card-title {
