@@ -1,0 +1,279 @@
+html, body {
+  background: #fff !important;
+}
+
+.activity-bg {
+  background: #e9f2f4;
+  min-height: 100vh;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.activity-container {
+  width: calc(100vw - 48px);
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1;
+}
+
+.activity-main {
+  width: 100%;
+  background: none;
+  padding: 32px 18px 0 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  /* 移除底部padding */
+  max-height: calc(100vh - 180px); /* 预留顶部和底部空间 */
+  overflow-y: auto;
+  /* 隐藏滚动条 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+.activity-main::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.activity-header-fixed {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 200;
+  background: #e9f2f4;
+  padding-top: 18px;
+  padding-bottom: 8px;
+  margin-bottom: 0;
+}
+
+.activity-title {
+  color: #000;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+  text-transform: capitalize;
+  text-align: left;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+  background: #e9f2f4;
+}
+
+.activity-card-now {
+  background: #fff;
+  border-radius: 16px;
+  margin-bottom: 18px;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
+  padding: 24px;
+}
+
+.activity-card-history {
+  background: #f7fafd;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.activity-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+.activity-card-label {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 2px;
+  text-align: left;
+}
+
+.activity-card-value {
+  font-size: 13px;
+  color: #222;
+  margin-bottom: 2px;
+  text-align: left;
+}
+
+.activity-btn-grid {
+  margin-bottom: 18px;
+}
+
+.activity-btn {
+  background: #E9F2F4;
+  color: #222;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
+  border: 1px solid #e0e0e0;
+  margin-bottom: 0;
+}
+
+.activity-btn.ant-btn-primary {
+  background: #00313c;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+}
+
+.activity-bottom-sheet-fixed {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100vw;
+  max-width: 420px;
+  background: #fff;
+  z-index: 300;
+  box-shadow: 0 -2px 16px 0 rgba(0, 0, 0, 0.06);
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  display: flex;
+  justify-content: center;
+  padding-top: 18px;
+  padding-bottom: 24px;
+  margin-left: auto;
+  margin-right: auto;
+  height: 280px; /* 固定高度 */
+  overflow: hidden; /* 防止popup本身滚动 */
+}
+
+.activity-popup-inner {
+  width: 100%;
+  max-width: 420px;
+  padding: 0 24px;
+  margin: 0;
+  box-sizing: border-box;
+  /* 隐藏滚动条 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+.activity-popup-inner::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* 为tag滚动区域隐藏滚动条 */
+.activity-popup-inner > div::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.activity-input-row-inner {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.activity-input {
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  font-size: 15px;
+  padding: 8px 12px;
+}
+
+.modal-content {
+  /* 桌面端最大宽度 */
+  width: min(480px, 100vw - 48px);
+  margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+  .modal-content {
+    width: calc(100vw - 48px);
+    min-width: 0;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .activity-bg {
+    align-items: center;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  .activity-container {
+    width: calc(100vw - 48px);
+    max-width: calc(100vw - 48px);
+    border-radius: 18px 18px 0 0;
+    margin-top: 0;
+    min-height: 70vh;
+    padding-bottom: 0;
+    margin-left: 24px;
+    margin-right: 24px;
+    position: static;
+    left: auto;
+    transform: none;
+  }
+  .activity-header-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: #e9f2f4;
+    padding: 18px 24px 8px 24px;
+    margin-bottom: 0;
+    width: 100vw;
+    box-sizing: border-box;
+  }
+  .activity-main {
+    padding: 60px 6px 0 6px;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* 为iOS添加平滑滚动 */
+  }
+  .activity-bottom-sheet-fixed {
+    max-width: 100vw;
+    width: 100vw;
+    left: 0;
+    transform: none;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .activity-popup-inner {
+    max-width: 100vw;
+    padding: 0 12px;
+  }
+  .activity-card-history {
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .activity-card-now {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .summary-modal-outer {
+    /* 移除top和height */
+  }
+  .modal-content {
+    margin-top: 60px;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+}

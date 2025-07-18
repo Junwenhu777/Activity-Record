@@ -1,0 +1,21 @@
+{
+  "name": "Activity Records",
+  "short_name": "Activity",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#e9f2f4",
+  "theme_color": "#00313c",
+  "description": "Quickly record and review your daily activities.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
