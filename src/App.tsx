@@ -56,40 +56,6 @@ function formatHMS(sec: number) {
   return `${h}:${m}:${s}`;
 }
 
-// 统计数据处理函数
-function getSummaryData(history: any[], current: any, now: Date) {
-  // 合并历史和当前活动
-  const all = [...history];
-  if (current) {
-    all.unshift({
-      name: current.name,
-      startAt: current.startAt,
-      endAt: now,
-      duration: now.getTime() - current.startAt.getTime(),
-    });
-  }
-  // 跨天活动按天拆分
-  const allByDay: { name: string; date: string; secs: number }[] = [];
-  all.forEach(item => {
-    allByDay.push(...splitActivityByDay(item));
-  });
-  // 按天分组
-  const groups: Record<string, Record<string, number>> = {};
-  allByDay.forEach(item => {
-    if (!groups[item.date]) groups[item.date] = {};
-    if (!groups[item.date][item.name]) groups[item.date][item.name] = 0;
-    groups[item.date][item.name] += item.secs;
-  });
-  // 转为数组并排序
-  return Object.entries(groups)
-    .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
-    .map(([date, acts]) => {
-      const arr = Object.entries(acts).map(([name, secs]) => ({ name, secs }));
-      arr.sort((a, b) => b.secs - a.secs);
-      return { date, activities: arr };
-    });
-}
-
 function reviveDate(obj: any): any {
   if (!obj) return obj;
   if (Array.isArray(obj)) {
