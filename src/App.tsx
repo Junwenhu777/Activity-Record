@@ -150,8 +150,6 @@ function App() {
   const [editingName, setEditingName] = useState('');
   // 新增state用于滑动删除
   const [swipeDelete, setSwipeDelete] = useState<{date?: string, idx?: number} | null>(null);
-  let touchStartX = 0;
-  let touchEndX = 0;
 
   // 用于长按定时器
   let longPressTimer: any = null;
