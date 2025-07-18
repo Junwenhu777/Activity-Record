@@ -28,16 +28,22 @@ function formatDuration(ms: number) {
   return `${h}:${m}:${s}`;
 }
 function getDateString(date: Date) {
-  return date.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  // 返回本地年月日字符串，避免UTC偏移
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
-function groupHistoryByDate(history: any[]) {
+function groupHistoryByDate(history: any[], beforeDate: Date) {
   const groups: Record<string, any[]> = {};
   history.forEach(item => {
-    const dateStr = getDateString(item.startAt);
+    const dateStr = getDateString(item.endAt);
     if (!groups[dateStr]) groups[dateStr] = [];
     groups[dateStr].push(item);
   });
-  return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+  // 只保留beforeDate（不含）之前的分组
+  const beforeStr = getDateString(beforeDate);
+  return Object.entries(groups)
+    .filter(([date]) => date < beforeStr)
+    .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+    .map(([date, items]) => [date, items.sort((a, b) => b.endAt - a.endAt)] as [string, any[]]);
 }
 
 // 格式化秒为hh:mm:ss
@@ -60,20 +66,26 @@ function getSummaryData(history: any[], current: any, now: Date) {
       duration: now.getTime() - current.startAt.getTime(),
     });
   }
+  // 跨天活动按天拆分
+  const allByDay: { name: string; date: string; secs: number }[] = [];
+  all.forEach(item => {
+    allByDay.push(...splitActivityByDay(item));
+  });
   // 按天分组
   const groups: Record<string, Record<string, number>> = {};
-  all.forEach(item => {
-    const dateStr = getDateString(item.startAt);
-    if (!groups[dateStr]) groups[dateStr] = {};
-    if (!groups[dateStr][item.name]) groups[dateStr][item.name] = 0;
-    groups[dateStr][item.name] += Math.max(0, Math.round((item.endAt.getTime() - item.startAt.getTime()) / 1000)); // 秒
+  allByDay.forEach(item => {
+    if (!groups[item.date]) groups[item.date] = {};
+    if (!groups[item.date][item.name]) groups[item.date][item.name] = 0;
+    groups[item.date][item.name] += item.secs;
   });
   // 转为数组并排序
-  return Object.entries(groups).map(([date, acts]) => {
-    const arr = Object.entries(acts).map(([name, secs]) => ({ name, secs }));
-    arr.sort((a, b) => b.secs - a.secs);
-    return { date, activities: arr };
-  });
+  return Object.entries(groups)
+    .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+    .map(([date, acts]) => {
+      const arr = Object.entries(acts).map(([name, secs]) => ({ name, secs }));
+      arr.sort((a, b) => b.secs - a.secs);
+      return { date, activities: arr };
+    });
 }
 
 function reviveDate(obj: any): any {
@@ -93,6 +105,43 @@ function reviveDate(obj: any): any {
     return copy;
   }
   return obj;
+}
+
+function isSameDay(d1: Date, d2: Date) {
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
+
+function formatStartAt(startAt: Date, endAt: Date) {
+  if (!isSameDay(startAt, endAt)) {
+    return `${formatTime(startAt)} ${String(startAt.getMonth() + 1).padStart(2, '0')}-${String(startAt.getDate()).padStart(2, '0')}`;
+  }
+  return formatTime(startAt);
+}
+
+function formatHeaderDateStr(dateStr: string) {
+  const [year, month, day] = dateStr.split('-');
+  const d = new Date(Number(year), Number(month) - 1, Number(day));
+  return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+}
+
+// summary跨天活动按天拆分
+function splitActivityByDay(item: any) {
+  const result = [];
+  let cur = new Date(item.startAt);
+  const end = new Date(item.endAt);
+  while (cur < end) {
+    const nextDay = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1, 0, 0, 0, 0);
+    const segEnd = nextDay < end ? nextDay : end;
+    result.push({
+      name: item.name,
+      date: getDateString(cur),
+      secs: Math.round((segEnd.getTime() - cur.getTime()) / 1000)
+    });
+    cur = new Date(segEnd.getTime() + 1000); // 下一天的00:00:01
+  }
+  return result;
 }
 
 function App() {
@@ -268,7 +317,13 @@ function App() {
     }
   };
 
-  const groupedHistory = groupHistoryByDate(history);
+  // 计算今天0点
+  const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  // 今天的活动
+  const todaysActivities = history.filter(item => item.endAt >= todayZero);
+  // 历史分组，只显示昨天及以前
+  const groupedHistory = groupHistoryByDate(history, todayZero);
+  const displayHistory: [string, any[]][] = groupedHistory as [string, any[]][];
 
   // 移动端阻止summary弹窗滚动穿透
   useEffect(() => {
@@ -377,45 +432,52 @@ function App() {
               {(() => {
                 const summary = getSummaryData(history, current, now);
                 if (!summary.length) return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>No activity data.</div>;
-                return summary.map(day => {
-                  const max = Math.max(...day.activities.map(a => a.secs), 1);
-                  const checked = selectedDates.includes(day.date);
-                  return (
-                    <div key={day.date} style={{ background: '#f8fafb', borderRadius: 12, marginBottom: 24, padding: 18, textAlign: 'left', position: 'relative' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                        <div style={{ fontWeight: 700, fontSize: 16 }}>{day.date}</div>
-                        <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', userSelect: 'none' }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              setSelectedDates(prev =>
-                                checked ? prev.filter(d => d !== day.date) : [...prev, day.date]
-                              );
-                            }}
-                            style={{ width: 18, height: 18, accentColor: '#00313c', marginRight: 4 }}
-                          />
-                        </label>
-                      </div>
-                      <div style={{
-                        maxHeight: 4 * 48,
-                        overflowY: day.activities.length > 4 ? 'auto' : 'visible',
-                        marginRight: -8,
-                        paddingRight: 8
-                      }}>
-                        {day.activities.map((a, i) => (
-                          <div key={a.name} style={{ marginBottom: 14 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15, fontWeight: 600, marginBottom: 2 }}>
-                              <span>{a.name}</span>
-                              <span style={{ fontFamily: 'monospace', fontWeight: 400, fontSize: 14 }}>{formatHMS(a.secs)}</span>
-                            </div>
-                            <div style={{ background: '#00313c', height: 18, borderRadius: 4, width: `${Math.max(20, a.secs / max * 100)}%`, minWidth: 20, maxWidth: 180 }} />
+                // 计算最大天数的活动数
+                const maxCount = Math.max(...summary.map(day => day.activities.length), 1);
+                const cardHeight = 48 * maxCount + 40; // 每活动两行约48px，+40为卡片内padding和标题
+                return (
+                  <div style={{ maxHeight: 252, overflowY: 'auto', marginBottom: 24 }}>
+                    {summary.map(day => {
+                      const max = Math.max(...day.activities.map(a => a.secs), 1);
+                      const checked = selectedDates.includes(day.date);
+                      return (
+                        <div key={day.date} style={{ background: '#f8fafb', borderRadius: 12, marginBottom: 24, padding: 18, textAlign: 'left', position: 'relative' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                            <div style={{ fontWeight: 700, fontSize: 16 }}>{day.date}</div>
+                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', userSelect: 'none' }}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  setSelectedDates(prev =>
+                                    checked ? prev.filter(d => d !== day.date) : [...prev, day.date]
+                                  );
+                                }}
+                                style={{ width: 18, height: 18, accentColor: '#00313c', marginRight: 4 }}
+                              />
+                            </label>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                });
+                          <div style={{
+                            maxHeight: 4 * 48,
+                            overflowY: day.activities.length > 4 ? 'auto' : 'visible',
+                            marginRight: -8,
+                            paddingRight: 8
+                          }}>
+                            {day.activities.map((a, i) => (
+                              <div key={a.name} style={{ marginBottom: 14 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15, fontWeight: 600, marginBottom: 2 }}>
+                                  <span>{a.name}</span>
+                                  <span style={{ fontFamily: 'monospace', fontWeight: 400, fontSize: 14 }}>{formatHMS(a.secs)}</span>
+                                </div>
+                                <div style={{ background: '#00313c', height: 18, borderRadius: 4, width: `${Math.max(20, a.secs / max * 100)}%`, minWidth: 20, maxWidth: 180 }} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
               })()}
               {/* 导出按钮区 */}
               <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -711,16 +773,42 @@ function App() {
               </div>
             </div>
           )}
+          {/* 今天的活动卡片流 */}
+          {todaysActivities.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              {todaysActivities.map((item, idx) => (
+                <div className="activity-card-history" key={idx}>
+                  <div className="activity-card-title">{item.name}</div>
+                  <div className="activity-card-row">
+                    <span className="activity-card-label">Start At:</span>
+                    <span className="activity-card-value">{formatStartAt(item.startAt, item.endAt)}</span>
+                  </div>
+                  <div className="activity-card-row">
+                    <span className="activity-card-label">Duration:</span>
+                    <span className="activity-card-value">{formatDuration(item.duration)}</span>
+                  </div>
+                  <div className="activity-card-row">
+                    <span className="activity-card-label">End At:</span>
+                    <span className="activity-card-value">{formatTime(item.endAt)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {/* 历史活动分组卡片 */}
           <div style={{ marginBottom: 16 }}>
-            {groupedHistory.map(([date, items]) => (
+            {displayHistory.map(([date, items]: [string, any[]]) => (
               <div key={date}>
+                <div style={{ fontWeight: 700, fontSize: 16, margin: '18px 0 8px 0' }}>{formatHeaderDateStr(date)}</div>
+                {items.length === 0 && (
+                  <div style={{ color: '#bbb', fontSize: 14, marginBottom: 12 }}>No activity</div>
+                )}
                 {items.map((item, idx) => (
                   <div className="activity-card-history" key={idx}>
                     <div className="activity-card-title">{item.name}</div>
                     <div className="activity-card-row">
                       <span className="activity-card-label">Start At:</span>
-                      <span className="activity-card-value">{formatTime(item.startAt)}</span>
+                      <span className="activity-card-value">{formatStartAt(item.startAt, item.endAt)}</span>
                     </div>
                     <div className="activity-card-row">
                       <span className="activity-card-label">Duration:</span>
@@ -857,10 +945,10 @@ function App() {
             onClick={() => setShowBottomSheet(true)}
           >
             + Start Activity
-          </button>
+        </button>
         </div>
       )}
-    </div>
+      </div>
   );
 }
 
