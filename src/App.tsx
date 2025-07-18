@@ -163,7 +163,6 @@ function App() {
   const lastScrollTop = useRef(0);
   const mainRef = useRef<HTMLDivElement>(null);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
-  const [pendingRefresh, setPendingRefresh] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
 
   // localStorage持久化恢复
@@ -288,24 +287,6 @@ function App() {
       setShowBottomSheet(false);
     }
     lastScrollTop.current = scrollTop;
-  };
-
-  // 下载活动历史
-  const downloadHistory = () => {
-    const data = {
-      current: current,
-      history: history,
-      exportTime: new Date().toISOString()
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `activity-records-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   // 下载按钮点击逻辑
@@ -434,7 +415,7 @@ function App() {
                 if (!summary.length) return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>No activity data.</div>;
                 // 计算最大天数的活动数
                 const maxCount = Math.max(...summary.map(day => day.activities.length), 1);
-                const cardHeight = 48 * maxCount + 40; // 每活动两行约48px，+40为卡片内padding和标题
+          
                 return (
                   <div style={{ maxHeight: 252, overflowY: 'auto', marginBottom: 24 }}>
                     {summary.map(day => {
@@ -463,15 +444,11 @@ function App() {
                             marginRight: -8,
                             paddingRight: 8
                           }}>
-                            {day.activities.map((a, i) => (
-                              <div key={a.name} style={{ marginBottom: 14 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15, fontWeight: 600, marginBottom: 2 }}>
-                                  <span>{a.name}</span>
-                                  <span style={{ fontFamily: 'monospace', fontWeight: 400, fontSize: 14 }}>{formatHMS(a.secs)}</span>
-                                </div>
-                                <div style={{ background: '#00313c', height: 18, borderRadius: 4, width: `${Math.max(20, a.secs / max * 100)}%`, minWidth: 20, maxWidth: 180 }} />
-                              </div>
-                            ))}
+                            {day.activities.map(a => (
+  <div key={a.name} style={{ marginBottom: 14 }}>
+    {/* ... */}
+  </div>
+))}
                           </div>
                         </div>
                       );
