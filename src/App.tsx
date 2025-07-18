@@ -418,7 +418,7 @@ function App() {
                 return (
                   <div style={{ maxHeight: 252, overflowY: 'auto', marginBottom: 24 }}>
                     {summary.map(day => {
-                      const max = Math.max(...day.activities.map(a => a.secs), 1);
+                    
                       const checked = selectedDates.includes(day.date);
                       return (
                         <div key={day.date} style={{ background: '#f8fafb', borderRadius: 12, marginBottom: 24, padding: 18, textAlign: 'left', position: 'relative' }}>
