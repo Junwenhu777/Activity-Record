@@ -70,6 +70,8 @@ function reviveDate(obj: any): any {
         copy[k] = reviveDate(copy[k]);
       }
     }
+    // 兼容老数据
+    if (copy.deleted === undefined) copy.deleted = false;
     return copy;
   }
   return obj;
@@ -96,13 +98,14 @@ function formatHeaderDateStr(dateStr: string) {
 
 // summary统计所有历史活动总时长排行
 function getTotalSummary(history: any[], current: any, now: Date) {
-  const all = [...history];
+  const all = [...history].filter(item => !item.deleted);
   if (current) {
     all.unshift({
       name: current.name,
       startAt: current.startAt,
       endAt: now,
       duration: now.getTime() - current.startAt.getTime(),
+      deleted: false
     });
   }
   // 按活动名聚合总时长
@@ -140,6 +143,18 @@ function App() {
   const mainRef = useRef<HTMLDivElement>(null);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
+
+  // 在App组件内新增state
+  const [editingCurrentName, setEditingCurrentName] = useState(false);
+  const [editingHistory, setEditingHistory] = useState<{date?: string, idx?: number} | null>(null);
+  const [editingName, setEditingName] = useState('');
+  // 新增state用于滑动删除
+  const [swipeDelete, setSwipeDelete] = useState<{date?: string, idx?: number} | null>(null);
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  // 用于长按定时器
+  let longPressTimer: any = null;
 
   // localStorage持久化恢复
   useEffect(() => {
@@ -209,7 +224,7 @@ function App() {
     const endAt = new Date();
     const duration = endAt.getTime() - current.startAt.getTime();
     setHistory([
-      { name: current.name, startAt: current.startAt, endAt, duration },
+      { name: current.name, startAt: current.startAt, endAt, duration, deleted: false },
       ...history,
     ]);
     setCurrent(null);
@@ -221,7 +236,7 @@ function App() {
     if (current) {
       stopCurrent();
     }
-    setCurrent({ name, startAt: new Date() });
+    setCurrent({ name, startAt: new Date(), deleted: false });
     setActivityName('');
     
     // 将自定义活动添加到recent列表
@@ -441,16 +456,32 @@ function App() {
                         startAt: current.startAt,
                         endAt: now,
                         duration: now.getTime() - current.startAt.getTime(),
+                        deleted: false
                       });
                     }
-                    const rows = all.map(item => ({
-                      Activity: item.name,
-                      Start: item.startAt instanceof Date ? item.startAt.toISOString() : item.startAt,
-                      End: item.endAt instanceof Date ? item.endAt.toISOString() : item.endAt,
-                      Duration: formatHMS(Math.round(item.duration / 1000)),
-                      Seconds: Math.round(item.duration / 1000)
-                    }));
-                    const ws = XLSX.utils.json_to_sheet(rows);
+                    // 构造带横线样式的 Excel 行
+                    const rows = all.map(item => {
+                      const strike = item.deleted ? { font: { strike: true } } : {};
+                      return {
+                        Activity: Object.assign({ v: item.name }, strike),
+                        Start: Object.assign({ v: item.startAt instanceof Date ? item.startAt.toISOString() : item.startAt }, strike),
+                        End: Object.assign({ v: item.endAt instanceof Date ? item.endAt.toISOString() : item.endAt }, strike),
+                        Duration: Object.assign({ v: formatHMS(Math.round(item.duration / 1000)) }, strike),
+                        Seconds: Object.assign({ v: Math.round(item.duration / 1000) }, strike),
+                        Deleted: item.deleted ? 'true' : 'false'
+                      };
+                    });
+                    // 生成 worksheet
+                    const ws = XLSX.utils.json_to_sheet(rows as any[]);
+                    // 应用横线样式
+                    Object.keys(rows[0] || {}).forEach((col, colIdx) => {
+                      (rows as any[]).forEach((row, rowIdx) => {
+                        if (row[col] && row[col].font && ws[XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx })]) {
+                          ws[XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx })].s = row[col];
+                        }
+                      });
+                    });
+                    // 生成 workbook
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, 'History');
                     XLSX.writeFile(wb, `activity-history-${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -681,7 +712,26 @@ function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div className="activity-card-title">Now</div>
-                  <div className="activity-card-title" style={{ fontSize: 24 }}>{current.name}</div>
+                  {editingCurrentName ? (
+                    <input
+                      style={{ fontSize: 24, fontWeight: 600, width: '100%', marginBottom: 8 }}
+                      value={editingName}
+                      autoFocus
+                      onChange={e => setEditingName(e.target.value)}
+                      onBlur={() => {
+                        setCurrent({ ...current, name: editingName });
+                        setEditingCurrentName(false);
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          setCurrent({ ...current, name: editingName });
+                          setEditingCurrentName(false);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="activity-card-title" style={{ fontSize: 24, cursor: 'pointer' }} onClick={() => { setEditingCurrentName(true); setEditingName(current.name); }}>{current.name}</div>
+                  )}
                   <div className="activity-card-label">Start At: {formatTime(current.startAt)}</div>
                   <div className="activity-card-label">Duration: {formatDuration(now.getTime() - current.startAt.getTime())}</div>
                   <div className="activity-card-label">End At: -</div>
@@ -718,23 +768,93 @@ function App() {
           {/* 今天的活动卡片流 */}
           {todaysActivities.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              {todaysActivities.map((item, idx) => (
-                <div className="activity-card-history" key={idx}>
-                  <div className="activity-card-title">{item.name}</div>
-                  <div className="activity-card-row">
-                    <span className="activity-card-label">Start At:</span>
-                    <span className="activity-card-value">{formatStartAt(item.startAt, item.endAt)}</span>
+              {todaysActivities.map((item, idx) => {
+                const isShowDelete = swipeDelete && swipeDelete.idx === idx && swipeDelete.date === 'today';
+                const isDeleted = item.deleted;
+                return (
+                  <div
+                    className="activity-card-history"
+                    key={idx}
+                    style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1 }}
+                    onTouchStart={() => {
+                      longPressTimer = setTimeout(() => setSwipeDelete({ date: 'today', idx }), 600);
+                    }}
+                    onTouchEnd={() => {
+                      clearTimeout(longPressTimer);
+                    }}
+                    onMouseDown={() => {
+                      longPressTimer = setTimeout(() => setSwipeDelete({ date: 'today', idx }), 600);
+                    }}
+                    onMouseUp={() => {
+                      clearTimeout(longPressTimer);
+                    }}
+                  >
+                    {/* delete/recover 按钮 */}
+                    {isShowDelete && !isDeleted && (
+                      <button
+                        style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, background: '#d70015', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontWeight: 600, cursor: 'pointer' }}
+                        onClick={() => {
+                          const newHistory = [...history];
+                          const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                          if (todayIdx !== -1) newHistory[todayIdx].deleted = true;
+                          setHistory(newHistory);
+                          setSwipeDelete(null);
+                        }}
+                      >delete</button>
+                    )}
+                    {isShowDelete && isDeleted && (
+                      <button
+                        style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, background: '#00b96b', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontWeight: 600, cursor: 'pointer' }}
+                        onClick={() => {
+                          const newHistory = [...history];
+                          const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                          if (todayIdx !== -1) newHistory[todayIdx].deleted = false;
+                          setHistory(newHistory);
+                          setSwipeDelete(null);
+                        }}
+                      >recover</button>
+                    )}
+                    {editingHistory && editingHistory.idx === idx && editingHistory.date === 'today' ? (
+                      <input
+                        style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6 }}
+                        value={editingName}
+                        autoFocus
+                        onChange={e => setEditingName(e.target.value)}
+                        onBlur={() => {
+                          const newHistory = [...history];
+                          const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                          if (todayIdx !== -1) newHistory[todayIdx].name = editingName;
+                          setHistory(newHistory);
+                          setEditingHistory(null);
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            const newHistory = [...history];
+                            const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                            if (todayIdx !== -1) newHistory[todayIdx].name = editingName;
+                            setHistory(newHistory);
+                            setEditingHistory(null);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
+                    )}
+                    <div className="activity-card-row">
+                      <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Start At:</span>
+                      <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatStartAt(item.startAt, item.endAt)}</span>
+                    </div>
+                    <div className="activity-card-row">
+                      <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>End At:</span>
+                      <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatTime(item.endAt)}</span>
+                    </div>
+                    <div className="activity-card-row">
+                      <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Duration:</span>
+                      <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatDuration(item.duration)}</span>
+                    </div>
                   </div>
-                  <div className="activity-card-row">
-                    <span className="activity-card-label">End At:</span>
-                    <span className="activity-card-value">{formatTime(item.endAt)}</span>
-                  </div>
-                  <div className="activity-card-row">
-                    <span className="activity-card-label">Duration:</span>
-                    <span className="activity-card-value">{formatDuration(item.duration)}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {/* 历史活动分组卡片 */}
@@ -745,23 +865,93 @@ function App() {
                 {items.length === 0 && (
                   <div style={{ color: '#bbb', fontSize: 14, marginBottom: 12 }}>No activity</div>
                 )}
-                {items.slice(0, 3).map((item, idx) => (
-                  <div className="activity-card-history" key={idx}>
-                    <div className="activity-card-title">{item.name}</div>
-                    <div className="activity-card-row">
-                      <span className="activity-card-label">Start At:</span>
-                      <span className="activity-card-value">{formatStartAt(item.startAt, item.endAt)}</span>
+                {items.slice(0, 3).map((item, idx) => {
+                  const isShowDelete = swipeDelete && swipeDelete.idx === idx && swipeDelete.date === date;
+                  const isDeleted = item.deleted;
+                  return (
+                    <div
+                      className="activity-card-history"
+                      key={idx}
+                      style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1 }}
+                      onTouchStart={() => {
+                        longPressTimer = setTimeout(() => setSwipeDelete({ date, idx }), 600);
+                      }}
+                      onTouchEnd={() => {
+                        clearTimeout(longPressTimer);
+                      }}
+                      onMouseDown={() => {
+                        longPressTimer = setTimeout(() => setSwipeDelete({ date, idx }), 600);
+                      }}
+                      onMouseUp={() => {
+                        clearTimeout(longPressTimer);
+                      }}
+                    >
+                      {/* delete/recover 按钮 */}
+                      {isShowDelete && !isDeleted && (
+                        <button
+                          style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, background: '#d70015', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontWeight: 600, cursor: 'pointer' }}
+                          onClick={() => {
+                            const newHistory = [...history];
+                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                            if (histIdx !== -1) newHistory[histIdx].deleted = true;
+                            setHistory(newHistory);
+                            setSwipeDelete(null);
+                          }}
+                        >delete</button>
+                      )}
+                      {isShowDelete && isDeleted && (
+                        <button
+                          style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, background: '#00b96b', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontWeight: 600, cursor: 'pointer' }}
+                          onClick={() => {
+                            const newHistory = [...history];
+                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                            if (histIdx !== -1) newHistory[histIdx].deleted = false;
+                            setHistory(newHistory);
+                            setSwipeDelete(null);
+                          }}
+                        >recover</button>
+                      )}
+                      {editingHistory && editingHistory.idx === idx && editingHistory.date === date ? (
+                        <input
+                          style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6 }}
+                          value={editingName}
+                          autoFocus
+                          onChange={e => setEditingName(e.target.value)}
+                          onBlur={() => {
+                            const newHistory = [...history];
+                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                            if (histIdx !== -1) newHistory[histIdx].name = editingName;
+                            setHistory(newHistory);
+                            setEditingHistory(null);
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              const newHistory = [...history];
+                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                              if (histIdx !== -1) newHistory[histIdx].name = editingName;
+                              setHistory(newHistory);
+                              setEditingHistory(null);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date, idx }); setEditingName(item.name); }}>{item.name}</div>
+                      )}
+                      <div className="activity-card-row">
+                        <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Start At:</span>
+                        <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatStartAt(item.startAt, item.endAt)}</span>
+                      </div>
+                      <div className="activity-card-row">
+                        <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>End At:</span>
+                        <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatTime(item.endAt)}</span>
+                      </div>
+                      <div className="activity-card-row">
+                        <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Duration:</span>
+                        <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatDuration(item.duration)}</span>
+                      </div>
                     </div>
-                    <div className="activity-card-row">
-                      <span className="activity-card-label">End At:</span>
-                      <span className="activity-card-value">{formatTime(item.endAt)}</span>
-                    </div>
-                    <div className="activity-card-row">
-                      <span className="activity-card-label">Duration:</span>
-                      <span className="activity-card-value">{formatDuration(item.duration)}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ))}
           </div>
