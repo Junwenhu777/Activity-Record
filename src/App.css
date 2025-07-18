@@ -232,7 +232,7 @@ body, .activity-bg {
     position: static;
     left: auto;
     transform: none;
-  }
+}
   .activity-header-fixed {
     position: fixed;
     top: 0;

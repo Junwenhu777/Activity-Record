@@ -726,12 +726,12 @@ function App() {
                     <span className="activity-card-value">{formatStartAt(item.startAt, item.endAt)}</span>
                   </div>
                   <div className="activity-card-row">
-                    <span className="activity-card-label">Duration:</span>
-                    <span className="activity-card-value">{formatDuration(item.duration)}</span>
-                  </div>
-                  <div className="activity-card-row">
                     <span className="activity-card-label">End At:</span>
                     <span className="activity-card-value">{formatTime(item.endAt)}</span>
+                  </div>
+                  <div className="activity-card-row">
+                    <span className="activity-card-label">Duration:</span>
+                    <span className="activity-card-value">{formatDuration(item.duration)}</span>
                   </div>
                 </div>
               ))}
@@ -753,12 +753,12 @@ function App() {
                       <span className="activity-card-value">{formatStartAt(item.startAt, item.endAt)}</span>
                     </div>
                     <div className="activity-card-row">
-                      <span className="activity-card-label">Duration:</span>
-                      <span className="activity-card-value">{formatDuration(item.duration)}</span>
-                    </div>
-                    <div className="activity-card-row">
                       <span className="activity-card-label">End At:</span>
                       <span className="activity-card-value">{formatTime(item.endAt)}</span>
+                    </div>
+                    <div className="activity-card-row">
+                      <span className="activity-card-label">Duration:</span>
+                      <span className="activity-card-value">{formatDuration(item.duration)}</span>
                     </div>
                   </div>
                 ))}
