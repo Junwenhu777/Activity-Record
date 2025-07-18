@@ -213,14 +213,6 @@ function App() {
     localStorage.setItem('activity-recent', JSON.stringify(recentActivities));
   }, [recentActivities]);
 
-  // summary弹窗全选逻辑
-  useEffect(() => {
-    if (showStatsModal) {
-      const summary = getSummaryData(history, current, now);
-      setSelectedDates(summary.map(day => day.date));
-    }
-  }, [showStatsModal, history, current, now]);
-
   // 刷新拦截逻辑
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
