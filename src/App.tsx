@@ -1,4 +1,6 @@
 import React from 'react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
+useRegisterSW();
 import { useState, useEffect, useRef } from 'react';
 import { Button, Input, Grid } from 'antd-mobile';
 import './App.css';
