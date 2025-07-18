@@ -94,24 +94,6 @@ function formatHeaderDateStr(dateStr: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 }
 
-// summary跨天活动按天拆分
-function splitActivityByDay(item: any) {
-  const result = [];
-  let cur = new Date(item.startAt);
-  const end = new Date(item.endAt);
-  while (cur < end) {
-    const nextDay = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1, 0, 0, 0, 0);
-    const segEnd = nextDay < end ? nextDay : end;
-    result.push({
-      name: item.name,
-      date: getDateString(cur),
-      secs: Math.round((segEnd.getTime() - cur.getTime()) / 1000)
-    });
-    cur = new Date(segEnd.getTime() + 1000); // 下一天的00:00:01
-  }
-  return result;
-}
-
 // summary统计所有历史活动总时长排行
 function getTotalSummary(history: any[], current: any, now: Date) {
   const all = [...history];
