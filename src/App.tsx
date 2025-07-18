@@ -187,7 +187,7 @@ function App() {
   });
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showEndCurrentModal, setShowEndCurrentModal] = useState(false);
-  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+
   const lastScrollTop = useRef(0);
   const mainRef = useRef<HTMLDivElement>(null);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
