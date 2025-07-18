@@ -1,6 +1,5 @@
 import React from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-useRegisterSW();
 import { useState, useEffect, useRef } from 'react';
 import { Button, Input, Grid } from 'antd-mobile';
 import './App.css';
@@ -19,6 +18,7 @@ function formatTime(date: any) {
   if (!(date instanceof Date)) date = new Date(date);
   return date.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
+
 function formatHeaderDate(date: Date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 }
@@ -147,6 +147,7 @@ function splitActivityByDay(item: any) {
 }
 
 function App() {
+  useRegisterSW(); // 在组件体内调用
   const [activityName, setActivityName] = useState('');
   const [current, setCurrent] = useState<any>(() => {
     const c = localStorage.getItem('activity-current');
