@@ -195,7 +195,7 @@ function App() {
         e.preventDefault();
         e.returnValue = '';
         setShowRefreshModal(true);
-        setPendingRefresh(true);
+        
         return '';
       }
     };
@@ -413,8 +413,7 @@ function App() {
               {(() => {
                 const summary = getSummaryData(history, current, now);
                 if (!summary.length) return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>No activity data.</div>;
-                // 计算最大天数的活动数
-                const maxCount = Math.max(...summary.map(day => day.activities.length), 1);
+               
           
                 return (
                   <div style={{ maxHeight: 252, overflowY: 'auto', marginBottom: 24 }}>
@@ -664,7 +663,7 @@ function App() {
                   }}
                   onClick={() => {
                     setShowRefreshModal(false);
-                    setPendingRefresh(false);
+                
                   }}
                 >
                   Cancel
@@ -676,7 +675,7 @@ function App() {
                   onClick={() => {
                     stopCurrent();
                     setShowRefreshModal(false);
-                    setPendingRefresh(false);
+                   
                     window.location.reload();
                   }}
                 >
