@@ -146,6 +146,28 @@ function splitActivityByDay(item: any) {
   return result;
 }
 
+// summary统计所有历史活动总时长排行
+function getTotalSummary(history: any[], current: any, now: Date) {
+  const all = [...history];
+  if (current) {
+    all.unshift({
+      name: current.name,
+      startAt: current.startAt,
+      endAt: now,
+      duration: now.getTime() - current.startAt.getTime(),
+    });
+  }
+  // 按活动名聚合总时长
+  const summary: Record<string, number> = {};
+  all.forEach(item => {
+    if (!summary[item.name]) summary[item.name] = 0;
+    summary[item.name] += item.duration;
+  });
+  return Object.entries(summary)
+    .map(([name, duration]) => ({ name, duration }))
+    .sort((a, b) => b.duration - a.duration);
+}
+
 function App() {
   useRegisterSW(); // 在组件体内调用
   const [activityName, setActivityName] = useState('');
@@ -159,7 +181,10 @@ function App() {
   });
   const [now, setNow] = useState(new Date());
   const [showBottomSheet, setShowBottomSheet] = useState(true);
-  const [recentActivities, setRecentActivities] = useState<string[]>([]);
+  const [recentActivities, setRecentActivities] = useState<string[]>(() => {
+    const r = localStorage.getItem('activity-recent');
+    return r ? JSON.parse(r) : [];
+  });
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showEndCurrentModal, setShowEndCurrentModal] = useState(false);
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
@@ -172,8 +197,10 @@ function App() {
   useEffect(() => {
     const h = localStorage.getItem('activity-history');
     const c = localStorage.getItem('activity-current');
+    const r = localStorage.getItem('activity-recent');
     if (h) setHistory(reviveDate(JSON.parse(h)));
     if (c) setCurrent(reviveDate(JSON.parse(c)));
+    if (r) setRecentActivities(JSON.parse(r));
   }, []);
   // localStorage持久化保存
   useEffect(() => {
@@ -182,6 +209,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem('activity-current', JSON.stringify(current));
   }, [current]);
+  useEffect(() => {
+    localStorage.setItem('activity-recent', JSON.stringify(recentActivities));
+  }, [recentActivities]);
 
   // summary弹窗全选逻辑
   useEffect(() => {
@@ -305,7 +335,7 @@ function App() {
   const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   // 今天的活动
   const todaysActivities = history.filter(item => item.endAt >= todayZero);
-  // 历史分组，只显示昨天及以前
+  // 历史分组，只显示昨天及以前，分组内最多展示3条
   const groupedHistory = groupHistoryByDate(history, todayZero);
   const displayHistory: [string, any[]][] = groupedHistory as [string, any[]][];
 
@@ -321,26 +351,27 @@ function App() {
     };
   }, [showStatsModal]);
 
+  // 顶部时间戳逻辑
+  const isToday = (date: Date) => {
+    const now = new Date();
+    return date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+  };
+
   return (
     <div className="activity-bg">
       <div className="activity-container">
         <div className="activity-header-fixed">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            height: '100%'
+            height: '100%',
+            paddingRight: 12, // 恢复右侧安全边距
           }}>
-            <div 
-              className="activity-title" 
-              style={{ margin: 0, cursor: 'pointer' }}
-              onClick={() => {
-                if (mainRef.current) {
-                  mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-              }}
-            >
+            <div className="activity-title" style={{ marginLeft: '4px', textAlign: 'left', marginTop: '12px' }}>
               Activity Records
             </div>
             <button 
@@ -412,63 +443,45 @@ function App() {
                   marginTop: -20
                 }}>×</button>
               </div>
-              {/* summary 内容 */}
+              {/* summary 总体排行条形图 */}
               {(() => {
-                const summary = getSummaryData(history, current, now);
-                if (!summary.length) return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>No activity data.</div>;
-               
-          
+                const summaryArr = getTotalSummary(history, current, now);
+                if (!summaryArr.length) return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>No activity data.</div>;
+                const max = Math.max(...summaryArr.map(a => a.duration));
                 return (
-                  <div style={{ maxHeight: 252, overflowY: 'auto', marginBottom: 24 }}>
-                    {summary.map(day => {
-                    
-                      const checked = selectedDates.includes(day.date);
-                      return (
-                        <div key={day.date} style={{ background: '#f8fafb', borderRadius: 12, marginBottom: 24, padding: 18, textAlign: 'left', position: 'relative' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                            <div style={{ fontWeight: 700, fontSize: 16 }}>{day.date}</div>
-                            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', userSelect: 'none' }}>
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => {
-                                  setSelectedDates(prev =>
-                                    checked ? prev.filter(d => d !== day.date) : [...prev, day.date]
-                                  );
-                                }}
-                                style={{ width: 18, height: 18, accentColor: '#00313c', marginRight: 4 }}
-                              />
-                            </label>
-                          </div>
-                          <div style={{
-                            maxHeight: 4 * 48,
-                            overflowY: day.activities.length > 4 ? 'auto' : 'visible',
-                            marginRight: -8,
-                            paddingRight: 8
-                          }}>
-                            {day.activities.map(a => (
-  <div key={a.name} style={{ marginBottom: 14 }}>
-    {/* ... */}
-  </div>
-))}
-                          </div>
+                  <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 24 }}>
+                    {summaryArr.map(a => (
+                      <div key={a.name} style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15, fontWeight: 600, marginBottom: 2 }}>
+                          <span>{a.name}</span>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 400, fontSize: 14 }}>{formatHMS(Math.round(a.duration / 1000))}</span>
                         </div>
-                      );
-                    })}
+                        <div style={{ background: '#00313c', height: 18, borderRadius: 4, width: `${Math.max(20, a.duration / max * 100)}%`, minWidth: 20, maxWidth: 180 }} />
+                      </div>
+                    ))}
                   </div>
                 );
               })()}
-              {/* 导出按钮区 */}
+              {/* 导出按钮区（导出原始历史活动数据） */}
               <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <button
                   style={{ background: '#fff', color: '#222', border: '1px solid #eee', borderRadius: 12, padding: '16px 0', fontSize: 18, fontWeight: 500, cursor: 'pointer' }}
                   onClick={() => {
-                    const summary = getSummaryData(history, current, now).filter(day => selectedDates.includes(day.date));
-                    const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+                    // 导出原始历史活动数据（含每个活动的开始和结束日期）
+                    const all = [...history];
+                    if (current) {
+                      all.unshift({
+                        name: current.name,
+                        startAt: current.startAt,
+                        endAt: now,
+                        duration: now.getTime() - current.startAt.getTime(),
+                      });
+                    }
+                    const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `activity-summary-${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `activity-history-${new Date().toISOString().split('T')[0]}.json`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -480,23 +493,27 @@ function App() {
                 <button
                   style={{ background: '#fff', color: '#222', border: '1px solid #eee', borderRadius: 12, padding: '16px 0', fontSize: 18, fontWeight: 500, cursor: 'pointer' }}
                   onClick={() => {
-                    const summary = getSummaryData(history, current, now).filter(day => selectedDates.includes(day.date));
-                    // 转为excel格式
-                    const rows: { Date: string; Activity: string; Duration: string; Seconds: number }[] = [];
-                    summary.forEach(day => {
-                      day.activities.forEach(act => {
-                        rows.push({
-                          Date: day.date,
-                          Activity: act.name,
-                          Duration: formatHMS(act.secs),
-                          Seconds: act.secs
-                        });
+                    // 导出原始历史活动数据为Excel
+                    const all = [...history];
+                    if (current) {
+                      all.unshift({
+                        name: current.name,
+                        startAt: current.startAt,
+                        endAt: now,
+                        duration: now.getTime() - current.startAt.getTime(),
                       });
-                    });
+                    }
+                    const rows = all.map(item => ({
+                      Activity: item.name,
+                      Start: item.startAt instanceof Date ? item.startAt.toISOString() : item.startAt,
+                      End: item.endAt instanceof Date ? item.endAt.toISOString() : item.endAt,
+                      Duration: formatHMS(Math.round(item.duration / 1000)),
+                      Seconds: Math.round(item.duration / 1000)
+                    }));
                     const ws = XLSX.utils.json_to_sheet(rows);
                     const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, 'Summary');
-                    XLSX.writeFile(wb, `activity-summary-${new Date().toISOString().split('T')[0]}.xlsx`);
+                    XLSX.utils.book_append_sheet(wb, ws, 'History');
+                    XLSX.writeFile(wb, `activity-history-${new Date().toISOString().split('T')[0]}.xlsx`);
                   }}
                 >
                   Export as Excel
@@ -508,7 +525,7 @@ function App() {
                   Clear All Data
                 </button>
               </div>
-              {/* 清空数据确认弹窗 */}
+              {/* 清空数据确认弹窗保持不变 */}
               {showClearModal && (
                 <div style={{
                   position: 'fixed',
@@ -697,18 +714,24 @@ function App() {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-start',
             borderRadius: 16,
-            marginBottom: 8,
-            marginTop: 16,
-            width: '100%'
+            marginBottom: 16,
+            marginTop: 38,
+            width: '100%',
+            paddingLeft: 0,
+            marginLeft: 0
           }}>
             <div style={{ textAlign: 'left', flex: 1, paddingLeft: 0, marginLeft: 0 }}>
-              <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 17, letterSpacing: 1 }}>
-                {now.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit' })}
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 400, color: '#222', marginTop: 2 }}>
-                {formatHeaderDate(now)}
+              <div style={{
+                color: '#000，',
+                fontSize: 16,
+                fontStyle: 'normal',
+                fontWeight: 700,
+                lineHeight: 'normal',
+                textTransform: 'capitalize',
+              }}>
+                {isToday(now) ? 'Today' : formatHeaderDate(now)}
               </div>
             </div>
           </div>
@@ -718,7 +741,7 @@ function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div className="activity-card-title">Now</div>
-                  <div className="activity-card-title" style={{ fontSize: 18 }}>{current.name}</div>
+                  <div className="activity-card-title" style={{ fontSize: 24 }}>{current.name}</div>
                   <div className="activity-card-label">Start At: {formatTime(current.startAt)}</div>
                   <div className="activity-card-label">Duration: {formatDuration(now.getTime() - current.startAt.getTime())}</div>
                   <div className="activity-card-label">End At: -</div>
@@ -782,7 +805,7 @@ function App() {
                 {items.length === 0 && (
                   <div style={{ color: '#bbb', fontSize: 14, marginBottom: 12 }}>No activity</div>
                 )}
-                {items.map((item, idx) => (
+                {items.slice(0, 3).map((item, idx) => (
                   <div className="activity-card-history" key={idx}>
                     <div className="activity-card-title">{item.name}</div>
                     <div className="activity-card-row">
@@ -805,21 +828,61 @@ function App() {
         </div>
       </div>
       {/* 底部固定活动选择与输入区 */}
-      {showBottomSheet ? (
-        <div className="activity-bottom-sheet-fixed">
-          <div className="activity-popup-inner" style={{ 
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {/* 可滚动的tag区域 */}
-            <div style={{ 
-              flex: 1,
-              overflowY: 'auto',
-              paddingRight: '8px'
-            }}>
-              {/* Recent Activities */}
-              {recentActivities.length > 0 && (
+      {showBottomSheet && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              zIndex: 199,
+              background: 'rgba(0,0,0,0)', // 可根据需要加深遮罩色
+            }}
+            onClick={() => setShowBottomSheet(false)}
+            onTouchStart={() => setShowBottomSheet(false)}
+          />
+          <div className="activity-bottom-sheet-fixed" style={{ zIndex: 200, position: 'fixed', left: '50%', bottom: 0, transform: 'translateX(-50%)' }}>
+            <div className="activity-popup-inner" style={{ padding: '0 24px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* 可滚动的tag区域 */}
+              <div style={{ 
+                flex: 1,
+                overflowY: 'auto',
+                paddingRight: '8px'
+              }}>
+                {/* Recent Activities */}
+                {recentActivities.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ 
+                      fontSize: 12, 
+                      fontWeight: 600, 
+                      color: '#666', 
+                      marginBottom: 12,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5
+                    }}>
+                      Recent
+                    </div>
+                    <Grid columns={2} gap={12} className="activity-btn-grid">
+                      {recentActivities.map(activity => (
+                        <Grid.Item key={activity}>
+                          <Button 
+                            block 
+                            className="activity-btn" 
+                            shape="rounded" 
+                            size="large" 
+                            onClick={() => startActivity(activity)}
+                          >
+                            {activity}
+                          </Button>
+                        </Grid.Item>
+                      ))}
+                    </Grid>
+                  </div>
+                )}
+                
+                {/* ADLs Activities */}
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ 
                     fontSize: 12, 
@@ -829,68 +892,41 @@ function App() {
                     textTransform: 'uppercase',
                     letterSpacing: 0.5
                   }}>
-                    Recent
+                    ADLs
                   </div>
                   <Grid columns={2} gap={12} className="activity-btn-grid">
-                    {recentActivities.map(activity => (
-                      <Grid.Item key={activity}>
-                        <Button 
-                          block 
-                          className="activity-btn" 
-                          shape="rounded" 
-                          size="large" 
-                          onClick={() => startActivity(activity)}
-                        >
-                          {activity}
-                        </Button>
+                    {activityTypes.map(type => (
+                      <Grid.Item key={type}>
+                        <Button block className="activity-btn" shape="rounded" size="large" onClick={() => startActivity(type)}>{type}</Button>
                       </Grid.Item>
                     ))}
                   </Grid>
                 </div>
-              )}
+              </div>
               
-              {/* ADLs Activities */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ 
-                  fontSize: 12, 
-                  fontWeight: 600, 
-                  color: '#666', 
-                  marginBottom: 12,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5
-                }}>
-                  ADLs
-                </div>
-                <Grid columns={2} gap={12} className="activity-btn-grid">
-                  {activityTypes.map(type => (
-                    <Grid.Item key={type}>
-                      <Button block className="activity-btn" shape="rounded" size="large" onClick={() => startActivity(type)}>{type}</Button>
-                    </Grid.Item>
-                  ))}
-                </Grid>
+              {/* 固定在底部的输入框 */}
+              <div className="activity-input-row-inner" style={{ 
+                marginTop: 16,
+                flexShrink: 0,
+                paddingTop: 16,
+                borderTop: '1px solid #f0f0f0'
+              }}>
+                <Input
+                  className="activity-input"
+                  placeholder="Write Activity Name"
+                  value={activityName}
+                  onChange={val => setActivityName(val)}
+                  clearable
+                  style={{ flex: 1 }}
+                />
+                <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName}>Start</Button>
               </div>
             </div>
-            
-            {/* 固定在底部的输入框 */}
-            <div className="activity-input-row-inner" style={{ 
-              marginTop: 16,
-              flexShrink: 0,
-              paddingTop: 16,
-              borderTop: '1px solid #f0f0f0'
-            }}>
-              <Input
-                className="activity-input"
-                placeholder="Write Activity Name"
-                value={activityName}
-                onChange={val => setActivityName(val)}
-                clearable
-                style={{ flex: 1 }}
-              />
-              <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName}>Start</Button>
-            </div>
           </div>
-        </div>
-      ) : (
+        </>
+      )}
+      {/* 底部固定活动选择与输入区 */}
+      {!showBottomSheet && (
         <div style={{
           position: 'fixed',
           left: '50%',
