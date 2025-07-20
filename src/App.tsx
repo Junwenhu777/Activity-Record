@@ -463,12 +463,14 @@ function App() {
                 background: '#fff',
                 borderRadius: '16px 16px 0 0',
                 width: '100%',
+                maxWidth: '100vw',
                 height: 'calc(100vh - 24px)',
                 margin: '0 auto',
                 display: 'flex',
                 flexDirection: 'column',
                 boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
-                position: 'relative'
+                position: 'relative',
+                overflow: 'hidden'
               }}
             >
               {/* 标题区 */}
@@ -478,8 +480,8 @@ function App() {
                 justifyContent: 'space-between', 
                 width: '100%', 
                 padding: '24px 24px 16px 24px',
-                paddingLeft: 'max(24px, env(safe-area-inset-left))',
-                paddingRight: 'max(24px, env(safe-area-inset-right))',
+                paddingLeft: 'max(12px, env(safe-area-inset-left))',
+                paddingRight: 'max(12px, env(safe-area-inset-right))',
                 borderBottom: '1px solid #f0f0f0'
               }}>
                 <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Summary</div>
@@ -649,8 +651,8 @@ function App() {
               {/* 筛选选项区 */}
               <div style={{ 
                 padding: '16px 24px',
-                paddingLeft: 'max(24px, env(safe-area-inset-left))',
-                paddingRight: 'max(24px, env(safe-area-inset-right))',
+                paddingLeft: 'max(12px, env(safe-area-inset-left))',
+                paddingRight: 'max(12px, env(safe-area-inset-right))',
                 borderBottom: '1px solid #f0f0f0',
                 display: 'flex',
                 gap: 12
@@ -702,8 +704,10 @@ function App() {
                 flex: 1,
                 overflowY: 'auto',
                 padding: '16px 24px',
-                paddingLeft: 'max(24px, env(safe-area-inset-left))',
-                paddingRight: 'max(24px, env(safe-area-inset-right))'
+                paddingLeft: 'max(12px, env(safe-area-inset-left))',
+                paddingRight: 'max(12px, env(safe-area-inset-right))',
+                boxSizing: 'border-box',
+                width: '100%'
               }}>
                 {(() => {
                   const groupedData = groupDataByTimeGranularity(history, current, now, timeGranularity);
@@ -737,10 +741,11 @@ function App() {
                                   justifyContent: 'space-between',
                                   alignItems: 'center',
                                   fontSize: 14,
-                                  fontWeight: 500
+                                  fontWeight: 500,
+                                  minWidth: 0
                                 }}>
-                                  <span>{activity.name}</span>
-                                  <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666' }}>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activity.name}</span>
+                                  <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666', flexShrink: 0 }}>
                                     {formatHMS(Math.round(activity.duration / 1000))}
                                   </span>
                                 </div>
@@ -748,8 +753,10 @@ function App() {
                                   background: getActivityColor(activity.name),
                                   height: 16,
                                   borderRadius: 4,
-                                  width: `${Math.max(20, (activity.duration / maxDuration) * 120)}px`,
-                                  minWidth: 20
+                                  width: `${Math.max(20, Math.min(80, (activity.duration / maxDuration) * 80))}px`,
+                                  minWidth: 20,
+                                  maxWidth: 80,
+                                  flexShrink: 0
                                 }} />
                               </div>
                             ))}
