@@ -1062,7 +1062,7 @@ function App() {
                   </select>
                 </div>
                 {/* 活动筛选下拉菜单 */}
-                <div style={{ position: 'relative', width: 'fit-content', zIndex: 100000 }}>
+                <div style={{ position: 'relative', width: 'fit-content', zIndex: 100003 }}>
                   <div
                     data-activity-filter-button
                     style={{
@@ -1144,7 +1144,7 @@ function App() {
                         minWidth: 200,
                         maxHeight: 350,
                         overflowY: 'auto',
-                        zIndex: 100000,
+                        zIndex: 100003,
                         scrollbarWidth: 'none',
                         msOverflowStyle: 'none',
                         animation: isActivityFilterClosing 
