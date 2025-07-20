@@ -517,12 +517,19 @@ function App() {
       const target = e.target as Element;
       const popupContent = document.querySelector('.summary-popup-content');
       const popupOuter = document.querySelector('.summary-popup-outer');
+      const activityPopupInner = document.querySelector('.activity-popup-inner');
       
       // 如果滚动事件来自popup内部，则不关闭popup
       if (popupContent && (popupContent.contains(target) || popupContent === target)) {
+        console.log('Scroll event from popup content, ignoring');
         return;
       }
       if (popupOuter && (popupOuter.contains(target) || popupOuter === target)) {
+        console.log('Scroll event from popup outer, ignoring');
+        return;
+      }
+      if (activityPopupInner && (activityPopupInner.contains(target) || activityPopupInner === target)) {
+        console.log('Scroll event from activity popup inner, ignoring');
         return;
       }
       
@@ -546,12 +553,19 @@ function App() {
       const target = e.target as Element;
       const popupContent = document.querySelector('.summary-popup-content');
       const popupOuter = document.querySelector('.summary-popup-outer');
+      const activityPopupInner = document.querySelector('.activity-popup-inner');
       
       // 如果触摸事件来自popup内部，则不关闭popup
       if (popupContent && (popupContent.contains(target) || popupContent === target)) {
+        console.log('Touch move event from popup content, ignoring');
         return;
       }
       if (popupOuter && (popupOuter.contains(target) || popupOuter === target)) {
+        console.log('Touch move event from popup outer, ignoring');
+        return;
+      }
+      if (activityPopupInner && (activityPopupInner.contains(target) || activityPopupInner === target)) {
+        console.log('Touch move event from activity popup inner, ignoring');
         return;
       }
       
