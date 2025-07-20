@@ -2,6 +2,16 @@ body, .activity-bg {
   background: #E9F2F4 !important;
 }
 
+/* 隐藏整个页面的滚动条 */
+html, body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
 .activity-container, .activity-main {
   position: relative;
   min-height: 100vh;
@@ -13,6 +23,13 @@ body, .activity-bg {
   padding-right: 12px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* 隐藏滚动条 - 所有浏览器 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.activity-main::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .activity-bottom-sheet-fixed {
