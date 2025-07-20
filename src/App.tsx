@@ -419,7 +419,7 @@ function App() {
             paddingRight: 12, // 恢复右侧安全边距
           }}>
             <div className="activity-title" style={{ marginLeft: '4px', textAlign: 'left', marginTop: '12px' }}>
-              Activity Records
+              🐱 Activity Records
             </div>
             <button 
               onClick={handleDownloadClick}
@@ -427,8 +427,8 @@ function App() {
                 width: 36, 
                 height: 36, 
                 borderRadius: '50%', 
-                border: '1px solid #bbb',
-                background: 'none', 
+                border: 'none',
+                background: 'rgba(110, 176, 188, 0.2)', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
@@ -437,7 +437,7 @@ function App() {
               }}
             >
               <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.0413 16.9216H2.91626V15.7224H16.0413V16.9216ZM10.0784 11.5935L12.9924 8.67944L13.8401 9.5271L9.90259 13.4646C9.66827 13.6989 9.28925 13.6989 9.05493 13.4646L5.11743 9.5271L5.96509 8.67944L8.87915 11.5935V2.54077H10.0784V11.5935Z" fill="black" fillOpacity="0.85"/>
+                <path d="M15.0806 9.7376C15.697 9.09724 16.0414 8.24295 16.0414 7.3541C16.0414 6.46524 15.697 5.61095 15.0806 4.9706C14.7801 4.65842 14.4197 4.41008 14.021 4.24046C13.6222 4.07083 13.1934 3.9834 12.7601 3.9834C12.3268 3.9834 11.8979 4.07083 11.4992 4.24046C11.1005 4.41008 10.7401 4.65842 10.4396 4.9706L9.50245 5.98385L8.51808 4.97256C8.21758 4.66039 7.85718 4.41205 7.45846 4.24242C7.05973 4.0728 6.63088 3.98537 6.19758 3.98537C5.76427 3.98537 5.33542 4.0728 4.9367 4.24242C4.53797 4.41205 4.17758 4.66039 3.87708 4.97256C3.26063 5.61292 2.91626 6.46721 2.91626 7.35606C2.91626 8.24492 3.26063 9.09921 3.87708 9.73956L9.4552 15.4693L15.0806 9.7376Z" fill="#003746"/>
               </svg>
             </button>
           </div>
@@ -479,7 +479,7 @@ function App() {
                 alignItems: 'center', 
                 justifyContent: 'space-between', 
                 width: '100%', 
-                padding: '24px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left))',
+                padding: '24px 24px 16px 24px',
                 boxSizing: 'border-box'
               }}>
                 <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Summary</div>
@@ -489,8 +489,8 @@ function App() {
                     <button 
                       onClick={() => setShowDownloadOptions(!showDownloadOptions)}
                       style={{
-                        width: 48,
-                        height: 48,
+                        width: 38,
+                        height: 38,
                         background: '#E9F2F4',
                         border: 'none',
                         borderRadius: '50%',
@@ -498,9 +498,25 @@ function App() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: 0
+                        padding: 0,
+                        position: 'relative'
                       }}
                     >
+                      {/* 选中态蒙层 */}
+                      {showDownloadOptions && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            borderRadius: '50%',
+                            background: 'rgba(0, 146, 189, 0.2)',
+                            pointerEvents: 'none'
+                          }}
+                        />
+                      )}
                       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M15.5625 16.1953H2.4375V14.9961H15.5625V16.1953ZM9.59961 10.8672L12.5137 7.95312L13.3613 8.80078L9.42383 12.7383C9.18952 12.9726 8.81048 12.9726 8.57617 12.7383L4.63867 8.80078L5.48633 7.95312L8.40039 10.8672V1.81445H9.59961V10.8672Z" fill="black" fillOpacity="0.85"/>
                       </svg>
@@ -631,8 +647,8 @@ function App() {
                   <button 
                     onClick={() => setShowStatsModal(false)}
                     style={{
-                      width: 48,
-                      height: 48,
+                      width: 38,
+                      height: 38,
                       background: '#E9F2F4',
                       border: 'none',
                       borderRadius: '50%',
@@ -652,7 +668,7 @@ function App() {
 
               {/* 筛选选项区 */}
               <div style={{ 
-                padding: '16px 14px',
+                padding: '16px 24px',
                 display: 'flex',
                 gap: 10,
                 boxSizing: 'border-box'
@@ -769,7 +785,7 @@ function App() {
               <div style={{ 
                 flex: 1,
                 overflowY: 'auto',
-                padding: '16px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left))',
+                padding: '16px 24px 16px 24px',
                 boxSizing: 'border-box',
                 width: '100%'
               }}>
@@ -793,14 +809,26 @@ function App() {
                         }}>
                           {formatTimeKey(timeKey, timeGranularity)}
                         </div>
+                        <div 
+                          className="summary-card"
+                          style={{
+                            borderRadius: 10,
+                            border: '1px solid rgba(0, 0, 0, 0.10)',
+                            background: '#E9F2F4',
+                            maxHeight: 306,
+                            overflowY: 'auto',
+                            padding: 16,
+                            boxSizing: 'border-box'
+                          }}
+                        >
                         
                         {chartType === 'Bar Chart' ? (
                           // 条形图显示
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                             {activities.map(activity => (
-                              <div key={activity.name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div key={activity.name} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {/* 第一行：活动名和时间 */}
                                 <div style={{ 
-                                  flex: 1,
                                   display: 'flex',
                                   justifyContent: 'space-between',
                                   alignItems: 'center',
@@ -813,13 +841,13 @@ function App() {
                                     {formatHMS(Math.round(activity.duration / 1000))}
                                   </span>
                                 </div>
+                                {/* 第二行：条形图 */}
                                 <div style={{ 
                                   background: getActivityColor(activity.name),
                                   height: 16,
                                   borderRadius: 4,
-                                  width: `${Math.max(20, Math.min(80, (activity.duration / maxDuration) * 80))}px`,
+                                  width: `${Math.max(20, Math.min(100, (activity.duration / maxDuration) * 100))}%`,
                                   minWidth: 20,
-                                  maxWidth: 80,
                                   flexShrink: 0
                                 }} />
                               </div>
@@ -925,6 +953,7 @@ function App() {
                             </div>
                           </div>
                         )}
+                        </div>
                       </div>
                     );
                   });
