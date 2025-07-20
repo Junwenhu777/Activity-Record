@@ -11,6 +11,8 @@ body, .activity-bg {
 .activity-main {
   padding-left: 12px;
   padding-right: 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .activity-bottom-sheet-fixed {
@@ -64,6 +66,15 @@ body, .activity-bg {
   margin-bottom: 0;
   letter-spacing: 0.5px;
   background: #e9f2f4;
+  transition: opacity 0.2s ease;
+}
+
+.activity-title:hover {
+  opacity: 0.7;
+}
+
+.activity-title:active {
+  opacity: 0.5;
 }
 
 .activity-card-now {
@@ -468,7 +479,6 @@ button:focus-visible {
   }
   .activity-main {
     padding: 84px 12px 0 12px;
-    max-height: calc(100vh - 180px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* 为iOS添加平滑滚动 */
     scrollbar-width: none; /* Firefox */

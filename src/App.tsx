@@ -422,26 +422,77 @@ function App() {
   // 滚动监听
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
-    if (scrollTop > lastScrollTop.current + 5) {
-      // 向上滑动，收起popup
-      if (!isBottomSheetClosing) {
-        setIsBottomSheetClosing(true);
-        setShowStartButton(false);
-                  setTimeout(() => {
-            setShowBottomSheet(false);
-            // 立即重置关闭状态，确保popup从DOM中移除
-            setIsBottomSheetClosing(false);
-            // 立即从DOM中移除popup
-            setPopupRendered(false);
-            // 延迟显示start按钮，确保popup完全消失
-            setTimeout(() => {
-              setShowStartButton(true);
-            }, 100);
-          }, 450);
-      }
+    
+    // 任何滚动都收起popup并显示start按钮
+    if (popupRendered && !isBottomSheetClosing) {
+      setIsBottomSheetClosing(true);
+      setShowStartButton(false);
+      setTimeout(() => {
+        setShowBottomSheet(false);
+        // 立即重置关闭状态，确保popup从DOM中移除
+        setIsBottomSheetClosing(false);
+        // 立即从DOM中移除popup
+        setPopupRendered(false);
+        // 延迟显示start按钮，确保popup完全消失
+        setTimeout(() => {
+          setShowStartButton(true);
+        }, 100);
+      }, 450);
     }
+    
     lastScrollTop.current = scrollTop;
   };
+
+  // 移动端触摸滚动监听
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    // 移动端触摸滚动时也收起popup，使用节流处理
+    throttledScrollHandler(e as any);
+  };
+
+  // 节流函数
+  const throttle = (func: Function, delay: number) => {
+    let timeoutId: number;
+    let lastExecTime = 0;
+    return function (...args: any[]) {
+      const currentTime = Date.now();
+      if (currentTime - lastExecTime > delay) {
+        func.apply(null, args);
+        lastExecTime = currentTime;
+      } else {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          func.apply(null, args);
+          lastExecTime = Date.now();
+        }, delay - (currentTime - lastExecTime));
+      }
+    };
+  };
+
+  // 节流后的滚动处理函数
+  const throttledScrollHandler = throttle((e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    console.log('Scroll/Touch event triggered, popupRendered:', popupRendered, 'isBottomSheetClosing:', isBottomSheetClosing);
+    
+    // 任何滚动都收起popup并显示start按钮
+    if (popupRendered && !isBottomSheetClosing) {
+      console.log('Closing popup due to scroll/touch');
+      setIsBottomSheetClosing(true);
+      setShowStartButton(false);
+      setTimeout(() => {
+        setShowBottomSheet(false);
+        // 立即重置关闭状态，确保popup从DOM中移除
+        setIsBottomSheetClosing(false);
+        // 立即从DOM中移除popup
+        setPopupRendered(false);
+        // 延迟显示start按钮，确保popup完全消失
+        setTimeout(() => {
+          setShowStartButton(true);
+        }, 100);
+      }, 450);
+    }
+    
+    lastScrollTop.current = scrollTop;
+  }, 100); // 100ms节流
 
   // 下载按钮点击逻辑
   const handleDownloadClick = () => {
@@ -529,7 +580,28 @@ function App() {
             paddingLeft: 0, // 移除左侧内边距，让CSS控制
             paddingRight: 0, // 确保右侧也没有内边距
           }}>
-            <div className="activity-title" style={{ textAlign: 'left' }}>
+            <div 
+              className="activity-title" 
+              style={{ 
+                textAlign: 'left',
+                cursor: 'pointer',
+                userSelect: 'none'
+              }}
+              onClick={() => {
+                // 滚动到主内容区顶部
+                if (mainRef.current) {
+                  mainRef.current.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                  });
+                }
+                // 同时滚动整个页面到顶部
+                window.scrollTo({
+                  top: 0,
+                  behavior: 'smooth'
+                });
+              }}
+            >
               🐱 Activity Records
             </div>
             <button 
@@ -584,7 +656,7 @@ function App() {
                 flexDirection: 'column',
                 boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
                 position: 'relative',
-                overflow: 'visible',
+                overflow: 'hidden',
                 animation: isStatsModalClosing 
                   ? 'slideDown 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
                   : 'slideUp 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
@@ -1447,11 +1519,17 @@ function App() {
         <div
           className="activity-main"
           ref={mainRef}
-          onScroll={handleScroll}
+          onScroll={throttledScrollHandler}
+          onTouchMove={handleTouchMove}
           onClick={e => {
             // 如果点击的是卡片内的按钮，不处理
             if ((e.target as HTMLElement).tagName.toLowerCase() === 'button') return;
             setSwipeDelete(null);
+          }}
+          style={{
+            minHeight: '100vh',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch'
           }}
         >
           {/* 日期时间区块 */}
