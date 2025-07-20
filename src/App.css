@@ -18,9 +18,9 @@ body, .activity-bg {
   border-top-left-radius: 28px;
   border-top-right-radius: 28px;
   padding-top: calc(18px + env(safe-area-inset-top));
-  padding-bottom: 8px;
+  padding-bottom: 18px;
   margin-bottom: 0;
-  height: 280px; /* 固定高度 */
+  height: 290px; /* 增加10px高度 */
   overflow: hidden; /* 防止popup本身滚动 */
 }
 
@@ -180,6 +180,26 @@ body, .activity-bg {
 }
 
 .summary-card {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* 隐藏 Summary popup 窗口滚动条 */
+.summary-popup-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.summary-popup-content {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* 隐藏 Summary popup 内容区域滚动条 */
+.summary-popup-content > div::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.summary-popup-content > div {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }

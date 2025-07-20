@@ -1230,8 +1230,8 @@ function App() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: 'transparent',
-                    border: '1px solid #ccc'
+                    backgroundColor: '#E9F2F4',
+                    border: 'none'
                   }} 
                   onClick={stopCurrent}
                 >
@@ -1543,6 +1543,7 @@ function App() {
                 marginTop: 16,
                 flexShrink: 0,
                 paddingTop: 16,
+                paddingBottom: 10,
                 borderTop: '1px solid #f0f0f0'
               }}>
                 <Input
