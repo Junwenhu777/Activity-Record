@@ -652,13 +652,13 @@ function App() {
 
               {/* 筛选选项区 */}
               <div style={{ 
-                padding: '16px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left))',
+                padding: '16px 14px',
                 display: 'flex',
                 gap: 10,
                 boxSizing: 'border-box'
               }}>
                 {/* 时间选择下拉菜单 */}
-                <div style={{ position: 'relative', flex: 1 }}>
+                <div style={{ position: 'relative', width: 'fit-content' }}>
                   <div
                     style={{
                       display: 'flex',
@@ -668,7 +668,7 @@ function App() {
                       alignItems: 'center',
                       gap: 10,
                       borderRadius: 200,
-                      border: '1px solid rgba(0, 0, 0, 0.20)',
+                      border: 'none',
                       background: '#E9F2F4',
                       cursor: 'pointer',
                       boxSizing: 'border-box'
@@ -712,7 +712,7 @@ function App() {
                   </select>
                 </div>
                 {/* 统计图类型选择下拉菜单 */}
-                <div style={{ position: 'relative', flex: 1 }}>
+                <div style={{ position: 'relative', width: 'fit-content' }}>
                   <div
                     style={{
                       display: 'flex',
@@ -722,7 +722,7 @@ function App() {
                       alignItems: 'center',
                       gap: 10,
                       borderRadius: 200,
-                      border: '1px solid rgba(0, 0, 0, 0.20)',
+                      border: 'none',
                       background: '#E9F2F4',
                       cursor: 'pointer',
                       boxSizing: 'border-box'
