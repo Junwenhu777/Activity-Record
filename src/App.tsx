@@ -479,10 +479,9 @@ function App() {
                 alignItems: 'center', 
                 justifyContent: 'space-between', 
                 width: '100%', 
-                padding: '24px 24px 16px 24px',
-                paddingLeft: 'max(12px, env(safe-area-inset-left))',
-                paddingRight: 'max(12px, env(safe-area-inset-right))',
-                borderBottom: '1px solid #f0f0f0'
+                padding: '24px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left))',
+                borderBottom: '1px solid #f0f0f0',
+                boxSizing: 'border-box'
               }}>
                 <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Summary</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -499,11 +498,12 @@ function App() {
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 16
+                        justifyContent: 'center'
                       }}
                     >
-                      ↓
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15.5625 16.1953H2.4375V14.9961H15.5625V16.1953ZM9.59961 10.8672L12.5137 7.95312L13.3613 8.80078L9.42383 12.7383C9.18952 12.9726 8.81048 12.9726 8.57617 12.7383L4.63867 8.80078L5.48633 7.95312L8.40039 10.8672V1.81445H9.59961V10.8672Z" fill="black" fillOpacity="0.85"/>
+                      </svg>
                     </button>
                     {/* 下载选项下拉菜单 */}
                     {showDownloadOptions && (
@@ -639,23 +639,23 @@ function App() {
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 18
+                      justifyContent: 'center'
                     }}
                   >
-                    ×
+                    <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14.158 5.27173L9.98804 9.44165L14.158 13.6116L13.3103 14.4592L9.14038 10.2893L4.97046 14.4592L4.1228 13.6116L8.29272 9.44165L4.1228 5.27173L4.97046 4.42407L9.14038 8.59399L13.3103 4.42407L14.158 5.27173Z" fill="black" fillOpacity="0.85"/>
+                    </svg>
                   </button>
                 </div>
               </div>
 
               {/* 筛选选项区 */}
               <div style={{ 
-                padding: '16px 24px',
-                paddingLeft: 'max(12px, env(safe-area-inset-left))',
-                paddingRight: 'max(12px, env(safe-area-inset-right))',
+                padding: '16px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left))',
                 borderBottom: '1px solid #f0f0f0',
                 display: 'flex',
-                gap: 12
+                gap: 12,
+                boxSizing: 'border-box'
               }}>
                 {/* 时间选择下拉菜单 */}
                 <div style={{ position: 'relative', flex: 1 }}>
@@ -703,9 +703,7 @@ function App() {
               <div style={{ 
                 flex: 1,
                 overflowY: 'auto',
-                padding: '16px 24px',
-                paddingLeft: 'max(12px, env(safe-area-inset-left))',
-                paddingRight: 'max(12px, env(safe-area-inset-right))',
+                padding: '16px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left))',
                 boxSizing: 'border-box',
                 width: '100%'
               }}>
