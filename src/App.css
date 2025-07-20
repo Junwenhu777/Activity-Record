@@ -318,4 +318,6 @@ body, .activity-bg {
   flex-direction: column;
   box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
   position: relative;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
 }

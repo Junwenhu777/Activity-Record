@@ -478,6 +478,8 @@ function App() {
                 justifyContent: 'space-between', 
                 width: '100%', 
                 padding: '24px 24px 16px 24px',
+                paddingLeft: 'max(24px, env(safe-area-inset-left))',
+                paddingRight: 'max(24px, env(safe-area-inset-right))',
                 borderBottom: '1px solid #f0f0f0'
               }}>
                 <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Summary</div>
@@ -647,6 +649,8 @@ function App() {
               {/* 筛选选项区 */}
               <div style={{ 
                 padding: '16px 24px',
+                paddingLeft: 'max(24px, env(safe-area-inset-left))',
+                paddingRight: 'max(24px, env(safe-area-inset-right))',
                 borderBottom: '1px solid #f0f0f0',
                 display: 'flex',
                 gap: 12
@@ -697,7 +701,9 @@ function App() {
               <div style={{ 
                 flex: 1,
                 overflowY: 'auto',
-                padding: '16px 24px'
+                padding: '16px 24px',
+                paddingLeft: 'max(24px, env(safe-area-inset-left))',
+                paddingRight: 'max(24px, env(safe-area-inset-right))'
               }}>
                 {(() => {
                   const groupedData = groupDataByTimeGranularity(history, current, now, timeGranularity);
@@ -749,39 +755,103 @@ function App() {
                             ))}
                           </div>
                         ) : (
-                          // 饼图显示（简化为彩色圆点）
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {activities.map(activity => (
-                              <div key={activity.name} style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: 12,
-                                padding: '8px 12px',
-                                background: '#f8f9fa',
-                                borderRadius: 8
+                          // 饼图显示
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {/* 饼图容器 */}
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'center', 
+                              marginBottom: 16 
+                            }}>
+                              <div style={{ 
+                                position: 'relative',
+                                width: 120,
+                                height: 120
                               }}>
-                                <div style={{
-                                  width: 12,
-                                  height: 12,
-                                  borderRadius: '50%',
-                                  background: getActivityColor(activity.name),
-                                  flexShrink: 0
-                                }} />
-                                <div style={{ 
-                                  flex: 1,
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  fontSize: 14,
-                                  fontWeight: 500
-                                }}>
-                                  <span>{activity.name}</span>
-                                  <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666' }}>
-                                    {formatHMS(Math.round(activity.duration / 1000))}
-                                  </span>
-                                </div>
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                  {(() => {
+                                    const totalDuration = activities.reduce((sum, a) => sum + a.duration, 0);
+                                    let currentAngle = 0;
+                                    
+                                    return activities.map((activity) => {
+                                      const percentage = totalDuration > 0 ? activity.duration / totalDuration : 0;
+                                      const angle = percentage * 360;
+                                      const startAngle = currentAngle;
+                                      const endAngle = currentAngle + angle;
+                                      
+                                      // 计算弧线路径
+                                      const radius = 50;
+                                      const centerX = 60;
+                                      const centerY = 60;
+                                      
+                                      const startRad = (startAngle - 90) * Math.PI / 180;
+                                      const endRad = (endAngle - 90) * Math.PI / 180;
+                                      
+                                      const x1 = centerX + radius * Math.cos(startRad);
+                                      const y1 = centerY + radius * Math.sin(startRad);
+                                      const x2 = centerX + radius * Math.cos(endRad);
+                                      const y2 = centerY + radius * Math.sin(endRad);
+                                      
+                                      const largeArcFlag = angle > 180 ? 1 : 0;
+                                      
+                                      const pathData = [
+                                        `M ${centerX} ${centerY}`,
+                                        `L ${x1} ${y1}`,
+                                        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                        'Z'
+                                      ].join(' ');
+                                      
+                                      currentAngle += angle;
+                                      
+                                      return (
+                                        <path
+                                          key={activity.name}
+                                          d={pathData}
+                                          fill={getActivityColor(activity.name)}
+                                          stroke="#fff"
+                                          strokeWidth="2"
+                                        />
+                                      );
+                                    });
+                                  })()}
+                                </svg>
                               </div>
-                            ))}
+                            </div>
+                            
+                            {/* 图例 */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {activities.map(activity => (
+                                <div key={activity.name} style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: 12,
+                                  padding: '8px 12px',
+                                  background: '#f8f9fa',
+                                  borderRadius: 8
+                                }}>
+                                  <div style={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: '50%',
+                                    background: getActivityColor(activity.name),
+                                    flexShrink: 0
+                                  }} />
+                                  <div style={{ 
+                                    flex: 1,
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    fontSize: 14,
+                                    fontWeight: 500
+                                  }}>
+                                    <span>{activity.name}</span>
+                                    <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666' }}>
+                                      {formatHMS(Math.round(activity.duration / 1000))}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
