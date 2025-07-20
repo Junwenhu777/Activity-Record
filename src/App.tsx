@@ -480,7 +480,6 @@ function App() {
                 justifyContent: 'space-between', 
                 width: '100%', 
                 padding: '24px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left))',
-                borderBottom: '1px solid #f0f0f0',
                 boxSizing: 'border-box'
               }}>
                 <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Summary</div>
@@ -490,15 +489,16 @@ function App() {
                     <button 
                       onClick={() => setShowDownloadOptions(!showDownloadOptions)}
                       style={{
-                        width: 40,
-                        height: 40,
-                        background: '#f5f5f5',
+                        width: 48,
+                        height: 48,
+                        background: '#E9F2F4',
                         border: 'none',
                         borderRadius: '50%',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        justifyContent: 'center',
+                        padding: 0
                       }}
                     >
                       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -631,15 +631,16 @@ function App() {
                   <button 
                     onClick={() => setShowStatsModal(false)}
                     style={{
-                      width: 40,
-                      height: 40,
-                      background: '#f5f5f5',
+                      width: 48,
+                      height: 48,
+                      background: '#E9F2F4',
                       border: 'none',
                       borderRadius: '50%',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      padding: 0
                     }}
                   >
                     <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -652,23 +653,55 @@ function App() {
               {/* 筛选选项区 */}
               <div style={{ 
                 padding: '16px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left))',
-                borderBottom: '1px solid #f0f0f0',
                 display: 'flex',
-                gap: 12,
+                gap: 10,
                 boxSizing: 'border-box'
               }}>
                 {/* 时间选择下拉菜单 */}
                 <div style={{ position: 'relative', flex: 1 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      height: 38,
+                      padding: '10px 14px',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: 10,
+                      borderRadius: 200,
+                      border: '1px solid rgba(0, 0, 0, 0.20)',
+                      background: '#E9F2F4',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box'
+                    }}
+                    onClick={() => {
+                      // 这里可以添加下拉菜单的展开逻辑
+                    }}
+                  >
+                    <span style={{
+                      color: '#000',
+                      fontSize: 12,
+                      fontStyle: 'normal',
+                      fontWeight: 700,
+                      lineHeight: 'normal',
+                      textTransform: 'capitalize'
+                    }}>
+                      {timeGranularity}
+                    </span>
+                    <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  {/* 隐藏的原生 select 用于数据绑定 */}
                   <select
                     value={timeGranularity}
                     onChange={(e) => setTimeGranularity(e.target.value as 'Day' | 'Week' | 'Month' | 'Year')}
                     style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
                       width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: 8,
-                      background: '#fff',
-                      fontSize: 14,
+                      height: '100%',
+                      opacity: 0,
                       cursor: 'pointer'
                     }}
                   >
@@ -680,16 +713,49 @@ function App() {
                 </div>
                 {/* 统计图类型选择下拉菜单 */}
                 <div style={{ position: 'relative', flex: 1 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      height: 38,
+                      padding: '10px 14px',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: 10,
+                      borderRadius: 200,
+                      border: '1px solid rgba(0, 0, 0, 0.20)',
+                      background: '#E9F2F4',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box'
+                    }}
+                    onClick={() => {
+                      // 这里可以添加下拉菜单的展开逻辑
+                    }}
+                  >
+                    <span style={{
+                      color: '#000',
+                      fontSize: 12,
+                      fontStyle: 'normal',
+                      fontWeight: 700,
+                      lineHeight: 'normal',
+                      textTransform: 'capitalize'
+                    }}>
+                      {chartType}
+                    </span>
+                    <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  {/* 隐藏的原生 select 用于数据绑定 */}
                   <select
                     value={chartType}
                     onChange={(e) => setChartType(e.target.value as 'Bar Chart' | 'Pie Chart')}
                     style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
                       width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: 8,
-                      background: '#fff',
-                      fontSize: 14,
+                      height: '100%',
+                      opacity: 0,
                       cursor: 'pointer'
                     }}
                   >
