@@ -190,11 +190,13 @@ function App() {
   });
   const [now, setNow] = useState(new Date());
   const [showBottomSheet, setShowBottomSheet] = useState(true);
+  const [isBottomSheetClosing, setIsBottomSheetClosing] = useState(false);
   const [recentActivities, setRecentActivities] = useState<string[]>(() => {
     const r = localStorage.getItem('activity-recent');
     return r ? JSON.parse(r) : [];
   });
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [isStatsModalClosing, setIsStatsModalClosing] = useState(false);
   const [showEndCurrentModal, setShowEndCurrentModal] = useState(false);
 
   const lastScrollTop = useRef(0);
@@ -443,7 +445,7 @@ function App() {
           </div>
         </div>
         {/* Summary Popup 窗口 */}
-        {showStatsModal && (
+        {(showStatsModal || isStatsModalClosing) && (
           <div className="summary-popup-outer" style={{
             position: 'fixed',
             top: 0,
@@ -456,6 +458,9 @@ function App() {
             flexDirection: 'column',
             paddingTop: '24px',
             boxSizing: 'border-box',
+            animation: isStatsModalClosing 
+              ? 'fadeOut 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+              : 'fadeIn 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
             <div
               className="summary-popup-content"
@@ -470,7 +475,10 @@ function App() {
                 flexDirection: 'column',
                 boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                animation: isStatsModalClosing 
+                  ? 'slideDown 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                  : 'slideUp 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               }}
             >
               {/* 标题区 */}
@@ -645,7 +653,13 @@ function App() {
                   </div>
                   {/* 关闭按钮 */}
                   <button 
-                    onClick={() => setShowStatsModal(false)}
+                    onClick={() => {
+                      setIsStatsModalClosing(true);
+                      setTimeout(() => {
+                        setShowStatsModal(false);
+                        setIsStatsModalClosing(false);
+                      }, 250);
+                    }}
                     style={{
                       width: 38,
                       height: 38,
@@ -1035,6 +1049,7 @@ function App() {
             justifyContent: 'center',
             padding: '0 24px',
             boxSizing: 'border-box',
+                        animation: 'fadeIn 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
             <div
               className="modal-content"
@@ -1048,11 +1063,12 @@ function App() {
                 boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
                 textAlign: 'center',
                 position: 'relative',
+                animation: 'scaleIn 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>
-                There is an ongoing activity. Do you want to stop it and continue?
-              </div>
+                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>
+                  There is an ongoing activity. Do you want to stop it and continue?
+                </div>
               <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 24 }}>
                 <button
                   style={{
@@ -1106,6 +1122,7 @@ function App() {
                 boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
                 textAlign: 'center',
                 position: 'relative',
+                animation: 'scaleIn 300ms linear'
               }}
             >
               <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>
@@ -1462,7 +1479,7 @@ function App() {
         </div>
       </div>
       {/* 底部固定活动选择与输入区 */}
-      {showBottomSheet && (
+      {(showBottomSheet || isBottomSheetClosing) && (
         <>
           <div
             style={{
@@ -1474,10 +1491,31 @@ function App() {
               zIndex: 199,
               background: 'rgba(0,0,0,0)', // 可根据需要加深遮罩色
             }}
-            onClick={() => setShowBottomSheet(false)}
-            onTouchStart={() => setShowBottomSheet(false)}
+            onClick={() => {
+              setIsBottomSheetClosing(true);
+              setTimeout(() => {
+                setShowBottomSheet(false);
+                setIsBottomSheetClosing(false);
+              }, 250);
+            }}
+            onTouchStart={() => {
+              setIsBottomSheetClosing(true);
+              setTimeout(() => {
+                setShowBottomSheet(false);
+                setIsBottomSheetClosing(false);
+              }, 250);
+            }}
           />
-          <div className="activity-bottom-sheet-fixed" style={{ zIndex: 200, position: 'fixed', left: '50%', bottom: 0, transform: 'translateX(-50%)' }}>
+          <div className="activity-bottom-sheet-fixed" style={{ 
+            zIndex: 200, 
+            position: 'fixed', 
+            left: '50%', 
+            bottom: 0, 
+            transform: 'translateX(-50%)',
+            animation: isBottomSheetClosing 
+              ? 'slideDownToBottom 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+              : 'slideUpFromBottom 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          }}>
             <div className="activity-popup-inner" style={{ padding: '0 24px', height: '100%', display: 'flex', flexDirection: 'column' }}>
               {/* 可滚动的tag区域 */}
               <div style={{ 
@@ -1567,9 +1605,8 @@ function App() {
           left: '50%',
           bottom: 0,
           transform: 'translateX(-50%)',
-          width: 'calc(100vw - 48px)',
-          maxWidth: 420,
-          background: '#e9f2f4',
+          width: 'auto',
+          background: 'transparent',
           zIndex: 399,
           display: 'flex',
           alignItems: 'flex-end',
@@ -1591,6 +1628,7 @@ function App() {
               boxShadow: '0px 91px 25px 0px rgba(0, 0, 0, 0.00), 0px 58px 23px 0px rgba(0, 0, 0, 0.01), 0px 33px 20px 0px rgba(0, 0, 0, 0.05), 0px 14px 14px 0px rgba(0, 0, 0, 0.09), 0px 4px 8px 0px rgba(0, 0, 0, 0.10)',
               cursor: 'pointer',
               pointerEvents: 'auto',
+              animation: 'fadeInScale 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
             }}
             onClick={() => setShowBottomSheet(true)}
           >

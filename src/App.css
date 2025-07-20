@@ -22,6 +22,7 @@ body, .activity-bg {
   margin-bottom: 0;
   height: 290px; /* 增加10px高度 */
   overflow: hidden; /* 防止popup本身滚动 */
+  transition: transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .activity-header-fixed {
@@ -248,6 +249,124 @@ button:focus-visible {
 .activity-btn:hover {
   -webkit-tap-highlight-color: transparent !important;
   -webkit-touch-callout: none !important;
+}
+
+/* 全局动画效果 - 移除可能导致压缩的动画 */
+* {
+  transition: color 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94), background-color 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94), border-color 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 特定元素的动画效果 */
+.activity-card,
+.activity-card-now,
+.activity-card-history,
+.activity-btn,
+.modal-content,
+.summary-popup-content,
+.activity-bottom-sheet-fixed {
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 弹窗动画 */
+.summary-popup-outer {
+  transition: opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.summary-popup-content {
+  transition: transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 按钮点击动画 */
+.activity-btn:active {
+  transition: background-color 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 输入框动画 */
+.activity-input {
+  transition: border-color 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 卡片动画 */
+.activity-card-now,
+.activity-card-history {
+  transition: opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 关键帧动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUpFromBottom {
+  from {
+    transform: translateX(-50%) translateY(100%);
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes slideDownToBottom {
+  from {
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    transform: translateX(-50%) translateY(100%);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* recent+ADLs tag 区域滚动 */
