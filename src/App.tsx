@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Input, Grid } from 'antd-mobile';
 import './App.css';
 import * as XLSX from 'xlsx';
@@ -1062,7 +1063,7 @@ function App() {
                   </select>
                 </div>
                 {/* 活动筛选下拉菜单 */}
-                <div style={{ position: 'relative', width: 'fit-content', zIndex: 100003 }}>
+                <div style={{ position: 'relative', width: 'fit-content', zIndex: 999999 }}>
                   <div
                     data-activity-filter-button
                     style={{
@@ -1107,8 +1108,8 @@ function App() {
                     </svg>
                   </div>
 
-                  {/* 活动筛选下拉菜单 */}
-                  {(showActivityFilter || isActivityFilterClosing) && (
+                  {/* 活动筛选下拉菜单 - 使用Portal渲染到body顶层 */}
+                  {(showActivityFilter || isActivityFilterClosing) && createPortal(
                     <div 
                       data-activity-filter-options
                       style={{
@@ -1117,7 +1118,7 @@ function App() {
                           const button = document.querySelector('[data-activity-filter-button]');
                           if (button) {
                             const rect = button.getBoundingClientRect();
-                            return rect.bottom - 20;
+                            return rect.bottom + 4;
                           }
                           return '50%';
                         })(),
@@ -1144,12 +1145,13 @@ function App() {
                         minWidth: 200,
                         maxHeight: 350,
                         overflowY: 'auto',
-                        zIndex: 100003,
+                        zIndex: 999999,
                         scrollbarWidth: 'none',
                         msOverflowStyle: 'none',
                         animation: isActivityFilterClosing 
                           ? 'slideUpAndFadeOut 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
-                          : 'slideDownAndFadeIn 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                          : 'slideDownAndFadeIn 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        pointerEvents: 'auto'
                       }}>
                   {/* All 选项 */}
                   <div
@@ -1230,7 +1232,8 @@ function App() {
                       <span>{activity}</span>
                     </div>
                   ))}
-                </div>
+                </div>,
+                document.body
               )}
                 </div>
               </div>
