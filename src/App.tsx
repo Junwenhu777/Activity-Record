@@ -419,29 +419,7 @@ function App() {
     }, 200);
   };
 
-  // 滚动监听
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    
-    // 任何滚动都收起popup并显示start按钮
-    if (popupRendered && !isBottomSheetClosing) {
-      setIsBottomSheetClosing(true);
-      setShowStartButton(false);
-      setTimeout(() => {
-        setShowBottomSheet(false);
-        // 立即重置关闭状态，确保popup从DOM中移除
-        setIsBottomSheetClosing(false);
-        // 立即从DOM中移除popup
-        setPopupRendered(false);
-        // 延迟显示start按钮，确保popup完全消失
-        setTimeout(() => {
-          setShowStartButton(true);
-        }, 100);
-      }, 450);
-    }
-    
-    lastScrollTop.current = scrollTop;
-  };
+
 
   // 移动端触摸滚动监听
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -471,11 +449,9 @@ function App() {
   // 节流后的滚动处理函数
   const throttledScrollHandler = throttle((e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
-    console.log('Scroll/Touch event triggered, popupRendered:', popupRendered, 'isBottomSheetClosing:', isBottomSheetClosing);
     
     // 任何滚动都收起popup并显示start按钮
     if (popupRendered && !isBottomSheetClosing) {
-      console.log('Closing popup due to scroll/touch');
       setIsBottomSheetClosing(true);
       setShowStartButton(false);
       setTimeout(() => {
