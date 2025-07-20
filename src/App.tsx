@@ -225,6 +225,8 @@ function App() {
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [timeGranularity, setTimeGranularity] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Day');
   const [chartType, setChartType] = useState<'Bar Chart' | 'Pie Chart'>('Bar Chart');
+  const [showActivityFilter, setShowActivityFilter] = useState(false);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
 
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
@@ -261,6 +263,18 @@ function App() {
         }
       }
       
+      // 检查是否点击了活动筛选下拉菜单
+      if (showActivityFilter) {
+        const target = e.target as Element;
+        const activityFilterButton = document.querySelector('[data-activity-filter-button]');
+        const activityFilterOptions = document.querySelector('[data-activity-filter-options]');
+        
+        if (activityFilterButton && !activityFilterButton.contains(target) && 
+            activityFilterOptions && !activityFilterOptions.contains(target)) {
+          setShowActivityFilter(false);
+        }
+      }
+      
       // 检查是否点击了 popup 外部区域
       if (showStatsModal && !isStatsModalClosing) {
         const target = e.target as Element;
@@ -270,20 +284,27 @@ function App() {
         if (popupOuter && popupOuter.contains(target) && 
             popupContent && !popupContent.contains(target)) {
           // 点击了 popup 外部区域，开始关闭动画
-          setIsStatsModalClosing(true);
-          setTimeout(() => {
-            setShowStatsModal(false);
-            setIsStatsModalClosing(false);
-          }, 250);
+          // 使用 requestAnimationFrame 确保在下一帧执行，避免 Safari 闪动
+          requestAnimationFrame(() => {
+            setIsStatsModalClosing(true);
+            // 使用更长的延迟确保动画完成
+            setTimeout(() => {
+              setShowStatsModal(false);
+              // 额外延迟重置状态，确保动画完全结束
+              setTimeout(() => {
+                setIsStatsModalClosing(false);
+              }, 50);
+            }, 300);
+          });
         }
       }
     };
 
-    if (showDownloadOptions || showStatsModal) {
+    if (showDownloadOptions || showActivityFilter || showStatsModal) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showDownloadOptions, showStatsModal, isStatsModalClosing]);
+  }, [showDownloadOptions, showActivityFilter, showStatsModal, isStatsModalClosing]);
 
   // localStorage持久化恢复
   useEffect(() => {
@@ -431,6 +452,42 @@ function App() {
       modal.removeEventListener('touchmove', stop);
     };
   }, [showStatsModal]);
+
+  // 获取所有可用活动列表
+  const getAllActivities = () => {
+    const activities = new Set<string>();
+    
+    // 添加历史活动
+    history.forEach(item => {
+      if (!item.deleted) {
+        activities.add(item.name);
+      }
+    });
+    
+    // 添加当前活动
+    if (current) {
+      activities.add(current.name);
+    }
+    
+    // 添加预设活动类型
+    activityTypes.forEach(type => activities.add(type));
+    
+    return Array.from(activities).sort();
+  };
+
+  // 活动筛选逻辑
+  const getFilteredData = (data: any[]) => {
+    if (selectedActivities.length === 0) {
+      return data; // 如果没有选择任何活动，显示所有活动
+    }
+    
+    return data.map(group => ({
+      ...group,
+      activities: group.activities.filter((activity: any) => 
+        selectedActivities.includes(activity.name)
+      )
+    })).filter(group => group.activities.length > 0);
+  };
 
   // 顶部时间戳逻辑
   const isToday = (date: Date) => {
@@ -707,11 +764,18 @@ function App() {
                   {/* 关闭按钮 */}
                   <button 
                     onClick={() => {
-                      setIsStatsModalClosing(true);
-                      setTimeout(() => {
-                        setShowStatsModal(false);
-                        setIsStatsModalClosing(false);
-                      }, 250);
+                      // 使用 requestAnimationFrame 确保在下一帧执行，避免 Safari 闪动
+                      requestAnimationFrame(() => {
+                        setIsStatsModalClosing(true);
+                        // 使用更长的延迟确保动画完成
+                        setTimeout(() => {
+                          setShowStatsModal(false);
+                          // 额外延迟重置状态，确保动画完全结束
+                          setTimeout(() => {
+                            setIsStatsModalClosing(false);
+                          }, 50);
+                        }, 300);
+                      });
                     }}
                     style={{
                       width: 38,
@@ -733,7 +797,7 @@ function App() {
                 </div>
               </div>
 
-              {/* 筛选选项区 */}
+                            {/* 筛选选项区 */}
               <div style={{ 
                 padding: '16px 24px',
                 display: 'flex',
@@ -846,6 +910,138 @@ function App() {
                     <option value="Pie Chart">Pie Chart</option>
                   </select>
                 </div>
+                {/* 活动筛选下拉菜单 */}
+                <div style={{ position: 'relative', width: 'fit-content' }}>
+                  <div
+                    data-activity-filter-button
+                    style={{
+                      display: 'flex',
+                      height: 38,
+                      padding: '10px 14px',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: 10,
+                      borderRadius: 200,
+                      border: 'none',
+                      background: '#E9F2F4',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box'
+                    }}
+                    onClick={() => setShowActivityFilter(!showActivityFilter)}
+                  >
+                    <span style={{
+                      color: '#000',
+                      fontSize: 12,
+                      fontStyle: 'normal',
+                      fontWeight: 700,
+                      lineHeight: 'normal'
+                    }}>
+                      {selectedActivities.length === 0 ? 'All Activities' : `${selectedActivities.length} Selected`}
+                    </span>
+                    <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  {/* 活动筛选下拉菜单 */}
+                  {showActivityFilter && (
+                    <div 
+                      data-activity-filter-options
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        background: '#fff',
+                        borderRadius: 8,
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                        padding: 8,
+                        marginTop: 4,
+                        minWidth: 200,
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        zIndex: 10001
+                      }}>
+                      {/* All 选项 */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderRadius: 4,
+                          fontSize: 14,
+                          background: selectedActivities.length === 0 ? '#f0f0f0' : 'transparent'
+                        }}
+                        onClick={() => {
+                          setSelectedActivities([]);
+                          setShowActivityFilter(false);
+                        }}
+                      >
+                        <div style={{
+                          width: 16,
+                          height: 16,
+                          border: '2px solid #ddd',
+                          borderRadius: 3,
+                          marginRight: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: selectedActivities.length === 0 ? '#007bff' : 'transparent'
+                        }}>
+                          {selectedActivities.length === 0 && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                        <span>All Activities</span>
+                      </div>
+                      
+                      <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
+                      
+                      {/* 各个活动选项 */}
+                      {getAllActivities().map(activity => (
+                        <div
+                          key={activity}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            borderRadius: 4,
+                            fontSize: 14,
+                            background: selectedActivities.includes(activity) ? '#f0f0f0' : 'transparent'
+                          }}
+                          onClick={() => {
+                            if (selectedActivities.includes(activity)) {
+                              setSelectedActivities(prev => prev.filter(a => a !== activity));
+                            } else {
+                              setSelectedActivities(prev => [...prev, activity]);
+                            }
+                          }}
+                        >
+                          <div style={{
+                            width: 16,
+                            height: 16,
+                            border: '2px solid #ddd',
+                            borderRadius: 3,
+                            marginRight: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: selectedActivities.includes(activity) ? '#007bff' : 'transparent'
+                          }}>
+                            {selectedActivities.includes(activity) && (
+                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
+                          <span>{activity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* 内容区域 */}
@@ -858,13 +1054,16 @@ function App() {
               }}>
                 {(() => {
                   const groupedData = groupDataByTimeGranularity(history, current, now, timeGranularity);
-                  if (!groupedData.length) {
-                    return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>No activity data.</div>;
+                  const filteredData = getFilteredData(groupedData);
+                  if (!filteredData.length) {
+                    return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>
+                      {selectedActivities.length === 0 ? 'No activity data.' : 'No data for selected activities.'}
+                    </div>;
                   }
 
-                  return groupedData.map((group, groupIndex) => {
+                  return filteredData.map((group, groupIndex) => {
                     const { timeKey, activities } = group;
-                    const maxDuration = Math.max(...activities.map(a => a.duration));
+                    const maxDuration = Math.max(...activities.map((a: any) => a.duration));
                     
                     return (
                       <div key={timeKey} style={{ marginBottom: groupIndex < groupedData.length - 1 ? 24 : 0 }}>
@@ -892,7 +1091,7 @@ function App() {
                         {chartType === 'Bar Chart' ? (
                           // 条形图显示
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {activities.map(activity => (
+                            {activities.map((activity: any) => (
                               <div key={activity.name} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {/* 第一行：活动名和时间 */}
                                 <div style={{ 
@@ -936,10 +1135,10 @@ function App() {
                               }}>
                                 <svg width="120" height="120" viewBox="0 0 120 120">
                                   {(() => {
-                                    const totalDuration = activities.reduce((sum, a) => sum + a.duration, 0);
+                                    const totalDuration = activities.reduce((sum: any, a: any) => sum + a.duration, 0);
                                     let currentAngle = 0;
                                     
-                                    return activities.map((activity) => {
+                                    return activities.map((activity: any) => {
                                       const percentage = totalDuration > 0 ? activity.duration / totalDuration : 0;
                                       const angle = percentage * 360;
                                       const startAngle = currentAngle;
@@ -986,7 +1185,7 @@ function App() {
                             
                             {/* 图例 */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              {activities.map(activity => (
+                              {activities.map((activity: any) => (
                                 <div key={activity.name} style={{ 
                                   display: 'flex', 
                                   alignItems: 'center', 

@@ -296,27 +296,37 @@ button:focus-visible {
 @keyframes fadeIn {
   from {
     opacity: 0;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
   to {
     opacity: 1;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 }
 
 @keyframes fadeOut {
   from {
     opacity: 1;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
   to {
     opacity: 0;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 }
 
 @keyframes slideUp {
   from {
-    transform: translateY(100%);
+    -webkit-transform: translateY(100%) translateZ(0);
+    transform: translateY(100%) translateZ(0);
   }
   to {
-    transform: translateY(0);
+    -webkit-transform: translateY(0) translateZ(0);
+    transform: translateY(0) translateZ(0);
   }
 }
 
@@ -340,10 +350,12 @@ button:focus-visible {
 
 @keyframes slideDown {
   from {
-    transform: translateY(0);
+    -webkit-transform: translateY(0) translateZ(0);
+    transform: translateY(0) translateZ(0);
   }
   to {
-    transform: translateY(100%);
+    -webkit-transform: translateY(100%) translateZ(0);
+    transform: translateY(100%) translateZ(0);
   }
 }
 
@@ -493,6 +505,12 @@ button:focus-visible {
   position: fixed;
   top: 0;
   left: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
   width: 100vw;
   height: 100vh;
   background: rgba(0,0,0,0.18);
@@ -506,8 +524,17 @@ button:focus-visible {
 .summary-popup-content {
   background: #fff;
   border-radius: 16px 16px 0 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
   width: 100%;
   max-width: 100vw;
+  /* Safari 特定优化 */
+  -webkit-overflow-scrolling: touch;
+  will-change: transform;
   height: calc(100vh - 24px);
   margin: 0 auto;
   display: flex;
