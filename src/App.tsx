@@ -1370,8 +1370,28 @@ function App() {
                                 <svg width="120" height="120" viewBox="0 0 120 120">
                                   {(() => {
                                     const totalDuration = activities.reduce((sum: any, a: any) => sum + a.duration, 0);
-                                    let currentAngle = 0;
                                     
+                                    // 如果只有一个活动，显示完整圆形
+                                    if (activities.length === 1) {
+                                      const activity = activities[0];
+                                      const radius = 50;
+                                      const centerX = 60;
+                                      const centerY = 60;
+                                      
+                                      return (
+                                        <circle
+                                          cx={centerX}
+                                          cy={centerY}
+                                          r={radius}
+                                          fill={getActivityColor(activity.name)}
+                                          stroke="#fff"
+                                          strokeWidth="2"
+                                        />
+                                      );
+                                    }
+                                    
+                                    // 多个活动时显示饼图
+                                    let currentAngle = 0;
                                     return activities.map((activity: any) => {
                                       const percentage = totalDuration > 0 ? activity.duration / totalDuration : 0;
                                       const angle = percentage * 360;
@@ -2059,13 +2079,30 @@ function App() {
               ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
               : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
-            <div className="activity-popup-inner" style={{ padding: '0 24px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div 
+              className="activity-popup-inner" 
+              style={{ padding: '0 24px', height: '100%', display: 'flex', flexDirection: 'column' }}
+              onScroll={(e) => {
+                e.stopPropagation();
+              }}
+              onTouchMove={(e) => {
+                e.stopPropagation();
+              }}
+            >
               {/* 可滚动的tag区域 */}
-              <div style={{ 
-                flex: 1,
-                overflowY: 'auto',
-                paddingRight: '8px'
-              }}>
+              <div 
+                style={{ 
+                  flex: 1,
+                  overflowY: 'auto',
+                  paddingRight: '8px'
+                }}
+                onScroll={(e) => {
+                  e.stopPropagation();
+                }}
+                onTouchMove={(e) => {
+                  e.stopPropagation();
+                }}
+              >
                 {/* Recent Activities */}
                 {recentActivities.length > 0 && (
                   <div style={{ marginBottom: 20 }}>
