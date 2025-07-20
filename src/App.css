@@ -8,6 +8,11 @@ body, .activity-bg {
   padding-bottom: 100px; /* 预留底部按钮空间 */
 }
 
+.activity-main {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
 .activity-bottom-sheet-fixed {
   position: fixed;
   left: 50%;
@@ -56,7 +61,7 @@ body, .activity-bg {
   line-height: normal;
   text-transform: capitalize;
   text-align: left;
-  margin-bottom: 24px;
+  margin-bottom: 0;
   letter-spacing: 0.5px;
   background: #e9f2f4;
 }
@@ -332,19 +337,25 @@ button:focus-visible {
 
 @keyframes slideUpFromBottom {
   from {
-    transform: translateX(-50%) translateY(100%);
+    -webkit-transform: translateX(-50%) translateY(100%) translateZ(0);
+    transform: translateX(-50%) translateY(100%) translateZ(0);
   }
   to {
-    transform: translateX(-50%) translateY(0);
+    -webkit-transform: translateX(-50%) translateY(0) translateZ(0);
+    transform: translateX(-50%) translateY(0) translateZ(0);
   }
 }
 
 @keyframes slideDownToBottom {
   from {
-    transform: translateX(-50%) translateY(0);
+    -webkit-transform: translateX(-50%) translateY(0) translateZ(0);
+    transform: translateX(-50%) translateY(0) translateZ(0);
+    opacity: 1;
   }
   to {
-    transform: translateX(-50%) translateY(100%);
+    -webkit-transform: translateX(-50%) translateY(100%) translateZ(0);
+    transform: translateX(-50%) translateY(100%) translateZ(0);
+    opacity: 0;
   }
 }
 
@@ -372,11 +383,11 @@ button:focus-visible {
 
 @keyframes fadeInScale {
   from {
-    transform: scale(0.8);
+    transform: scale(0.8) translateZ(0);
     opacity: 0;
   }
   to {
-    transform: scale(1);
+    transform: scale(1) translateZ(0);
     opacity: 1;
   }
 }
@@ -450,13 +461,13 @@ button:focus-visible {
     right: 0;
     z-index: 200;
     background: #E9F2F4 !important;
-    padding: 18px 24px 8px 24px;
+    padding: 42px 36px 8px 36px;
     margin-bottom: 0;
     width: 100vw;
     box-sizing: border-box;
   }
   .activity-main {
-    padding: 60px 6px 0 6px;
+    padding: 84px 12px 0 12px;
     max-height: calc(100vh - 180px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* 为iOS添加平滑滚动 */
@@ -477,6 +488,15 @@ button:focus-visible {
     padding-right: 0;
     margin-left: auto;
     margin-right: auto;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000px;
+    perspective: 1000px;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    /* 确保动画结束后元素完全隐藏 */
+    animation-fill-mode: forwards;
   }
   .activity-popup-inner {
     max-width: 100vw;
@@ -519,6 +539,8 @@ button:focus-visible {
   flex-direction: column;
   padding-top: 24px;
   box-sizing: border-box;
+  /* 确保动画结束后元素完全隐藏 */
+  animation-fill-mode: forwards;
 }
 
 .summary-popup-content {
@@ -542,4 +564,11 @@ button:focus-visible {
   box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
   position: relative;
   overflow: hidden;
+  /* 确保动画结束后元素完全隐藏 */
+  animation-fill-mode: forwards;
+}
+
+/* 隐藏筛选器区块的滚动条 */
+.summary-popup-content > div::-webkit-scrollbar {
+  display: none;
 }

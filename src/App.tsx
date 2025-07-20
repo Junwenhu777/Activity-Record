@@ -227,6 +227,8 @@ function App() {
   const [chartType, setChartType] = useState<'Bar Chart' | 'Pie Chart'>('Bar Chart');
   const [showActivityFilter, setShowActivityFilter] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [showStartButton, setShowStartButton] = useState(true);
+  const [popupRendered, setPopupRendered] = useState(true);
 
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
@@ -284,18 +286,21 @@ function App() {
         if (popupOuter && popupOuter.contains(target) && 
             popupContent && !popupContent.contains(target)) {
           // 点击了 popup 外部区域，开始关闭动画
-          // 使用 requestAnimationFrame 确保在下一帧执行，避免 Safari 闪动
-          requestAnimationFrame(() => {
-            setIsStatsModalClosing(true);
-            // 使用更长的延迟确保动画完成
-            setTimeout(() => {
-              setShowStatsModal(false);
-              // 额外延迟重置状态，确保动画完全结束
-              setTimeout(() => {
-                setIsStatsModalClosing(false);
-              }, 50);
-            }, 300);
-          });
+          // 防止重复触发
+          if (!isStatsModalClosing) {
+            // 使用 requestAnimationFrame 确保在下一帧执行，避免 Safari 闪动
+                          requestAnimationFrame(() => {
+                setIsStatsModalClosing(true);
+                // 先等待动画完成，再隐藏元素
+                setTimeout(() => {
+                  setShowStatsModal(false);
+                  // 确保元素完全隐藏后再重置状态
+                  setTimeout(() => {
+                    setIsStatsModalClosing(false);
+                  }, 100);
+                }, 400);
+              });
+          }
         }
       }
     };
@@ -419,7 +424,21 @@ function App() {
     const scrollTop = e.currentTarget.scrollTop;
     if (scrollTop > lastScrollTop.current + 5) {
       // 向上滑动，收起popup
-      setShowBottomSheet(false);
+      if (!isBottomSheetClosing) {
+        setIsBottomSheetClosing(true);
+        setShowStartButton(false);
+                  setTimeout(() => {
+            setShowBottomSheet(false);
+            // 立即重置关闭状态，确保popup从DOM中移除
+            setIsBottomSheetClosing(false);
+            // 立即从DOM中移除popup
+            setPopupRendered(false);
+            // 延迟显示start按钮，确保popup完全消失
+            setTimeout(() => {
+              setShowStartButton(true);
+            }, 100);
+          }, 450);
+      }
     }
     lastScrollTop.current = scrollTop;
   };
@@ -507,9 +526,10 @@ function App() {
             justifyContent: 'space-between',
             width: '100%',
             height: '100%',
-            paddingRight: 12, // 恢复右侧安全边距
+            paddingLeft: 0, // 移除左侧内边距，让CSS控制
+            paddingRight: 0, // 确保右侧也没有内边距
           }}>
-            <div className="activity-title" style={{ marginLeft: '4px', textAlign: 'left', marginTop: '12px' }}>
+            <div className="activity-title" style={{ textAlign: 'left' }}>
               🐱 Activity Records
             </div>
             <button 
@@ -548,8 +568,8 @@ function App() {
             paddingTop: '24px',
             boxSizing: 'border-box',
             animation: isStatsModalClosing 
-              ? 'fadeOut 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
-              : 'fadeIn 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+              ? 'fadeOut 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+              : 'fadeIn 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
             <div
               className="summary-popup-content"
@@ -564,10 +584,10 @@ function App() {
                 flexDirection: 'column',
                 boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
                 position: 'relative',
-                overflow: 'hidden',
+                overflow: 'visible',
                 animation: isStatsModalClosing 
-                  ? 'slideDown 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
-                  : 'slideUp 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                  ? 'slideDown 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                  : 'slideUp 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               }}
             >
               {/* 标题区 */}
@@ -636,7 +656,7 @@ function App() {
                         padding: 8,
                         marginTop: 4,
                         minWidth: 140,
-                        zIndex: 10001
+                        zIndex: 100000
                       }}>
                         <button
                           style={{
@@ -802,7 +822,12 @@ function App() {
                 padding: '16px 24px',
                 display: 'flex',
                 gap: 10,
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                overflowX: 'auto',
+                overflowY: 'visible',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch'
               }}>
                 {/* 时间选择下拉菜单 */}
                 <div style={{ position: 'relative', width: 'fit-content' }}>
@@ -830,7 +855,10 @@ function App() {
                       fontStyle: 'normal',
                       fontWeight: 700,
                       lineHeight: 'normal',
-                      textTransform: 'capitalize'
+                      textTransform: 'capitalize',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}>
                       {timeGranularity}
                     </span>
@@ -884,7 +912,10 @@ function App() {
                       fontStyle: 'normal',
                       fontWeight: 700,
                       lineHeight: 'normal',
-                      textTransform: 'capitalize'
+                      textTransform: 'capitalize',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}>
                       {chartType}
                     </span>
@@ -911,7 +942,7 @@ function App() {
                   </select>
                 </div>
                 {/* 活动筛选下拉菜单 */}
-                <div style={{ position: 'relative', width: 'fit-content' }}>
+                <div style={{ position: 'relative', width: 'fit-content', zIndex: 100000 }}>
                   <div
                     data-activity-filter-button
                     style={{
@@ -934,115 +965,119 @@ function App() {
                       fontSize: 12,
                       fontStyle: 'normal',
                       fontWeight: 700,
-                      lineHeight: 'normal'
+                      lineHeight: 'normal',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}>
-                      {selectedActivities.length === 0 ? 'All Activities' : `${selectedActivities.length} Selected`}
+                      {selectedActivities.length === 0 ? 'All' : `${selectedActivities.length} Selected`}
                     </span>
                     <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
                     </svg>
                   </div>
-                  {/* 活动筛选下拉菜单 */}
-                  {showActivityFilter && (
-                    <div 
-                      data-activity-filter-options
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        background: '#fff',
-                        borderRadius: 8,
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                        padding: 8,
-                        marginTop: 4,
-                        minWidth: 200,
-                        maxHeight: 300,
-                        overflowY: 'auto',
-                        zIndex: 10001
-                      }}>
-                      {/* All 选项 */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          borderRadius: 4,
-                          fontSize: 14,
-                          background: selectedActivities.length === 0 ? '#f0f0f0' : 'transparent'
-                        }}
-                        onClick={() => {
-                          setSelectedActivities([]);
-                          setShowActivityFilter(false);
-                        }}
-                      >
-                        <div style={{
-                          width: 16,
-                          height: 16,
-                          border: '2px solid #ddd',
-                          borderRadius: 3,
-                          marginRight: 8,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: selectedActivities.length === 0 ? '#007bff' : 'transparent'
-                        }}>
-                          {selectedActivities.length === 0 && (
-                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                        </div>
-                        <span>All Activities</span>
-                      </div>
-                      
-                      <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
-                      
-                      {/* 各个活动选项 */}
-                      {getAllActivities().map(activity => (
-                        <div
-                          key={activity}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '8px 12px',
-                            cursor: 'pointer',
-                            borderRadius: 4,
-                            fontSize: 14,
-                            background: selectedActivities.includes(activity) ? '#f0f0f0' : 'transparent'
-                          }}
-                          onClick={() => {
-                            if (selectedActivities.includes(activity)) {
-                              setSelectedActivities(prev => prev.filter(a => a !== activity));
-                            } else {
-                              setSelectedActivities(prev => [...prev, activity]);
-                            }
-                          }}
-                        >
-                          <div style={{
-                            width: 16,
-                            height: 16,
-                            border: '2px solid #ddd',
-                            borderRadius: 3,
-                            marginRight: 8,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: selectedActivities.includes(activity) ? '#007bff' : 'transparent'
-                          }}>
-                            {selectedActivities.includes(activity) && (
-                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            )}
-                          </div>
-                          <span>{activity}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+
                 </div>
               </div>
+
+              {/* 活动筛选下拉菜单 - 移到外层避免被overflow限制 */}
+              {showActivityFilter && (
+                <div 
+                  data-activity-filter-options
+                  style={{
+                    position: 'absolute',
+                    top: '120px',
+                    left: '24px',
+                    background: '#fff',
+                    borderRadius: 8,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                    padding: 8,
+                    minWidth: 200,
+                    maxHeight: 300,
+                    overflowY: 'auto',
+                    zIndex: 100000
+                  }}>
+                  {/* All 选项 */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      borderRadius: 4,
+                      fontSize: 14,
+                      background: selectedActivities.length === 0 ? '#f0f0f0' : 'transparent'
+                    }}
+                    onClick={() => {
+                      setSelectedActivities([]);
+                      setShowActivityFilter(false);
+                    }}
+                  >
+                    <div style={{
+                      width: 16,
+                      height: 16,
+                      border: '2px solid #ddd',
+                      borderRadius: 3,
+                      marginRight: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: selectedActivities.length === 0 ? '#007bff' : 'transparent'
+                    }}>
+                      {selectedActivities.length === 0 && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span>All</span>
+                  </div>
+                  
+                  <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
+                  
+                  {/* 各个活动选项 */}
+                  {getAllActivities().map(activity => (
+                    <div
+                      key={activity}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        borderRadius: 4,
+                        fontSize: 14,
+                        background: selectedActivities.includes(activity) ? '#f0f0f0' : 'transparent'
+                      }}
+                      onClick={() => {
+                        if (selectedActivities.includes(activity)) {
+                          setSelectedActivities(prev => prev.filter(a => a !== activity));
+                        } else {
+                          setSelectedActivities(prev => [...prev, activity]);
+                        }
+                      }}
+                    >
+                      <div style={{
+                        width: 16,
+                        height: 16,
+                        border: '2px solid #ddd',
+                        borderRadius: 3,
+                        marginRight: 8,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: selectedActivities.includes(activity) ? '#007bff' : 'transparent'
+                      }}>
+                        {selectedActivities.includes(activity) && (
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <span>{activity}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* 内容区域 */}
               <div style={{ 
@@ -1742,7 +1777,7 @@ function App() {
         </div>
       </div>
       {/* 底部固定活动选择与输入区 */}
-      {(showBottomSheet || isBottomSheetClosing) && (
+      {popupRendered && (
         <>
           <div
             style={{
@@ -1754,19 +1789,25 @@ function App() {
               zIndex: 199,
               background: 'rgba(0,0,0,0)', // 可根据需要加深遮罩色
             }}
-            onClick={() => {
-              setIsBottomSheetClosing(true);
-              setTimeout(() => {
-                setShowBottomSheet(false);
-                setIsBottomSheetClosing(false);
-              }, 250);
-            }}
-            onTouchStart={() => {
-              setIsBottomSheetClosing(true);
-              setTimeout(() => {
-                setShowBottomSheet(false);
-                setIsBottomSheetClosing(false);
-              }, 250);
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!isBottomSheetClosing) {
+                setIsBottomSheetClosing(true);
+                setShowStartButton(false); // 立即隐藏start按钮
+                // 先等待动画完成，再隐藏元素
+                setTimeout(() => {
+                  setShowBottomSheet(false);
+                  // 立即重置关闭状态，确保popup从DOM中移除
+                  setIsBottomSheetClosing(false);
+                  // 立即从DOM中移除popup
+                  setPopupRendered(false);
+                  // 延迟显示start按钮，确保popup完全消失
+                  setTimeout(() => {
+                    setShowStartButton(true);
+                  }, 100);
+                }, 450);
+              }
             }}
           />
           <div className="activity-bottom-sheet-fixed" style={{ 
@@ -1776,8 +1817,8 @@ function App() {
             bottom: 0, 
             transform: 'translateX(-50%)',
             animation: isBottomSheetClosing 
-              ? 'slideDownToBottom 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
-              : 'slideUpFromBottom 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+              ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+              : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
             <div className="activity-popup-inner" style={{ padding: '0 24px', height: '100%', display: 'flex', flexDirection: 'column' }}>
               {/* 可滚动的tag区域 */}
@@ -1928,7 +1969,7 @@ function App() {
         </>
       )}
       {/* 底部固定活动选择与输入区 */}
-      {!showBottomSheet && (
+      {!showBottomSheet && !isBottomSheetClosing && showStartButton && !showStatsModal && !isStatsModalClosing && (
         <div style={{
           position: 'fixed',
           left: '50%',
@@ -1958,9 +1999,14 @@ function App() {
               boxShadow: '0px 91px 25px 0px rgba(0, 0, 0, 0.00), 0px 58px 23px 0px rgba(0, 0, 0, 0.01), 0px 33px 20px 0px rgba(0, 0, 0, 0.05), 0px 14px 14px 0px rgba(0, 0, 0, 0.09), 0px 4px 8px 0px rgba(0, 0, 0, 0.10)',
               cursor: 'pointer',
               pointerEvents: 'auto',
-              animation: 'fadeInScale 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+              animation: 'fadeInScale 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+              transform: 'translateZ(0)',
+              willChange: 'transform, opacity'
             }}
-            onClick={() => setShowBottomSheet(true)}
+            onClick={() => {
+              setShowBottomSheet(true);
+              setPopupRendered(true);
+            }}
           >
             ✨ Start Activity
           </button>
