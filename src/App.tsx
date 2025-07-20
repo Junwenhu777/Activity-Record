@@ -5,6 +5,11 @@ import { Button, Input, Grid } from 'antd-mobile';
 import './App.css';
 import * as XLSX from 'xlsx';
 
+// 测试 XLSX 库是否正确加载
+console.log('XLSX library loaded:', typeof XLSX);
+console.log('XLSX.utils available:', !!XLSX.utils);
+console.log('XLSX.write available:', !!XLSX.write);
+
 const activityTypes = [
   'Moving Around',
   'Eating',
@@ -243,17 +248,42 @@ function App() {
 
   // 点击外部关闭下载选项
   useEffect(() => {
-    const handleClickOutside = () => {
+    const handleClickOutside = (e: MouseEvent) => {
+      // 检查是否点击了下载选项下拉菜单
       if (showDownloadOptions) {
-        setShowDownloadOptions(false);
+        const target = e.target as Element;
+        const downloadButton = document.querySelector('[data-download-button]');
+        const downloadOptions = document.querySelector('[data-download-options]');
+        
+        if (downloadButton && !downloadButton.contains(target) && 
+            downloadOptions && !downloadOptions.contains(target)) {
+          setShowDownloadOptions(false);
+        }
+      }
+      
+      // 检查是否点击了 popup 外部区域
+      if (showStatsModal && !isStatsModalClosing) {
+        const target = e.target as Element;
+        const popupContent = document.querySelector('.summary-popup-content');
+        const popupOuter = document.querySelector('.summary-popup-outer');
+        
+        if (popupOuter && popupOuter.contains(target) && 
+            popupContent && !popupContent.contains(target)) {
+          // 点击了 popup 外部区域，开始关闭动画
+          setIsStatsModalClosing(true);
+          setTimeout(() => {
+            setShowStatsModal(false);
+            setIsStatsModalClosing(false);
+          }, 250);
+        }
       }
     };
 
-    if (showDownloadOptions) {
+    if (showDownloadOptions || showStatsModal) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showDownloadOptions]);
+  }, [showDownloadOptions, showStatsModal, isStatsModalClosing]);
 
   // localStorage持久化恢复
   useEffect(() => {
@@ -497,7 +527,11 @@ function App() {
                   {/* 下载按钮 */}
                   <div style={{ position: 'relative' }}>
                     <button 
-                      onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+                      data-download-button
+                      onClick={() => {
+                        console.log('Download button clicked, current state:', showDownloadOptions);
+                        setShowDownloadOptions(!showDownloadOptions);
+                      }}
                       style={{
                         width: 38,
                         height: 38,
@@ -533,7 +567,9 @@ function App() {
                     </button>
                     {/* 下载选项下拉菜单 */}
                     {showDownloadOptions && (
-                      <div style={{
+                      <div 
+                        data-download-options
+                        style={{
                         position: 'absolute',
                         top: '100%',
                         right: 0,
@@ -554,83 +590,98 @@ function App() {
                             textAlign: 'left',
                             cursor: 'pointer',
                             borderRadius: 4,
-                            fontSize: 14
+                            fontSize: 14,
+                            position: 'relative',
+                            zIndex: 10002,
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none'
                           }}
-                          onClick={() => {
-                            const all = [...history];
-                            if (current) {
-                              all.unshift({
-                                name: current.name,
-                                startAt: current.startAt,
-                                endAt: now,
-                                duration: now.getTime() - current.startAt.getTime(),
-                                deleted: false
-                              });
-                            }
-                            const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `activity-history-${new Date().toISOString().split('T')[0]}.json`;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                            setShowDownloadOptions(false);
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Button mouse down!');
                           }}
-                        >
-                          Export as JSON
-                        </button>
-                        <button
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            background: 'none',
-                            border: 'none',
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            borderRadius: 4,
-                            fontSize: 14
-                          }}
-                          onClick={() => {
-                            const all = [...history];
-                            if (current) {
-                              all.unshift({
-                                name: current.name,
-                                startAt: current.startAt,
-                                endAt: now,
-                                duration: now.getTime() - current.startAt.getTime(),
-                                deleted: false
-                              });
-                            }
-                            const rows = all.map(item => {
-                              const strike = item.deleted ? { font: { strike: true } } : {};
-                              return {
-                                Activity: Object.assign({ v: item.name }, strike),
-                                Start: Object.assign({ v: item.startAt instanceof Date ? item.startAt.toISOString() : item.startAt }, strike),
-                                End: Object.assign({ v: item.endAt instanceof Date ? item.endAt.toISOString() : item.endAt }, strike),
-                                Duration: Object.assign({ v: formatHMS(Math.round(item.duration / 1000)) }, strike),
-                                Seconds: Object.assign({ v: Math.round(item.duration / 1000) }, strike),
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Button clicked!'); // 简单测试
+                            try {
+                              console.log('=== Excel Export Debug ===');
+                              console.log('XLSX library:', typeof XLSX);
+                              console.log('XLSX.utils:', XLSX.utils);
+                              console.log('XLSX.write:', XLSX.write);
+                              
+                              const all = [...history];
+                              if (current) {
+                                all.unshift({
+                                  name: current.name,
+                                  startAt: current.startAt,
+                                  endAt: now,
+                                  duration: now.getTime() - current.startAt.getTime(),
+                                  deleted: false
+                                });
+                              }
+                              console.log('Data prepared:', all.length, 'items');
+                              console.log('Sample data:', all[0]);
+                              
+                              // 简化的数据格式
+                              const rows = all.map(item => ({
+                                Activity: item.name,
+                                Start: item.startAt instanceof Date ? item.startAt.toISOString() : item.startAt,
+                                End: item.endAt instanceof Date ? item.endAt.toISOString() : item.endAt,
+                                Duration: formatHMS(Math.round(item.duration / 1000)),
+                                Seconds: Math.round(item.duration / 1000),
                                 Deleted: item.deleted ? 'true' : 'false'
-                              };
-                            });
-                            const ws = XLSX.utils.json_to_sheet(rows as any[]);
-                            Object.keys(rows[0] || {}).forEach((col, colIdx) => {
-                              (rows as any[]).forEach((row, rowIdx) => {
-                                if (row[col] && row[col].font && ws[XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx })]) {
-                                  ws[XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx })].s = row[col];
-                                }
-                              });
-                            });
-                            const wb = XLSX.utils.book_new();
-                            XLSX.utils.book_append_sheet(wb, ws, 'History');
-                            XLSX.writeFile(wb, `activity-history-${new Date().toISOString().split('T')[0]}.xlsx`);
-                            setShowDownloadOptions(false);
+                              }));
+                              
+                              console.log('Creating worksheet...');
+                              const ws = XLSX.utils.json_to_sheet(rows);
+                              console.log('Worksheet created:', ws);
+                              
+                              const wb = XLSX.utils.book_new();
+                              XLSX.utils.book_append_sheet(wb, ws, 'History');
+                              console.log('Workbook created:', wb);
+                              
+                              console.log('Writing file...');
+                              const fileName = `activity-history-${new Date().toISOString().split('T')[0]}.xlsx`;
+                              
+                              // 使用 Blob 方法，兼容性更好
+                              const blob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                              console.log('Blob created:', blob);
+                              console.log('Blob size:', blob.length);
+                              
+                              const url = URL.createObjectURL(new Blob([blob], { 
+                                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                              }));
+                              console.log('URL created:', url);
+                              
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = fileName;
+                              console.log('Download link created:', a);
+                              
+                              document.body.appendChild(a);
+                              console.log('Link appended to body');
+                              
+                              a.click();
+                              console.log('Click triggered');
+                              
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                              
+                              console.log('Export completed successfully');
+                              setShowDownloadOptions(false);
+                            } catch (error) {
+                              console.error('Export failed:', error);
+                              console.error('Error stack:', (error as Error).stack);
+                              alert('Export failed: ' + (error as Error).message);
+                            }
                           }}
                         >
                           Export as Excel
                         </button>
-                        <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
+
+                          <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
                         <button
                           style={{
                             width: '100%',
@@ -1713,10 +1764,10 @@ function App() {
             onClick={() => setShowBottomSheet(true)}
           >
             ✨ Start Activity
-        </button>
+          </button>
         </div>
       )}
-      </div>
+    </div>
   );
 }
 
