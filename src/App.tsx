@@ -290,24 +290,32 @@ function App() {
         const popupContent = document.querySelector('.summary-popup-content');
         const popupOuter = document.querySelector('.summary-popup-outer');
         
-        if (popupOuter && popupOuter.contains(target) && 
-            popupContent && !popupContent.contains(target)) {
-          // 点击了 popup 外部区域，开始关闭动画
-          // 防止重复触发
-          if (!isStatsModalClosing) {
-            // 使用 requestAnimationFrame 确保在下一帧执行，避免 Safari 闪动
-                          requestAnimationFrame(() => {
-                setIsStatsModalClosing(true);
-                // 先等待动画完成，再隐藏元素
-                setTimeout(() => {
-                  setShowStatsModal(false);
-                  // 确保元素完全隐藏后再重置状态
-                  setTimeout(() => {
-                    setIsStatsModalClosing(false);
-                  }, 100);
-                }, 400);
-              });
-          }
+        // 如果点击的是popup内部，则不关闭
+        if (popupContent && (popupContent.contains(target) || popupContent === target)) {
+          console.log('Click inside popup content, ignoring');
+          return;
+        }
+        if (popupOuter && (popupOuter.contains(target) || popupOuter === target)) {
+          console.log('Click inside popup outer, ignoring');
+          return;
+        }
+        
+        // 点击了 popup 外部区域，开始关闭动画
+        // 防止重复触发
+        if (!isStatsModalClosing) {
+          console.log('Click outside popup, closing');
+          // 使用 requestAnimationFrame 确保在下一帧执行，避免 Safari 闪动
+          requestAnimationFrame(() => {
+            setIsStatsModalClosing(true);
+            // 先等待动画完成，再隐藏元素
+            setTimeout(() => {
+              setShowStatsModal(false);
+              // 确保元素完全隐藏后再重置状态
+              setTimeout(() => {
+                setIsStatsModalClosing(false);
+              }, 100);
+            }, 400);
+          });
         }
       }
     };
@@ -458,9 +466,34 @@ function App() {
     const scrollTop = e.currentTarget.scrollTop;
     console.log('Scroll event triggered, scrollTop:', scrollTop, 'popupRendered:', popupRendered, 'isBottomSheetClosing:', isBottomSheetClosing);
     
-    // 任何滚动都收起popup并显示start按钮
+    // 检查滚动事件是否来自popup内部
+    const target = e.target as Element;
+    const popupContent = document.querySelector('.summary-popup-content');
+    const popupOuter = document.querySelector('.summary-popup-outer');
+    const activityPopupInner = document.querySelector('.activity-popup-inner');
+    const activityBottomSheetFixed = document.querySelector('.activity-bottom-sheet-fixed');
+    
+    // 如果滚动事件来自popup内部，则不关闭popup
+    if (popupContent && (popupContent.contains(target) || popupContent === target)) {
+      console.log('Scroll event from popup content in throttled handler, ignoring');
+      return;
+    }
+    if (popupOuter && (popupOuter.contains(target) || popupOuter === target)) {
+      console.log('Scroll event from popup outer in throttled handler, ignoring');
+      return;
+    }
+    if (activityPopupInner && (activityPopupInner.contains(target) || activityPopupInner === target)) {
+      console.log('Scroll event from activity popup inner in throttled handler, ignoring');
+      return;
+    }
+    if (activityBottomSheetFixed && (activityBottomSheetFixed.contains(target) || activityBottomSheetFixed === target)) {
+      console.log('Scroll event from activity bottom sheet fixed in throttled handler, ignoring');
+      return;
+    }
+    
+    // 只有主内容区的滚动才收起popup并显示start按钮
     if (popupRendered && !isBottomSheetClosing) {
-      console.log('Closing popup due to scroll');
+      console.log('Closing popup due to main content scroll');
       setIsBottomSheetClosing(true);
       setShowStartButton(false);
       setTimeout(() => {
