@@ -96,8 +96,10 @@ function formatHeaderDateStr(dateStr: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 }
 
-// summary统计所有历史活动总时长排行
-function getTotalSummary(history: any[], current: any, now: Date) {
+
+
+// 根据时间颗粒度分组数据
+function groupDataByTimeGranularity(history: any[], current: any, now: Date, granularity: 'Day' | 'Week' | 'Month' | 'Year') {
   const all = [...history].filter(item => !item.deleted);
   if (current) {
     all.unshift({
@@ -108,15 +110,71 @@ function getTotalSummary(history: any[], current: any, now: Date) {
       deleted: false
     });
   }
-  // 按活动名聚合总时长
-  const summary: Record<string, number> = {};
+
+  const groups: Record<string, any[]> = {};
+  
   all.forEach(item => {
-    if (!summary[item.name]) summary[item.name] = 0;
-    summary[item.name] += item.duration;
+    let groupKey = '';
+    const date = new Date(item.endAt);
+    
+    switch (granularity) {
+      case 'Day':
+        groupKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        break;
+      case 'Week':
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        groupKey = weekStart.toISOString().split('T')[0];
+        break;
+      case 'Month':
+        groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+        break;
+      case 'Year':
+        groupKey = date.getFullYear().toString(); // YYYY
+        break;
+    }
+    
+    if (!groups[groupKey]) groups[groupKey] = [];
+    groups[groupKey].push(item);
   });
-  return Object.entries(summary)
-    .map(([name, duration]) => ({ name, duration }))
-    .sort((a, b) => b.duration - a.duration);
+
+  // 按时间排序并聚合每个时间段的活动
+  return Object.entries(groups)
+    .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+    .map(([timeKey, items]) => {
+      const summary: Record<string, number> = {};
+      items.forEach(item => {
+        if (!summary[item.name]) summary[item.name] = 0;
+        summary[item.name] += item.duration;
+      });
+      
+      return {
+        timeKey,
+        activities: Object.entries(summary)
+          .map(([name, duration]) => ({ name, duration }))
+          .sort((a, b) => b.duration - a.duration)
+      };
+    });
+}
+
+// 格式化时间键显示
+function formatTimeKey(timeKey: string, granularity: 'Day' | 'Week' | 'Month' | 'Year') {
+  switch (granularity) {
+    case 'Day':
+      const dayDate = new Date(timeKey);
+      return dayDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    case 'Week':
+      const weekDate = new Date(timeKey);
+      const weekEnd = new Date(weekDate);
+      weekEnd.setDate(weekDate.getDate() + 6);
+      return `${weekDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}`;
+    case 'Month':
+      const [year, month] = timeKey.split('-');
+      const monthDate = new Date(Number(year), Number(month) - 1);
+      return monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    case 'Year':
+      return timeKey;
+  }
 }
 
 function App() {
@@ -151,8 +209,44 @@ function App() {
   // 新增state用于滑动删除
   const [swipeDelete, setSwipeDelete] = useState<{date?: string, idx?: number} | null>(null);
 
+  // 新增 Summary popup 相关状态
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  const [timeGranularity, setTimeGranularity] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Day');
+  const [chartType, setChartType] = useState<'Bar Chart' | 'Pie Chart'>('Bar Chart');
+
+  // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
+  const activityColors = useRef<Record<string, string>>({});
+  const colorPalette = [
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+    '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+    '#a6cee3', '#fb9a99', '#fdbf6f', '#cab2d6', '#ffff99'
+  ];
+
+  // 获取活动颜色
+  const getActivityColor = (activityName: string) => {
+    if (!activityColors.current[activityName]) {
+      const colorIndex = Object.keys(activityColors.current).length % colorPalette.length;
+      activityColors.current[activityName] = colorPalette[colorIndex];
+    }
+    return activityColors.current[activityName];
+  };
+
   // 用于长按定时器
   let longPressTimer: any = null;
+
+  // 点击外部关闭下载选项
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showDownloadOptions) {
+        setShowDownloadOptions(false);
+      }
+    };
+
+    if (showDownloadOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showDownloadOptions]);
 
   // localStorage持久化恢复
   useEffect(() => {
@@ -348,9 +442,9 @@ function App() {
             </button>
           </div>
         </div>
-        {/* 统计弹窗 */}
+        {/* Summary Popup 窗口 */}
         {showStatsModal && (
-          <div className="summary-modal-outer" style={{
+          <div className="summary-popup-outer" style={{
             position: 'fixed',
             top: 0,
             left: 0,
@@ -359,199 +453,401 @@ function App() {
             background: 'rgba(0,0,0,0.18)',
             zIndex: 9999,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 24px',
+            flexDirection: 'column',
+            paddingTop: '24px',
             boxSizing: 'border-box',
           }}>
             <div
-              className="modal-content"
+              className="summary-popup-content"
               style={{
                 background: '#fff',
-                borderRadius: 16,
+                borderRadius: '16px 16px 0 0',
                 width: '100%',
-                maxWidth: 480,
+                height: 'calc(100vh - 24px)',
                 margin: '0 auto',
-                padding: 24,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
                 position: 'relative'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: 0, marginBottom: 18 }}>
-                <button style={{
-                  width: 40, height: 40, background: 'none', border: 'none', color: 'transparent', cursor: 'default', pointerEvents: 'none', flexShrink: 0
-                }}>×</button>
-                <div style={{ fontWeight: 700, fontSize: 20, flex: 1, textAlign: 'center', color: '#222', margin: 0, padding: 0 }}>Summary</div>
-                <button onClick={() => setShowStatsModal(false)} style={{
-                  width: 40,
-                  height: 40,
-                  background: 'none',
-                  border: 'none',
-                  fontSize: 24,
-                  cursor: 'pointer',
-                  color: '#000',
-                  zIndex: 2,
-                  flexShrink: 0,
-                  marginTop: -20
-                }}>×</button>
-              </div>
-              {/* summary 总体排行条形图 */}
-              {(() => {
-                const summaryArr = getTotalSummary(history, current, now);
-                if (!summaryArr.length) return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>No activity data.</div>;
-                const max = Math.max(...summaryArr.map(a => a.duration));
-                return (
-                  <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 24 }}>
-                    {summaryArr.map(a => (
-                      <div key={a.name} style={{ marginBottom: 14 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15, fontWeight: 600, marginBottom: 2 }}>
-                          <span>{a.name}</span>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 400, fontSize: 14 }}>{formatHMS(Math.round(a.duration / 1000))}</span>
-                        </div>
-                        <div style={{ background: '#00313c', height: 18, borderRadius: 4, width: `${Math.max(20, a.duration / max * 100)}%`, minWidth: 20, maxWidth: 180 }} />
+              {/* 标题区 */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                width: '100%', 
+                padding: '24px 24px 16px 24px',
+                borderBottom: '1px solid #f0f0f0'
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Summary</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {/* 下载按钮 */}
+                  <div style={{ position: 'relative' }}>
+                    <button 
+                      onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        background: '#f5f5f5',
+                        border: 'none',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 16
+                      }}
+                    >
+                      ↓
+                    </button>
+                    {/* 下载选项下拉菜单 */}
+                    {showDownloadOptions && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        background: '#fff',
+                        borderRadius: 8,
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                        padding: 8,
+                        marginTop: 4,
+                        minWidth: 140,
+                        zIndex: 10001
+                      }}>
+                        <button
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            background: 'none',
+                            border: 'none',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            borderRadius: 4,
+                            fontSize: 14
+                          }}
+                          onClick={() => {
+                            const all = [...history];
+                            if (current) {
+                              all.unshift({
+                                name: current.name,
+                                startAt: current.startAt,
+                                endAt: now,
+                                duration: now.getTime() - current.startAt.getTime(),
+                                deleted: false
+                              });
+                            }
+                            const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `activity-history-${new Date().toISOString().split('T')[0]}.json`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            setShowDownloadOptions(false);
+                          }}
+                        >
+                          Export as JSON
+                        </button>
+                        <button
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            background: 'none',
+                            border: 'none',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            borderRadius: 4,
+                            fontSize: 14
+                          }}
+                          onClick={() => {
+                            const all = [...history];
+                            if (current) {
+                              all.unshift({
+                                name: current.name,
+                                startAt: current.startAt,
+                                endAt: now,
+                                duration: now.getTime() - current.startAt.getTime(),
+                                deleted: false
+                              });
+                            }
+                            const rows = all.map(item => {
+                              const strike = item.deleted ? { font: { strike: true } } : {};
+                              return {
+                                Activity: Object.assign({ v: item.name }, strike),
+                                Start: Object.assign({ v: item.startAt instanceof Date ? item.startAt.toISOString() : item.startAt }, strike),
+                                End: Object.assign({ v: item.endAt instanceof Date ? item.endAt.toISOString() : item.endAt }, strike),
+                                Duration: Object.assign({ v: formatHMS(Math.round(item.duration / 1000)) }, strike),
+                                Seconds: Object.assign({ v: Math.round(item.duration / 1000) }, strike),
+                                Deleted: item.deleted ? 'true' : 'false'
+                              };
+                            });
+                            const ws = XLSX.utils.json_to_sheet(rows as any[]);
+                            Object.keys(rows[0] || {}).forEach((col, colIdx) => {
+                              (rows as any[]).forEach((row, rowIdx) => {
+                                if (row[col] && row[col].font && ws[XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx })]) {
+                                  ws[XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx })].s = row[col];
+                                }
+                              });
+                            });
+                            const wb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(wb, ws, 'History');
+                            XLSX.writeFile(wb, `activity-history-${new Date().toISOString().split('T')[0]}.xlsx`);
+                            setShowDownloadOptions(false);
+                          }}
+                        >
+                          Export as Excel
+                        </button>
+                        <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
+                        <button
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            background: 'none',
+                            border: 'none',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            borderRadius: 4,
+                            fontSize: 14,
+                            color: '#d70015'
+                          }}
+                          onClick={() => {
+                            setShowClearModal(true);
+                            setShowDownloadOptions(false);
+                          }}
+                        >
+                          Clear All Data
+                        </button>
                       </div>
-                    ))}
+                    )}
                   </div>
-                );
-              })()}
-              {/* 导出按钮区（导出原始历史活动数据） */}
-              <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <button
-                  style={{ background: '#fff', color: '#222', border: '1px solid #eee', borderRadius: 12, padding: '16px 0', fontSize: 18, fontWeight: 500, cursor: 'pointer' }}
-                  onClick={() => {
-                    // 导出原始历史活动数据（含每个活动的开始和结束日期）
-                    const all = [...history];
-                    if (current) {
-                      all.unshift({
-                        name: current.name,
-                        startAt: current.startAt,
-                        endAt: now,
-                        duration: now.getTime() - current.startAt.getTime(),
-                      });
-                    }
-                    const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `activity-history-${new Date().toISOString().split('T')[0]}.json`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                  }}
-                >
-                  Download JSON file
-                </button>
-                <button
-                  style={{ background: '#fff', color: '#222', border: '1px solid #eee', borderRadius: 12, padding: '16px 0', fontSize: 18, fontWeight: 500, cursor: 'pointer' }}
-                  onClick={() => {
-                    // 导出原始历史活动数据为Excel
-                    const all = [...history];
-                    if (current) {
-                      all.unshift({
-                        name: current.name,
-                        startAt: current.startAt,
-                        endAt: now,
-                        duration: now.getTime() - current.startAt.getTime(),
-                        deleted: false
-                      });
-                    }
-                    // 构造带横线样式的 Excel 行
-                    const rows = all.map(item => {
-                      const strike = item.deleted ? { font: { strike: true } } : {};
-                      return {
-                        Activity: Object.assign({ v: item.name }, strike),
-                        Start: Object.assign({ v: item.startAt instanceof Date ? item.startAt.toISOString() : item.startAt }, strike),
-                        End: Object.assign({ v: item.endAt instanceof Date ? item.endAt.toISOString() : item.endAt }, strike),
-                        Duration: Object.assign({ v: formatHMS(Math.round(item.duration / 1000)) }, strike),
-                        Seconds: Object.assign({ v: Math.round(item.duration / 1000) }, strike),
-                        Deleted: item.deleted ? 'true' : 'false'
-                      };
-                    });
-                    // 生成 worksheet
-                    const ws = XLSX.utils.json_to_sheet(rows as any[]);
-                    // 应用横线样式
-                    Object.keys(rows[0] || {}).forEach((col, colIdx) => {
-                      (rows as any[]).forEach((row, rowIdx) => {
-                        if (row[col] && row[col].font && ws[XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx })]) {
-                          ws[XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx })].s = row[col];
-                        }
-                      });
-                    });
-                    // 生成 workbook
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, 'History');
-                    XLSX.writeFile(wb, `activity-history-${new Date().toISOString().split('T')[0]}.xlsx`);
-                  }}
-                >
-                  Export as Excel
-                </button>
-                <button
-                  style={{ background: '#fff', color: '#d70015', border: '1px solid #eee', borderRadius: 12, padding: '16px 0', fontSize: 18, fontWeight: 500, cursor: 'pointer' }}
-                  onClick={() => setShowClearModal(true)}
-                >
-                  Clear All Data
-                </button>
-              </div>
-              {/* 清空数据确认弹窗保持不变 */}
-              {showClearModal && (
-                <div style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  width: '100vw',
-                  height: '100vh',
-                  background: 'rgba(0,0,0,0.18)',
-                  zIndex: 10002,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 24px',
-                  boxSizing: 'border-box',
-                }}>
-                  <div
-                    className="modal-content"
+                  {/* 关闭按钮 */}
+                  <button 
+                    onClick={() => setShowStatsModal(false)}
                     style={{
-                      background: '#fff',
-                      borderRadius: 16,
-                      width: '100%',
-                      maxWidth: 340,
-                      margin: '0 auto',
-                      padding: 28,
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                      textAlign: 'center',
-                      position: 'relative',
+                      width: 40,
+                      height: 40,
+                      background: '#f5f5f5',
+                      border: 'none',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 18
                     }}
                   >
-                    <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>
-                      Are you sure you want to clear all activity data?
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 24 }}>
-                      <button
-                        style={{
-                          background: '#f5f5f5', color: '#333', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, fontSize: 16, cursor: 'pointer'
-                        }}
-                        onClick={() => setShowClearModal(false)}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        style={{
-                          background: '#d70015', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, fontSize: 16, cursor: 'pointer'
-                        }}
-                        onClick={() => {
-                          localStorage.clear();
-                          window.location.reload();
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </div>
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              {/* 筛选选项区 */}
+              <div style={{ 
+                padding: '16px 24px',
+                borderBottom: '1px solid #f0f0f0',
+                display: 'flex',
+                gap: 12
+              }}>
+                {/* 时间选择下拉菜单 */}
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <select
+                    value={timeGranularity}
+                    onChange={(e) => setTimeGranularity(e.target.value as 'Day' | 'Week' | 'Month' | 'Year')}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 8,
+                      background: '#fff',
+                      fontSize: 14,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="Day">Day</option>
+                    <option value="Week">Week</option>
+                    <option value="Month">Month</option>
+                    <option value="Year">Year</option>
+                  </select>
+                </div>
+                {/* 统计图类型选择下拉菜单 */}
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <select
+                    value={chartType}
+                    onChange={(e) => setChartType(e.target.value as 'Bar Chart' | 'Pie Chart')}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 8,
+                      background: '#fff',
+                      fontSize: 14,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="Bar Chart">Bar Chart</option>
+                    <option value="Pie Chart">Pie Chart</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 内容区域 */}
+              <div style={{ 
+                flex: 1,
+                overflowY: 'auto',
+                padding: '16px 24px'
+              }}>
+                {(() => {
+                  const groupedData = groupDataByTimeGranularity(history, current, now, timeGranularity);
+                  if (!groupedData.length) {
+                    return <div style={{ color: '#888', textAlign: 'center', margin: '48px 0' }}>No activity data.</div>;
+                  }
+
+                  return groupedData.map((group, groupIndex) => {
+                    const { timeKey, activities } = group;
+                    const maxDuration = Math.max(...activities.map(a => a.duration));
+                    
+                    return (
+                      <div key={timeKey} style={{ marginBottom: groupIndex < groupedData.length - 1 ? 24 : 0 }}>
+                        <div style={{ 
+                          fontWeight: 600, 
+                          fontSize: 16, 
+                          marginBottom: 12,
+                          color: '#333'
+                        }}>
+                          {formatTimeKey(timeKey, timeGranularity)}
+                        </div>
+                        
+                        {chartType === 'Bar Chart' ? (
+                          // 条形图显示
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {activities.map(activity => (
+                              <div key={activity.name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ 
+                                  flex: 1,
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  fontSize: 14,
+                                  fontWeight: 500
+                                }}>
+                                  <span>{activity.name}</span>
+                                  <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666' }}>
+                                    {formatHMS(Math.round(activity.duration / 1000))}
+                                  </span>
+                                </div>
+                                <div style={{ 
+                                  background: getActivityColor(activity.name),
+                                  height: 16,
+                                  borderRadius: 4,
+                                  width: `${Math.max(20, (activity.duration / maxDuration) * 120)}px`,
+                                  minWidth: 20
+                                }} />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          // 饼图显示（简化为彩色圆点）
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {activities.map(activity => (
+                              <div key={activity.name} style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 12,
+                                padding: '8px 12px',
+                                background: '#f8f9fa',
+                                borderRadius: 8
+                              }}>
+                                <div style={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: '50%',
+                                  background: getActivityColor(activity.name),
+                                  flexShrink: 0
+                                }} />
+                                <div style={{ 
+                                  flex: 1,
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  fontSize: 14,
+                                  fontWeight: 500
+                                }}>
+                                  <span>{activity.name}</span>
+                                  <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666' }}>
+                                    {formatHMS(Math.round(activity.duration / 1000))}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+
+            {/* 清空数据确认弹窗 */}
+            {showClearModal && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                background: 'rgba(0,0,0,0.18)',
+                zIndex: 10002,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 24px',
+                boxSizing: 'border-box',
+              }}>
+                <div
+                  className="modal-content"
+                  style={{
+                    background: '#fff',
+                    borderRadius: 16,
+                    width: '100%',
+                    maxWidth: 340,
+                    margin: '0 auto',
+                    padding: 28,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                    textAlign: 'center',
+                    position: 'relative',
+                  }}
+                >
+                  <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>
+                    Are you sure you want to clear all activity data?
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 24 }}>
+                    <button
+                      style={{
+                        background: '#f5f5f5', color: '#333', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, fontSize: 16, cursor: 'pointer'
+                      }}
+                      onClick={() => setShowClearModal(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      style={{
+                        background: '#d70015', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, fontSize: 16, cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        localStorage.clear();
+                        window.location.reload();
+                      }}
+                    >
+                      Clear
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
         {/* 结束当前活动提示弹窗 */}
