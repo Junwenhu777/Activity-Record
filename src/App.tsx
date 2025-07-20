@@ -508,12 +508,25 @@ function App() {
     };
   }, [showStatsModal]);
 
-  // 全局滚动监听，当popup显示时，任何滚动都关闭popup
+  // 全局滚动监听，当popup显示时，只有主页面的滚动才关闭popup
   useEffect(() => {
     if (!popupRendered || isBottomSheetClosing) return;
     
-    const handleGlobalScroll = () => {
-      console.log('Global scroll event triggered');
+    const handleGlobalScroll = (e: Event) => {
+      // 检查滚动事件是否来自popup内部
+      const target = e.target as Element;
+      const popupContent = document.querySelector('.summary-popup-content');
+      const popupOuter = document.querySelector('.summary-popup-outer');
+      
+      // 如果滚动事件来自popup内部，则不关闭popup
+      if (popupContent && (popupContent.contains(target) || popupContent === target)) {
+        return;
+      }
+      if (popupOuter && (popupOuter.contains(target) || popupOuter === target)) {
+        return;
+      }
+      
+      console.log('Global scroll event triggered from main page');
       if (!isBottomSheetClosing) {
         setIsBottomSheetClosing(true);
         setShowStartButton(false);
@@ -528,8 +541,21 @@ function App() {
       }
     };
 
-    const handleGlobalTouchMove = () => {
-      console.log('Global touch move event triggered');
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      // 检查触摸事件是否来自popup内部
+      const target = e.target as Element;
+      const popupContent = document.querySelector('.summary-popup-content');
+      const popupOuter = document.querySelector('.summary-popup-outer');
+      
+      // 如果触摸事件来自popup内部，则不关闭popup
+      if (popupContent && (popupContent.contains(target) || popupContent === target)) {
+        return;
+      }
+      if (popupOuter && (popupOuter.contains(target) || popupOuter === target)) {
+        return;
+      }
+      
+      console.log('Global touch move event triggered from main page');
       if (!isBottomSheetClosing) {
         setIsBottomSheetClosing(true);
         setShowStartButton(false);
