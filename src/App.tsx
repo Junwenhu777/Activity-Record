@@ -199,6 +199,8 @@ function App() {
   const [isStatsModalClosing, setIsStatsModalClosing] = useState(false);
   const [showEndCurrentModal, setShowEndCurrentModal] = useState(false);
 
+
+
   const lastScrollTop = useRef(0);
   const mainRef = useRef<HTMLDivElement>(null);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
@@ -210,6 +212,9 @@ function App() {
   const [editingName, setEditingName] = useState('');
   // 新增state用于滑动删除
   const [swipeDelete, setSwipeDelete] = useState<{date?: string, idx?: number} | null>(null);
+  // 新增state用于编辑recent activity
+  const [editingRecentActivity, setEditingRecentActivity] = useState<string | null>(null);
+  const [editingRecentName, setEditingRecentName] = useState('');
 
   // 新增 Summary popup 相关状态
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
@@ -312,15 +317,17 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
+
+
+
+
   // 结束当前活动并记录
   const stopCurrent = () => {
     if (!current) return;
     const endAt = new Date();
     const duration = endAt.getTime() - current.startAt.getTime();
-    setHistory([
-      { name: current.name, startAt: current.startAt, endAt, duration, deleted: false },
-      ...history,
-    ]);
+    const newHistoryItem = { name: current.name, startAt: current.startAt, endAt, duration, deleted: false };
+    setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
     setCurrent(null);
   };
 
@@ -343,10 +350,6 @@ function App() {
     
     // 滚动到主内容区顶部
     setTimeout(() => {
-      console.log('Attempting to scroll to top...');
-      console.log('mainRef.current:', mainRef.current);
-      console.log('window.scrollY:', window.scrollY);
-      
       // 滚动整个页面到顶部
       window.scrollTo({
         top: 0,
@@ -355,7 +358,6 @@ function App() {
       
       // 如果mainRef存在，也尝试滚动它
       if (mainRef.current) {
-        console.log('Scrolling main container...');
         mainRef.current.scrollTop = 0;
       }
     }, 200);
@@ -1194,7 +1196,12 @@ function App() {
           </div>
           {/* 当前活动卡片 */}
           {current && (
-            <div className="activity-card-now">
+            <div 
+              className="activity-card-now"
+              style={{
+                animation: 'fadeInScale 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div className="activity-card-title">Now</div>
@@ -1255,7 +1262,7 @@ function App() {
                   <div style={{
                     width: '18px',
                     height: '18px',
-                    backgroundColor: '#D70015',
+                    backgroundColor: '#F13C3F',
                     borderRadius: '2px'
                   }}></div>
                 </Button>
@@ -1271,8 +1278,14 @@ function App() {
                 return (
                   <div
                     className="activity-card-history"
-                    key={idx}
-                    style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1, userSelect: 'none', touchAction: 'manipulation' }}
+                    key={item.startAt.getTime()}
+                    style={{ 
+                      position: 'relative', 
+                      overflow: 'hidden', 
+                      opacity: isDeleted ? 0.6 : 1, 
+                      userSelect: 'none', 
+                      touchAction: 'manipulation'
+                    }}
                     onTouchStart={() => {
                       longPressTimer = setTimeout(() => setSwipeDelete({ date: 'today', idx }), 600);
                     }}
@@ -1380,7 +1393,7 @@ function App() {
                   return (
                     <div
                       className="activity-card-history"
-                      key={idx}
+                      key={item.startAt.getTime()}
                       style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1, userSelect: 'none', touchAction: 'manipulation' }}
                       onTouchStart={() => {
                         longPressTimer = setTimeout(() => setSwipeDelete({ date, idx }), 600);
@@ -1539,15 +1552,81 @@ function App() {
                     <Grid columns={2} gap={12} className="activity-btn-grid">
                       {recentActivities.map(activity => (
                         <Grid.Item key={activity}>
-                          <Button 
-                            block 
-                            className="activity-btn" 
-                            shape="rounded" 
-                            size="large" 
-                            onClick={() => startActivity(activity)}
-                          >
-                            {activity}
-                          </Button>
+                          {editingRecentActivity === activity ? (
+                            <input
+                              style={{
+                                width: '100%',
+                                height: '48px',
+                                padding: '0 16px',
+                                border: '1px solid #ddd',
+                                borderRadius: '12px',
+                                fontSize: '16px',
+                                fontWeight: '500',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
+                              value={editingRecentName}
+                              autoFocus
+                              onChange={e => setEditingRecentName(e.target.value)}
+                              onBlur={() => {
+                                if (editingRecentName.trim() === '') {
+                                  setEditingRecentName(activity); // 恢复原标题
+                                  setEditingRecentActivity(null);
+                                } else {
+                                  // 更新recent activities
+                                  setRecentActivities(prev => 
+                                    prev.map(item => 
+                                      item === activity ? editingRecentName : item
+                                    )
+                                  );
+                                  setEditingRecentActivity(null);
+                                }
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  if (editingRecentName.trim() === '') {
+                                    setEditingRecentName(activity); // 恢复原标题
+                                    setEditingRecentActivity(null);
+                                  } else {
+                                    // 更新recent activities
+                                    setRecentActivities(prev => 
+                                      prev.map(item => 
+                                        item === activity ? editingRecentName : item
+                                      )
+                                    );
+                                    setEditingRecentActivity(null);
+                                  }
+                                } else if (e.key === 'Escape') {
+                                  setEditingRecentName(activity); // 恢复原标题
+                                  setEditingRecentActivity(null);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div
+                              onTouchStart={(e) => {
+                                e.preventDefault();
+                                const timer = setTimeout(() => {
+                                  setEditingRecentActivity(activity);
+                                  setEditingRecentName(activity);
+                                }, 600);
+                                const cleanup = () => clearTimeout(timer);
+                                document.addEventListener('touchend', cleanup, { once: true });
+                                document.addEventListener('touchmove', cleanup, { once: true });
+                              }}
+                              onContextMenu={(e) => e.preventDefault()}
+                            >
+                              <Button 
+                                block 
+                                className="activity-btn" 
+                                shape="rounded" 
+                                size="large" 
+                                onClick={() => startActivity(activity)}
+                              >
+                                {activity}
+                              </Button>
+                            </div>
+                          )}
                         </Grid.Item>
                       ))}
                     </Grid>
@@ -1603,7 +1682,7 @@ function App() {
         <div style={{
           position: 'fixed',
           left: '50%',
-          bottom: 0,
+          bottom: '24px',
           transform: 'translateX(-50%)',
           width: 'auto',
           background: 'transparent',
@@ -1625,6 +1704,7 @@ function App() {
               padding: '12px 32px',
               fontSize: 18,
               fontWeight: 600,
+              whiteSpace: 'nowrap',
               boxShadow: '0px 91px 25px 0px rgba(0, 0, 0, 0.00), 0px 58px 23px 0px rgba(0, 0, 0, 0.01), 0px 33px 20px 0px rgba(0, 0, 0, 0.05), 0px 14px 14px 0px rgba(0, 0, 0, 0.09), 0px 4px 8px 0px rgba(0, 0, 0, 0.10)',
               cursor: 'pointer',
               pointerEvents: 'auto',
@@ -1632,7 +1712,7 @@ function App() {
             }}
             onClick={() => setShowBottomSheet(true)}
           >
-            + Start Activity
+            ✨ Start Activity
         </button>
         </div>
       )}
