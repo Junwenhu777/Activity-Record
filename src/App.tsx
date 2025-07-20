@@ -227,7 +227,7 @@ function App() {
   const [chartType, setChartType] = useState<'Bar Chart' | 'Pie Chart'>('Bar Chart');
   const [showActivityFilter, setShowActivityFilter] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-  const [showStartButton, setShowStartButton] = useState(true);
+  const [showStartButton, setShowStartButton] = useState(false);
   const [popupRendered, setPopupRendered] = useState(true);
 
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
@@ -449,9 +449,11 @@ function App() {
   // 节流后的滚动处理函数
   const throttledScrollHandler = throttle((e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
+    console.log('Scroll event triggered, scrollTop:', scrollTop, 'popupRendered:', popupRendered, 'isBottomSheetClosing:', isBottomSheetClosing);
     
     // 任何滚动都收起popup并显示start按钮
     if (popupRendered && !isBottomSheetClosing) {
+      console.log('Closing popup due to scroll');
       setIsBottomSheetClosing(true);
       setShowStartButton(false);
       setTimeout(() => {
@@ -468,7 +470,7 @@ function App() {
     }
     
     lastScrollTop.current = scrollTop;
-  }, 100); // 100ms节流
+  }, 50); // 减少到50ms节流，更敏感
 
   // 下载按钮点击逻辑
   const handleDownloadClick = () => {
@@ -498,6 +500,52 @@ function App() {
       modal.removeEventListener('touchmove', stop);
     };
   }, [showStatsModal]);
+
+  // 全局滚动监听，当popup显示时，任何滚动都关闭popup
+  useEffect(() => {
+    if (!popupRendered || isBottomSheetClosing) return;
+    
+    const handleGlobalScroll = () => {
+      console.log('Global scroll event triggered');
+      if (!isBottomSheetClosing) {
+        setIsBottomSheetClosing(true);
+        setShowStartButton(false);
+        setTimeout(() => {
+          setShowBottomSheet(false);
+          setIsBottomSheetClosing(false);
+          setPopupRendered(false);
+          setTimeout(() => {
+            setShowStartButton(true);
+          }, 100);
+        }, 450);
+      }
+    };
+
+    const handleGlobalTouchMove = () => {
+      console.log('Global touch move event triggered');
+      if (!isBottomSheetClosing) {
+        setIsBottomSheetClosing(true);
+        setShowStartButton(false);
+        setTimeout(() => {
+          setShowBottomSheet(false);
+          setIsBottomSheetClosing(false);
+          setPopupRendered(false);
+          setTimeout(() => {
+            setShowStartButton(true);
+          }, 100);
+        }, 450);
+      }
+    };
+
+    // 监听window的滚动和触摸事件
+    window.addEventListener('scroll', handleGlobalScroll, { passive: false });
+    window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    
+    return () => {
+      window.removeEventListener('scroll', handleGlobalScroll);
+      window.removeEventListener('touchmove', handleGlobalTouchMove);
+    };
+  }, [popupRendered, isBottomSheetClosing]);
 
   // 获取所有可用活动列表
   const getAllActivities = () => {
@@ -1857,6 +1905,40 @@ function App() {
                   // 立即从DOM中移除popup
                   setPopupRendered(false);
                   // 延迟显示start按钮，确保popup完全消失
+                  setTimeout(() => {
+                    setShowStartButton(true);
+                  }, 100);
+                }, 450);
+              }
+            }}
+            onScroll={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Overlay scroll event triggered');
+              if (!isBottomSheetClosing) {
+                setIsBottomSheetClosing(true);
+                setShowStartButton(false);
+                setTimeout(() => {
+                  setShowBottomSheet(false);
+                  setIsBottomSheetClosing(false);
+                  setPopupRendered(false);
+                  setTimeout(() => {
+                    setShowStartButton(true);
+                  }, 100);
+                }, 450);
+              }
+            }}
+            onTouchMove={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Overlay touch move event triggered');
+              if (!isBottomSheetClosing) {
+                setIsBottomSheetClosing(true);
+                setShowStartButton(false);
+                setTimeout(() => {
+                  setShowBottomSheet(false);
+                  setIsBottomSheetClosing(false);
+                  setPopupRendered(false);
                   setTimeout(() => {
                     setShowStartButton(true);
                   }, 100);
