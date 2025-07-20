@@ -493,20 +493,28 @@ function App() {
     
     // 只有主内容区的滚动才收起popup并显示start按钮
     if (popupRendered && !isBottomSheetClosing) {
-      console.log('Closing popup due to main content scroll');
-      setIsBottomSheetClosing(true);
-      setShowStartButton(false);
-      setTimeout(() => {
-        setShowBottomSheet(false);
-        // 立即重置关闭状态，确保popup从DOM中移除
-        setIsBottomSheetClosing(false);
-        // 立即从DOM中移除popup
-        setPopupRendered(false);
-        // 延迟显示start按钮，确保popup完全消失
+      // 检查是否有popup交互标志
+      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+      const hasRecentInteraction = popupContainer && popupContainer.getAttribute('data-recent-interaction') === 'true';
+      
+      if (!hasRecentInteraction) {
+        console.log('Closing popup due to main content scroll');
+        setIsBottomSheetClosing(true);
+        setShowStartButton(false);
         setTimeout(() => {
-          setShowStartButton(true);
-        }, 100);
-      }, 450);
+          setShowBottomSheet(false);
+          // 立即重置关闭状态，确保popup从DOM中移除
+          setIsBottomSheetClosing(false);
+          // 立即从DOM中移除popup
+          setPopupRendered(false);
+          // 延迟显示start按钮，确保popup完全消失
+          setTimeout(() => {
+            setShowStartButton(true);
+          }, 100);
+        }, 450);
+      } else {
+        console.log('Popup has recent interaction, not closing');
+      }
     }
     
     lastScrollTop.current = scrollTop;
@@ -545,6 +553,29 @@ function App() {
   useEffect(() => {
     if (!popupRendered || isBottomSheetClosing) return;
     
+    // 添加一个标志来防止popup意外关闭
+    let isPopupInteraction = false;
+    
+    // 监听popup内的交互事件
+    const handlePopupInteraction = () => {
+      isPopupInteraction = true;
+      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+      if (popupContainer) {
+        popupContainer.setAttribute('data-recent-interaction', 'true');
+        setTimeout(() => {
+          popupContainer.removeAttribute('data-recent-interaction');
+          isPopupInteraction = false;
+        }, 1000); // 1秒内不关闭popup
+      }
+    };
+    
+    const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+    if (popupContainer) {
+      popupContainer.addEventListener('touchstart', handlePopupInteraction, { passive: true });
+      popupContainer.addEventListener('click', handlePopupInteraction, { passive: true });
+      popupContainer.addEventListener('focus', handlePopupInteraction, { passive: true });
+    }
+    
     const handleGlobalScroll = (e: Event) => {
       // 检查滚动事件是否来自popup内部
       const target = e.target as Element;
@@ -567,7 +598,7 @@ function App() {
       }
       
       console.log('Global scroll event triggered from main page');
-      if (!isBottomSheetClosing) {
+      if (!isBottomSheetClosing && !isPopupInteraction) {
         setIsBottomSheetClosing(true);
         setShowStartButton(false);
         setTimeout(() => {
@@ -603,7 +634,7 @@ function App() {
       }
       
       console.log('Global touch move event triggered from main page');
-      if (!isBottomSheetClosing) {
+      if (!isBottomSheetClosing && !isPopupInteraction) {
         setIsBottomSheetClosing(true);
         setShowStartButton(false);
         setTimeout(() => {
@@ -624,6 +655,14 @@ function App() {
     return () => {
       window.removeEventListener('scroll', handleGlobalScroll);
       window.removeEventListener('touchmove', handleGlobalTouchMove);
+      
+      // 清理popup交互监听器
+      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+      if (popupContainer) {
+        popupContainer.removeEventListener('touchstart', handlePopupInteraction);
+        popupContainer.removeEventListener('click', handlePopupInteraction);
+        popupContainer.removeEventListener('focus', handlePopupInteraction);
+      }
     };
   }, [popupRendered, isBottomSheetClosing]);
 
@@ -2121,6 +2160,21 @@ function App() {
               onTouchMove={(e) => {
                 e.stopPropagation();
               }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onFocus={(e) => {
+                e.stopPropagation();
+              }}
+              onBlur={(e) => {
+                e.stopPropagation();
+              }}
             >
               {/* 可滚动的tag区域 */}
               <div 
@@ -2270,6 +2324,15 @@ function App() {
                   onChange={val => setActivityName(val)}
                   clearable
                   style={{ flex: 1 }}
+                  onFocus={(e: React.FocusEvent<HTMLInputElement>) => {
+                    e.stopPropagation();
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    e.stopPropagation();
+                  }}
+                  onClick={(e: React.MouseEvent<HTMLInputElement>) => {
+                    e.stopPropagation();
+                  }}
                 />
                 <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName}>Start</Button>
               </div>
