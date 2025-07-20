@@ -599,3 +599,54 @@ button:focus-visible {
 .summary-popup-content > div::-webkit-scrollbar {
   display: none;
 }
+
+/* 隐藏活动筛选下拉菜单的滚动条 */
+[data-activity-filter-options]::-webkit-scrollbar {
+  display: none;
+}
+
+/* 活动筛选下拉菜单动画 */
+@keyframes slideDownAndFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideUpAndFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+
+/* 下载菜单动画 */
+@keyframes downloadMenuSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes downloadMenuSlideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}

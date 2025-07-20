@@ -223,9 +223,11 @@ function App() {
 
   // 新增 Summary popup 相关状态
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  const [isDownloadOptionsClosing, setIsDownloadOptionsClosing] = useState(false);
   const [timeGranularity, setTimeGranularity] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Day');
   const [chartType, setChartType] = useState<'Bar Chart' | 'Pie Chart'>('Bar Chart');
   const [showActivityFilter, setShowActivityFilter] = useState(false);
+  const [isActivityFilterClosing, setIsActivityFilterClosing] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showStartButton, setShowStartButton] = useState(false);
   const [popupRendered, setPopupRendered] = useState(true);
@@ -261,7 +263,11 @@ function App() {
         
         if (downloadButton && !downloadButton.contains(target) && 
             downloadOptions && !downloadOptions.contains(target)) {
-          setShowDownloadOptions(false);
+          setIsDownloadOptionsClosing(true);
+          setTimeout(() => {
+            setShowDownloadOptions(false);
+            setIsDownloadOptionsClosing(false);
+          }, 300);
         }
       }
       
@@ -702,8 +708,16 @@ function App() {
                     <button 
                       data-download-button
                       onClick={() => {
-                        console.log('Download button clicked, current state:', showDownloadOptions);
-                        setShowDownloadOptions(!showDownloadOptions);
+                                              console.log('Download button clicked, current state:', showDownloadOptions);
+                      if (showDownloadOptions) {
+                        setIsDownloadOptionsClosing(true);
+                        setTimeout(() => {
+                          setShowDownloadOptions(false);
+                          setIsDownloadOptionsClosing(false);
+                        }, 300);
+                      } else {
+                        setShowDownloadOptions(true);
+                      }
                       }}
                       style={{
                         width: 38,
@@ -739,7 +753,7 @@ function App() {
                       </svg>
                     </button>
                     {/* 下载选项下拉菜单 */}
-                    {showDownloadOptions && (
+                    {(showDownloadOptions || isDownloadOptionsClosing) && (
                       <div 
                         data-download-options
                         style={{
@@ -752,7 +766,12 @@ function App() {
                         padding: 8,
                         marginTop: 4,
                         minWidth: 140,
-                        zIndex: 100000
+                        zIndex: 100001,
+                        animation: isDownloadOptionsClosing 
+                          ? 'downloadMenuSlideUp 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards'
+                          : 'downloadMenuSlideDown 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                        transformOrigin: 'top right',
+                        willChange: 'transform, opacity'
                       }}>
                         <button
                           style={{
@@ -843,7 +862,11 @@ function App() {
                               URL.revokeObjectURL(url);
                               
                               console.log('Export completed successfully');
-                              setShowDownloadOptions(false);
+                              setIsDownloadOptionsClosing(true);
+                              setTimeout(() => {
+                                setShowDownloadOptions(false);
+                                setIsDownloadOptionsClosing(false);
+                              }, 300);
                             } catch (error) {
                               console.error('Export failed:', error);
                               console.error('Error stack:', (error as Error).stack);
@@ -869,7 +892,11 @@ function App() {
                           }}
                           onClick={() => {
                             setShowClearModal(true);
-                            setShowDownloadOptions(false);
+                            setIsDownloadOptionsClosing(true);
+                            setTimeout(() => {
+                              setShowDownloadOptions(false);
+                              setIsDownloadOptionsClosing(false);
+                            }, 300);
                           }}
                         >
                           Clear All Data
@@ -919,11 +946,8 @@ function App() {
                 display: 'flex',
                 gap: 10,
                 boxSizing: 'border-box',
-                overflowX: 'auto',
-                overflowY: 'visible',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-                WebkitOverflowScrolling: 'touch'
+                overflowX: 'hidden',
+                overflowY: 'visible'
               }}>
                 {/* 时间选择下拉菜单 */}
                 <div style={{ position: 'relative', width: 'fit-content' }}>
@@ -1054,7 +1078,17 @@ function App() {
                       cursor: 'pointer',
                       boxSizing: 'border-box'
                     }}
-                    onClick={() => setShowActivityFilter(!showActivityFilter)}
+                    onClick={() => {
+                      if (showActivityFilter) {
+                        setIsActivityFilterClosing(true);
+                        setTimeout(() => {
+                          setShowActivityFilter(false);
+                          setIsActivityFilterClosing(false);
+                        }, 300);
+                      } else {
+                        setShowActivityFilter(true);
+                      }
+                    }}
                   >
                     <span style={{
                       color: '#000',
@@ -1073,26 +1107,50 @@ function App() {
                     </svg>
                   </div>
 
-                </div>
-              </div>
-
-              {/* 活动筛选下拉菜单 - 移到外层避免被overflow限制 */}
-              {showActivityFilter && (
-                <div 
-                  data-activity-filter-options
-                  style={{
-                    position: 'absolute',
-                    top: '120px',
-                    left: '24px',
-                    background: '#fff',
-                    borderRadius: 8,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                    padding: 8,
-                    minWidth: 200,
-                    maxHeight: 300,
-                    overflowY: 'auto',
-                    zIndex: 100000
-                  }}>
+                  {/* 活动筛选下拉菜单 */}
+                  {(showActivityFilter || isActivityFilterClosing) && (
+                    <div 
+                      data-activity-filter-options
+                      style={{
+                        position: 'fixed',
+                        top: (() => {
+                          const button = document.querySelector('[data-activity-filter-button]');
+                          if (button) {
+                            const rect = button.getBoundingClientRect();
+                            return rect.bottom - 20;
+                          }
+                          return '50%';
+                        })(),
+                        left: (() => {
+                          const button = document.querySelector('[data-activity-filter-button]');
+                          if (button) {
+                            const rect = button.getBoundingClientRect();
+                            const menuWidth = 200; // 菜单的最小宽度
+                            const screenWidth = window.innerWidth;
+                            const rightEdge = rect.left + menuWidth;
+                            
+                            // 如果菜单会溢出右边，则向左调整
+                            if (rightEdge > screenWidth - 20) {
+                              return Math.max(20, screenWidth - menuWidth - 20);
+                            }
+                            return rect.left;
+                          }
+                          return '50%';
+                        })(),
+                        background: '#fff',
+                        borderRadius: 8,
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                        padding: 8,
+                        minWidth: 200,
+                        maxHeight: 350,
+                        overflowY: 'auto',
+                        zIndex: 100000,
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
+                        animation: isActivityFilterClosing 
+                          ? 'slideUpAndFadeOut 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                          : 'slideDownAndFadeIn 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                      }}>
                   {/* All 选项 */}
                   <div
                     style={{
@@ -1174,6 +1232,8 @@ function App() {
                   ))}
                 </div>
               )}
+                </div>
+              </div>
 
               {/* 内容区域 */}
               <div style={{ 
