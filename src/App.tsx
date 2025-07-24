@@ -2274,10 +2274,10 @@ function App() {
                                   setEditingRecentName(activity);
                                 }, 1000);
                               }}
-                              onTouchEnd={e => {
+                              onTouchEnd={() => {
                                 if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
                               }}
-                              onTouchMove={e => {
+                              onTouchMove={() => {
                                 if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
                               }}
                               onMouseDown={e => {
@@ -2289,10 +2289,10 @@ function App() {
                                   setEditingRecentName(activity);
                                 }, 1000);
                               }}
-                              onMouseUp={e => {
+                              onMouseUp={() => {
                                 if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
                               }}
-                              onMouseLeave={e => {
+                              onMouseLeave={() => {
                                 if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
                               }}
                               onClick={e => {
