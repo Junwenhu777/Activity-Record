@@ -503,6 +503,8 @@ function App() {
         setShowStartButton(false);
         setTimeout(() => {
           setShowBottomSheet(false);
+          setEditingRecentActivity(null);
+          setEditingRecentName('');
           // 立即重置关闭状态，确保popup从DOM中移除
           setIsBottomSheetClosing(false);
           // 立即从DOM中移除popup
@@ -1224,6 +1226,8 @@ function App() {
                   {(showActivityFilter || isActivityFilterClosing) && createPortal(
                     <div 
                       data-activity-filter-options
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={e => e.stopPropagation()}
                       style={{
                         position: 'fixed',
                         top: (() => {
@@ -2095,6 +2099,8 @@ function App() {
                 // 先等待动画完成，再隐藏元素
                 setTimeout(() => {
                   setShowBottomSheet(false);
+                  setEditingRecentActivity(null);
+                  setEditingRecentName('');
                   // 立即重置关闭状态，确保popup从DOM中移除
                   setIsBottomSheetClosing(false);
                   // 立即从DOM中移除popup
@@ -2258,24 +2264,52 @@ function App() {
                             />
                           ) : (
                             <div
-                              onTouchStart={(e) => {
+                              onTouchStart={e => {
                                 e.preventDefault();
-                                const timer = setTimeout(() => {
+                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                (window as any).__recentRecentLongPressFired = false;
+                                (window as any).__recentLongPressTimer = setTimeout(() => {
+                                  (window as any).__recentRecentLongPressFired = true;
                                   setEditingRecentActivity(activity);
                                   setEditingRecentName(activity);
-                                }, 600);
-                                const cleanup = () => clearTimeout(timer);
-                                document.addEventListener('touchend', cleanup, { once: true });
-                                document.addEventListener('touchmove', cleanup, { once: true });
+                                }, 1000);
                               }}
-                              onContextMenu={(e) => e.preventDefault()}
+                              onTouchEnd={e => {
+                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                              }}
+                              onTouchMove={e => {
+                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                              }}
+                              onMouseDown={e => {
+                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                (window as any).__recentRecentLongPressFired = false;
+                                (window as any).__recentLongPressTimer = setTimeout(() => {
+                                  (window as any).__recentRecentLongPressFired = true;
+                                  setEditingRecentActivity(activity);
+                                  setEditingRecentName(activity);
+                                }, 1000);
+                              }}
+                              onMouseUp={e => {
+                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                              }}
+                              onMouseLeave={e => {
+                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                              }}
+                              onClick={e => {
+                                if ((window as any).__recentRecentLongPressFired) {
+                                  // 长按已触发编辑，不再触发点击
+                                  (window as any).__recentRecentLongPressFired = false;
+                                  return;
+                                }
+                                startActivity(activity);
+                              }}
+                              onContextMenu={e => e.preventDefault()}
                             >
                               <Button 
                                 block 
                                 className="activity-btn" 
                                 shape="rounded" 
-                                size="large" 
-                                onClick={() => startActivity(activity)}
+                                size="large"
                               >
                                 {activity}
                               </Button>
