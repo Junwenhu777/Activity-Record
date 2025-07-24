@@ -2280,7 +2280,7 @@ function App() {
                               onTouchMove={() => {
                                 if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
                               }}
-                              onMouseDown={e => {
+                              onMouseDown={() => {
                                 if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
                                 (window as any).__recentRecentLongPressFired = false;
                                 (window as any).__recentLongPressTimer = setTimeout(() => {
@@ -2295,7 +2295,7 @@ function App() {
                               onMouseLeave={() => {
                                 if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
                               }}
-                              onClick={e => {
+                              onClick={() => {
                                 if ((window as any).__recentRecentLongPressFired) {
                                   // 长按已触发编辑，不再触发点击
                                   (window as any).__recentRecentLongPressFired = false;
