@@ -39,20 +39,7 @@ function getDateString(date: Date) {
   // 返回本地年月日字符串，避免UTC偏移
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
-function groupHistoryByDate(history: any[], beforeDate: Date) {
-  const groups: Record<string, any[]> = {};
-  history.forEach(item => {
-    const dateStr = getDateString(item.endAt);
-    if (!groups[dateStr]) groups[dateStr] = [];
-    groups[dateStr].push(item);
-  });
-  // 只保留beforeDate（不含）之前的分组
-  const beforeStr = getDateString(beforeDate);
-  return Object.entries(groups)
-    .filter(([date]) => date < beforeStr)
-    .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
-    .map(([date, items]) => [date, items.sort((a, b) => b.endAt - a.endAt)] as [string, any[]]);
-}
+
 
 // 获取所有历史数据的分组（用于显示完整历史）
 function groupAllHistoryByDate(history: any[]) {
