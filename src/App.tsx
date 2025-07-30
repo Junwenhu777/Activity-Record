@@ -54,6 +54,19 @@ function groupHistoryByDate(history: any[], beforeDate: Date) {
     .map(([date, items]) => [date, items.sort((a, b) => b.endAt - a.endAt)] as [string, any[]]);
 }
 
+// 获取所有历史数据的分组（用于显示完整历史）
+function groupAllHistoryByDate(history: any[]) {
+  const groups: Record<string, any[]> = {};
+  history.forEach(item => {
+    const dateStr = getDateString(item.endAt);
+    if (!groups[dateStr]) groups[dateStr] = [];
+    groups[dateStr].push(item);
+  });
+  return Object.entries(groups)
+    .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+    .map(([date, items]) => [date, items.sort((a, b) => b.endAt - a.endAt)] as [string, any[]]);
+}
+
 // 格式化秒为hh:mm:ss
 function formatHMS(sec: number) {
   const h = String(Math.floor(sec / 3600)).padStart(2, '0');
@@ -535,8 +548,8 @@ function App() {
   const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   // 今天的活动
   const todaysActivities = history.filter(item => item.endAt >= todayZero);
-  // 历史分组，只显示昨天及以前，分组内最多展示3条
-  const groupedHistory = groupHistoryByDate(history, todayZero);
+  // 历史分组，显示所有历史数据
+  const groupedHistory = groupAllHistoryByDate(history);
   const displayHistory: [string, any[]][] = groupedHistory as [string, any[]][];
 
   // 移动端阻止summary弹窗滚动穿透
@@ -918,7 +931,8 @@ function App() {
                               console.log('XLSX.utils:', XLSX.utils);
                               console.log('XLSX.write:', XLSX.write);
                               
-                              const all = [...history];
+                              // 使用与显示相同的数据源，并确保数据一致性
+                              const all = [...history].filter(item => !item.deleted);
                               if (current) {
                                 all.unshift({
                                   name: current.name,
@@ -928,14 +942,28 @@ function App() {
                                   deleted: false
                                 });
                               }
+                              
+                              // 按结束时间排序，最新的在前
+                              all.sort((a, b) => b.endAt.getTime() - a.endAt.getTime());
+                              
                               console.log('Data prepared:', all.length, 'items');
                               console.log('Sample data:', all[0]);
+                              console.log('All data for export:', all.map(item => ({
+                                name: item.name,
+                                startDate: getDateString(item.startAt),
+                                startAt: formatTime(item.startAt),
+                                endDate: getDateString(item.endAt),
+                                endAt: formatTime(item.endAt),
+                                duration: formatHMS(Math.round(item.duration / 1000))
+                              })));
                               
-                              // 简化的数据格式
+                              // 使用与主内容区相同的时间格式和列名，并添加日期信息
                               const rows = all.map(item => ({
                                 Activity: item.name,
-                                Start: item.startAt instanceof Date ? item.startAt.toISOString() : item.startAt,
-                                End: item.endAt instanceof Date ? item.endAt.toISOString() : item.endAt,
+                                'Start Date': getDateString(item.startAt),
+                                'Start At': formatTime(item.startAt),
+                                'End Date': getDateString(item.endAt),
+                                'End At': formatTime(item.endAt),
                                 Duration: formatHMS(Math.round(item.duration / 1000)),
                                 Seconds: Math.round(item.duration / 1000),
                                 Deleted: item.deleted ? 'true' : 'false'
@@ -1973,7 +2001,7 @@ function App() {
                 {items.length === 0 && (
                   <div style={{ color: '#bbb', fontSize: 14, marginBottom: 12 }}>No activity</div>
                 )}
-                {items.slice(0, 3).map((item, idx) => {
+                {items.map((item, idx) => {
                   const isShowDelete = swipeDelete && swipeDelete.idx === idx && swipeDelete.date === date;
                   const isDeleted = item.deleted;
                   return (
