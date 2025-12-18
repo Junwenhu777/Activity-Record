@@ -153,17 +153,33 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
   return Object.entries(groups)
     .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
     .map(([timeKey, items]) => {
-      const summary: Record<string, { duration: number; residents: Set<string> }> = {};
+      const summary: Record<string, { 
+        duration: number; 
+        residents: Set<string>; 
+        residentDurations: Record<string, number>;
+      }> = {};
+      
       items.forEach(item => {
         if (!summary[item.name]) {
-          summary[item.name] = { duration: 0, residents: new Set() };
+          summary[item.name] = { duration: 0, residents: new Set(), residentDurations: {} };
         }
         summary[item.name].duration += item.duration;
-        // 收集所有 residents
-        if (item.residents) {
+        
+        // 收集所有 residents 及其各自的时长
+        if (item.residents && item.residents.length > 0) {
           item.residents.forEach((r: any) => {
             const name = typeof r === 'string' ? r : r.name;
-            if (name) summary[item.name].residents.add(name);
+            if (name) {
+              summary[item.name].residents.add(name);
+              // 计算该 resident 的时长：从 addedAt 到 endAt
+              const addedAt = (typeof r === 'object' && r.addedAt) ? new Date(r.addedAt) : item.startAt;
+              const residentDuration = new Date(item.endAt).getTime() - new Date(addedAt).getTime();
+              // 累加同名 resident 在不同活动实例中的时长
+              if (!summary[item.name].residentDurations[name]) {
+                summary[item.name].residentDurations[name] = 0;
+              }
+              summary[item.name].residentDurations[name] += residentDuration;
+            }
           });
         }
       });
@@ -174,7 +190,8 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
           .map(([name, data]) => ({ 
             name, 
             duration: data.duration, 
-            residents: Array.from(data.residents) 
+            residents: Array.from(data.residents),
+            residentDurations: data.residentDurations
           }))
           .sort((a, b) => b.duration - a.duration)
       };
@@ -775,29 +792,33 @@ function App() {
 
   // 活动和 Resident 筛选逻辑
   const getFilteredData = (data: any[]) => {
-    console.log('getFilteredData input:', data);
-    console.log('selectedFilterResidents:', selectedFilterResidents);
-    
-    const result = data.map(group => ({
+    return data.map(group => ({
       ...group,
-      activities: group.activities.filter((activity: any) => {
-        // 活动名称筛选
-        const activityMatch = selectedActivities.length === 0 || selectedActivities.includes(activity.name);
-        
-        // Resident 筛选 - activity.residents 现在是字符串数组
-        const residentMatch = selectedFilterResidents.length === 0 || 
-          (activity.residents && activity.residents.length > 0 && activity.residents.some((r: string) => {
-            return selectedFilterResidents.includes(r);
-          }));
-        
-        console.log('Activity:', activity.name, 'residents:', activity.residents, 'residentMatch:', residentMatch);
-        
-        return activityMatch && residentMatch;
-      })
+      activities: group.activities
+        .filter((activity: any) => {
+          // 活动名称筛选
+          const activityMatch = selectedActivities.length === 0 || selectedActivities.includes(activity.name);
+          
+          // Resident 筛选 - activity.residents 现在是字符串数组
+          const residentMatch = selectedFilterResidents.length === 0 || 
+            (activity.residents && activity.residents.length > 0 && activity.residents.some((r: string) => {
+              return selectedFilterResidents.includes(r);
+            }));
+          
+          return activityMatch && residentMatch;
+        })
+        .map((activity: any) => {
+          // 如果选择了特定 Residents，重新计算该活动的时长
+          if (selectedFilterResidents.length > 0 && activity.residentDurations) {
+            const filteredDuration = selectedFilterResidents.reduce((sum: number, r: string) => {
+              return sum + (activity.residentDurations[r] || 0);
+            }, 0);
+            return { ...activity, duration: filteredDuration };
+          }
+          return activity;
+        })
+        .filter((activity: any) => activity.duration > 0) // 过滤掉时长为0的活动
     })).filter(group => group.activities.length > 0);
-    
-    console.log('getFilteredData result:', result);
-    return result;
   };
   
   // 获取所有 resident 名字（从 history 和 current 中提取）
