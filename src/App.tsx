@@ -2130,8 +2130,8 @@ function App() {
                 }
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minWidth: 0 }}>
-                <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="activity-card-title">Now</div>
                   {/* 当前活动卡片名称可编辑 */}
                   {editingCurrentName ? (
@@ -2169,13 +2169,9 @@ function App() {
                         alignItems: 'center',
                         gap: 8, 
                         marginBottom: 4,
-                        position: 'relative',
-                        width: '100%',
                         overflowX: 'auto',
                         scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        paddingRight: 0,
-                        marginRight: 0
+                        msOverflowStyle: 'none'
                       }}>
                         {/* Add resident 按钮 */}
                         <button
@@ -2354,26 +2350,31 @@ function App() {
                         )}
                         
                         {/* Residents tags - 横向滚动 */}
-                        {current.residents && current.residents.length > 0 && current.residents.map((resident: any) => {
-                          const residentName = typeof resident === 'string' ? resident : resident.name;
-                          return (
-                            <span 
-                              key={residentName}
-                              style={{
-                                background: '#E9F2F4',
-                                color: '#00313c',
-                                padding: '4px 12px',
-                                borderRadius: 12,
-                                fontSize: 12,
-                                fontWeight: 500,
-                                whiteSpace: 'nowrap',
-                                flexShrink: 0
-                              }}
-                            >
-                              {residentName}
-                            </span>
-                          );
-                        })}
+                        {current.residents && current.residents.length > 0 && current.residents
+                          .filter((resident: any) => {
+                            const residentName = typeof resident === 'string' ? resident : resident.name;
+                            return residentName && residentName.trim() !== '';
+                          })
+                          .map((resident: any) => {
+                            const residentName = typeof resident === 'string' ? resident : resident.name;
+                            return (
+                              <span 
+                                key={residentName}
+                                style={{
+                                  background: '#E9F2F4',
+                                  color: '#00313c',
+                                  padding: '4px 12px',
+                                  borderRadius: 12,
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0
+                                }}
+                              >
+                                {residentName}
+                              </span>
+                            );
+                          })}
                       </div>
                       <div className="activity-card-title" style={{ fontSize: 24, cursor: 'pointer' }} onClick={() => { setEditingCurrentName(true); setEditingName(current.name); }}>{current.name}</div>
                     </>
@@ -2512,13 +2513,9 @@ function App() {
                           alignItems: 'center',
                           gap: 8, 
                           marginBottom: 4,
-                          position: 'relative',
-                          width: '100%',
                           overflowX: 'auto',
                           scrollbarWidth: 'none',
-                          msOverflowStyle: 'none',
-                          paddingRight: 0,
-                          marginRight: 0
+                          msOverflowStyle: 'none'
                         }}>
                           {/* Add resident 按钮 */}
                           <button
@@ -2706,22 +2703,27 @@ function App() {
                           )}
                           
                           {/* Residents tags */}
-                          {item.residents && item.residents.length > 0 && item.residents.map((resident: any) => {
-                            const residentName = typeof resident === 'string' ? resident : resident.name;
-                            return (
-                              <span 
-                                key={residentName}
-                                style={{
-                                  background: '#E9F2F4',
-                                  color: '#00313c',
-                                  padding: '4px 12px',
-                                  borderRadius: 12,
-                                  fontSize: 12,
-                                  fontWeight: 500,
-                                  whiteSpace: 'nowrap',
-                                  flexShrink: 0
-                                }}
-                              >
+                          {item.residents && item.residents.length > 0 && item.residents
+                            .filter((resident: any) => {
+                              const residentName = typeof resident === 'string' ? resident : resident.name;
+                              return residentName && residentName.trim() !== '';
+                            })
+                            .map((resident: any) => {
+                              const residentName = typeof resident === 'string' ? resident : resident.name;
+                              return (
+                                <span 
+                                  key={residentName}
+                                  style={{
+                                    background: '#E9F2F4',
+                                    color: '#00313c',
+                                    padding: '4px 12px',
+                                    borderRadius: 12,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0
+                                  }}
+                                >
                                 {residentName}
                               </span>
                             );
@@ -2844,13 +2846,9 @@ function App() {
                             alignItems: 'center',
                             gap: 8, 
                             marginBottom: 4,
-                            position: 'relative',
-                            width: '100%',
                             overflowX: 'auto',
                             scrollbarWidth: 'none',
-                            msOverflowStyle: 'none',
-                            paddingRight: 0,
-                            marginRight: 0
+                            msOverflowStyle: 'none'
                           }}>
                             {/* Add resident 按钮 */}
                             <button
@@ -3038,22 +3036,27 @@ function App() {
                             )}
                             
                             {/* Residents tags */}
-                            {item.residents && item.residents.length > 0 && item.residents.map((resident: any) => {
-                              const residentName = typeof resident === 'string' ? resident : resident.name;
-                              return (
-                                <span 
-                                  key={residentName}
-                                  style={{
-                                    background: '#E9F2F4',
-                                    color: '#00313c',
-                                    padding: '4px 12px',
-                                    borderRadius: 12,
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0
-                                  }}
-                                >
+                            {item.residents && item.residents.length > 0 && item.residents
+                              .filter((resident: any) => {
+                                const residentName = typeof resident === 'string' ? resident : resident.name;
+                                return residentName && residentName.trim() !== '';
+                              })
+                              .map((resident: any) => {
+                                const residentName = typeof resident === 'string' ? resident : resident.name;
+                                return (
+                                  <span 
+                                    key={residentName}
+                                    style={{
+                                      background: '#E9F2F4',
+                                      color: '#00313c',
+                                      padding: '4px 12px',
+                                      borderRadius: 12,
+                                      fontSize: 12,
+                                      fontWeight: 500,
+                                      whiteSpace: 'nowrap',
+                                      flexShrink: 0
+                                    }}
+                                  >
                                   {residentName}
                                 </span>
                               );
