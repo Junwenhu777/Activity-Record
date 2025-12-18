@@ -918,8 +918,8 @@ function App() {
                               console.log('XLSX.utils:', XLSX.utils);
                               console.log('XLSX.write:', XLSX.write);
                               
-                              // 使用与显示相同的数据源，并确保数据一致性
-                              const all = [...history].filter(item => !item.deleted);
+                              // 导出所有数据（包括已删除的），deleted 字段会正确反映删除状态
+                              const all = [...history];
                               if (current) {
                                 all.unshift({
                                   name: current.name,
@@ -941,8 +941,11 @@ function App() {
                                 startAt: formatTime(item.startAt),
                                 endDate: getDateString(item.endAt),
                                 endAt: formatTime(item.endAt),
-                                duration: formatHMS(Math.round(item.duration / 1000))
+                                duration: formatHMS(Math.round(item.duration / 1000)),
+                                deleted: item.deleted
                               })));
+                              console.log('Deleted items count:', all.filter(item => item.deleted).length);
+                              console.log('Total items count:', all.length);
                               
                               // 使用与主内容区相同的时间格式和列名，并添加日期信息
                               const rows = all.map(item => ({
