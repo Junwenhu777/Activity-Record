@@ -114,7 +114,8 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
       startAt: current.startAt,
       endAt: now,
       duration: now.getTime() - current.startAt.getTime(),
-      deleted: false
+      deleted: false,
+      residents: current.residents || []
     });
   }
 
@@ -152,16 +153,29 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
   return Object.entries(groups)
     .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
     .map(([timeKey, items]) => {
-      const summary: Record<string, number> = {};
+      const summary: Record<string, { duration: number; residents: Set<string> }> = {};
       items.forEach(item => {
-        if (!summary[item.name]) summary[item.name] = 0;
-        summary[item.name] += item.duration;
+        if (!summary[item.name]) {
+          summary[item.name] = { duration: 0, residents: new Set() };
+        }
+        summary[item.name].duration += item.duration;
+        // 收集所有 residents
+        if (item.residents) {
+          item.residents.forEach((r: any) => {
+            const name = typeof r === 'string' ? r : r.name;
+            if (name) summary[item.name].residents.add(name);
+          });
+        }
       });
       
       return {
         timeKey,
         activities: Object.entries(summary)
-          .map(([name, duration]) => ({ name, duration }))
+          .map(([name, data]) => ({ 
+            name, 
+            duration: data.duration, 
+            residents: Array.from(data.residents) 
+          }))
           .sort((a, b) => b.duration - a.duration)
       };
     });
@@ -169,12 +183,18 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
 
 // 格式化时间键显示
 function formatTimeKey(timeKey: string, granularity: 'Day' | 'Week' | 'Month' | 'Year') {
+  // 手动解析日期字符串，避免时区问题
+  const parseLocalDate = (str: string) => {
+    const parts = str.split('-');
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2] || '1'));
+  };
+  
   switch (granularity) {
     case 'Day':
-      const dayDate = new Date(timeKey);
+      const dayDate = parseLocalDate(timeKey);
       return dayDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
     case 'Week':
-      const weekDate = new Date(timeKey);
+      const weekDate = parseLocalDate(timeKey);
       const weekEnd = new Date(weekDate);
       weekEnd.setDate(weekDate.getDate() + 6);
       return `${weekDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}`;
