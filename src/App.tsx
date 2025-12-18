@@ -773,35 +773,44 @@ function App() {
 
   // 活动和 Resident 筛选逻辑
   const getFilteredData = (data: any[]) => {
-    return data.map(group => ({
+    console.log('getFilteredData input:', data);
+    console.log('selectedFilterResidents:', selectedFilterResidents);
+    
+    const result = data.map(group => ({
       ...group,
       activities: group.activities.filter((activity: any) => {
         // 活动名称筛选
         const activityMatch = selectedActivities.length === 0 || selectedActivities.includes(activity.name);
         
-        // Resident 筛选 - 正确处理 resident 可能是对象的情况
+        // Resident 筛选 - activity.residents 现在是字符串数组
         const residentMatch = selectedFilterResidents.length === 0 || 
-          (activity.residents && activity.residents.some((r: any) => {
-            const residentName = typeof r === 'string' ? r : r.name;
-            return selectedFilterResidents.includes(residentName);
+          (activity.residents && activity.residents.length > 0 && activity.residents.some((r: string) => {
+            return selectedFilterResidents.includes(r);
           }));
+        
+        console.log('Activity:', activity.name, 'residents:', activity.residents, 'residentMatch:', residentMatch);
         
         return activityMatch && residentMatch;
       })
     })).filter(group => group.activities.length > 0);
+    
+    console.log('getFilteredData result:', result);
+    return result;
   };
   
   // 获取所有 resident 名字（从 history 和 current 中提取）
   const getAllResidentsFromHistory = (): string[] => {
     const residentSet = new Set<string>();
     // 从 residents 列表获取
-    residents.forEach(r => residentSet.add(r));
+    residents.forEach(r => {
+      if (r && r.trim()) residentSet.add(r);
+    });
     // 从 history 中获取
     history.forEach(item => {
       if (item.residents) {
         item.residents.forEach((r: any) => {
           const name = typeof r === 'string' ? r : r.name;
-          residentSet.add(name);
+          if (name && name.trim()) residentSet.add(name);
         });
       }
     });
@@ -809,7 +818,7 @@ function App() {
     if (current && current.residents) {
       current.residents.forEach((r: any) => {
         const name = typeof r === 'string' ? r : r.name;
-        residentSet.add(name);
+        if (name && name.trim()) residentSet.add(name);
       });
     }
     return Array.from(residentSet).sort();
