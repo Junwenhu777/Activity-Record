@@ -488,7 +488,9 @@ function App() {
     if (current) {
       stopCurrent();
     }
-    setCurrent({ name, startAt: new Date(), deleted: false, residents: selectedResidents });
+    // 将选中的 residents 转换为对象格式，包含 addedAt
+    const residentsWithTime = selectedResidents.map(r => ({ name: r, addedAt: new Date() }));
+    setCurrent({ name, startAt: new Date(), deleted: false, residents: residentsWithTime });
     setActivityName('');
     
     // 将自定义活动添加到recent列表
