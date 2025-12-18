@@ -231,6 +231,14 @@ function App() {
   const [selectedResidents, setSelectedResidents] = useState<string[]>([]);
   const [isAddingResident, setIsAddingResident] = useState(false);
   const [newResidentName, setNewResidentName] = useState('');
+  const [editingResident, setEditingResident] = useState<string | null>(null);
+  const [editingResidentName, setEditingResidentName] = useState('');
+  
+  // Card 内添加 resident 的 state
+  const [showCardResidentDropdown, setShowCardResidentDropdown] = useState<string | null>(null); // 'now' | 'today-{idx}' | '{date}-{idx}'
+  const [cardNewResidentName, setCardNewResidentName] = useState('');
+  const [isAddingNewCardResident, setIsAddingNewCardResident] = useState(false); // 是否正在输入新名字
+  const [cardDropdownPosition, setCardDropdownPosition] = useState<{ top: number; left: number } | null>(null);
 
   // 新增 Summary popup 相关状态
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
@@ -240,6 +248,9 @@ function App() {
   const [showActivityFilter, setShowActivityFilter] = useState(false);
   const [isActivityFilterClosing, setIsActivityFilterClosing] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [showResidentFilter, setShowResidentFilter] = useState(false);
+  const [isResidentFilterClosing, setIsResidentFilterClosing] = useState(false);
+  const [selectedFilterResidents, setSelectedFilterResidents] = useState<string[]>([]);
   const [showStartButton, setShowStartButton] = useState(false);
   const [popupRendered, setPopupRendered] = useState(true);
 
@@ -293,6 +304,31 @@ function App() {
           setShowActivityFilter(false);
         }
       }
+
+      // 检查是否点击了 Resident 筛选下拉菜单
+      if (showResidentFilter) {
+        const target = e.target as Element;
+        const residentFilterButton = document.querySelector('[data-resident-filter-button]');
+        const residentFilterOptions = document.querySelector('[data-resident-filter-options]');
+        
+        if (residentFilterButton && !residentFilterButton.contains(target) && 
+            residentFilterOptions && !residentFilterOptions.contains(target)) {
+          setShowResidentFilter(false);
+        }
+      }
+      
+      // 检查是否点击了卡片 Resident dropdown 外部
+      if (showCardResidentDropdown) {
+        const target = e.target as Element;
+        const cardResidentDropdown = document.querySelector('[data-card-resident-dropdown]');
+        
+        if (!cardResidentDropdown || !cardResidentDropdown.contains(target)) {
+          setShowCardResidentDropdown(null);
+          setCardDropdownPosition(null);
+          setIsAddingNewCardResident(false);
+          setCardNewResidentName('');
+        }
+      }
       
       // 检查是否点击了 popup 外部区域
       if (showStatsModal && !isStatsModalClosing) {
@@ -330,11 +366,11 @@ function App() {
       }
     };
 
-    if (showDownloadOptions || showActivityFilter || showStatsModal) {
+    if (showDownloadOptions || showActivityFilter || showResidentFilter || showStatsModal || showCardResidentDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showDownloadOptions, showActivityFilter, showStatsModal, isStatsModalClosing]);
+  }, [showDownloadOptions, showActivityFilter, showResidentFilter, showStatsModal, isStatsModalClosing, showCardResidentDropdown]);
 
   // localStorage持久化恢复
   useEffect(() => {
@@ -711,18 +747,48 @@ function App() {
     return Array.from(activities).sort();
   };
 
-  // 活动筛选逻辑
+  // 活动和 Resident 筛选逻辑
   const getFilteredData = (data: any[]) => {
-    if (selectedActivities.length === 0) {
-      return data; // 如果没有选择任何活动，显示所有活动
-    }
-    
     return data.map(group => ({
       ...group,
-      activities: group.activities.filter((activity: any) => 
-        selectedActivities.includes(activity.name)
-      )
+      activities: group.activities.filter((activity: any) => {
+        // 活动名称筛选
+        const activityMatch = selectedActivities.length === 0 || selectedActivities.includes(activity.name);
+        
+        // Resident 筛选 - 正确处理 resident 可能是对象的情况
+        const residentMatch = selectedFilterResidents.length === 0 || 
+          (activity.residents && activity.residents.some((r: any) => {
+            const residentName = typeof r === 'string' ? r : r.name;
+            return selectedFilterResidents.includes(residentName);
+          }));
+        
+        return activityMatch && residentMatch;
+      })
     })).filter(group => group.activities.length > 0);
+  };
+  
+  // 获取所有 resident 名字（从 history 和 current 中提取）
+  const getAllResidentsFromHistory = (): string[] => {
+    const residentSet = new Set<string>();
+    // 从 residents 列表获取
+    residents.forEach(r => residentSet.add(r));
+    // 从 history 中获取
+    history.forEach(item => {
+      if (item.residents) {
+        item.residents.forEach((r: any) => {
+          const name = typeof r === 'string' ? r : r.name;
+          residentSet.add(name);
+        });
+      }
+    });
+    // 从 current 中获取
+    if (current && current.residents) {
+      current.residents.forEach((r: any) => {
+        const name = typeof r === 'string' ? r : r.name;
+        residentSet.add(name);
+      });
+    }
+    return Array.from(residentSet).sort();
   };
 
   // 顶部时间戳逻辑
@@ -789,8 +855,9 @@ function App() {
                 padding: 0
               }}
             >
-              <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15.0806 9.7376C15.697 9.09724 16.0414 8.24295 16.0414 7.3541C16.0414 6.46524 15.697 5.61095 15.0806 4.9706C14.7801 4.65842 14.4197 4.41008 14.021 4.24046C13.6222 4.07083 13.1934 3.9834 12.7601 3.9834C12.3268 3.9834 11.8979 4.07083 11.4992 4.24046C11.1005 4.41008 10.7401 4.65842 10.4396 4.9706L9.50245 5.98385L8.51808 4.97256C8.21758 4.66039 7.85718 4.41205 7.45846 4.24242C7.05973 4.0728 6.63088 3.98537 6.19758 3.98537C5.76427 3.98537 5.33542 4.0728 4.9367 4.24242C4.53797 4.41205 4.17758 4.66039 3.87708 4.97256C3.26063 5.61292 2.91626 6.46721 2.91626 7.35606C2.91626 8.24492 3.26063 9.09921 3.87708 9.73956L9.4552 15.4693L15.0806 9.7376Z" fill="#003746"/>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3V15M12 15L7 10M12 15L17 10" stroke="#003746" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M3 17V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V17" stroke="#003746" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
           </div>
@@ -906,7 +973,7 @@ function App() {
                         padding: 8,
                         marginTop: 4,
                         minWidth: 140,
-                        zIndex: 100001,
+                        zIndex: 9999999,
                         animation: isDownloadOptionsClosing 
                           ? 'downloadMenuSlideUp 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards'
                           : 'downloadMenuSlideDown 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
@@ -972,21 +1039,66 @@ function App() {
                               console.log('Deleted items count:', all.filter(item => item.deleted).length);
                               console.log('Total items count:', all.length);
                               
-                              // 使用与主内容区相同的时间格式和列名，并添加日期信息
-                              const rows = all.map(item => ({
-                                Activity: item.name,
-                                Resident: item.residents && item.residents.length > 0 ? item.residents.join(', ') : 'none',
-                                'Start Date': getDateString(item.startAt),
-                                'Start At': formatTime(item.startAt),
-                                'End Date': getDateString(item.endAt),
-                                'End At': formatTime(item.endAt),
-                                Duration: formatHMS(Math.round(item.duration / 1000)),
-                                Seconds: Math.round(item.duration / 1000),
-                                Deleted: item.deleted ? 'true' : 'false'
-                              }));
+                              // 新格式：每个 resident 对应一行
+                              // Resident Name | Activity | Start Date | Start At | End Date | End At | Duration | Seconds | Deleted
+                              const rows: any[] = [];
+                              
+                              all.forEach(item => {
+                                const itemResidents = item.residents || [];
+                                
+                                if (itemResidents.length === 0) {
+                                  // 没有 resident 的 activity，Resident Name 为空
+                                  rows.push({
+                                    'Resident Name': '',
+                                    Activity: item.name,
+                                    'Start Date': getDateString(item.startAt),
+                                    'Start At': formatTime(item.startAt),
+                                    'End Date': getDateString(item.endAt),
+                                    'End At': formatTime(item.endAt),
+                                    Duration: formatHMS(Math.round(item.duration / 1000)),
+                                    Seconds: Math.round(item.duration / 1000),
+                                    Deleted: item.deleted ? 'true' : 'false'
+                                  });
+                                } else {
+                                  // 每个 resident 生成一行
+                                  itemResidents.forEach((r: any) => {
+                                    const residentName = typeof r === 'string' ? r : r.name;
+                                    // 如果 resident 有 addedAt 时间，使用它作为该 resident 的开始时间
+                                    // 否则使用活动的开始时间
+                                    const residentStartAt = (typeof r === 'object' && r.addedAt) 
+                                      ? new Date(r.addedAt) 
+                                      : item.startAt;
+                                    // 计算该 resident 的 duration（从 addedAt 到活动结束）
+                                    const residentDuration = item.endAt.getTime() - residentStartAt.getTime();
+                                    rows.push({
+                                      'Resident Name': residentName,
+                                      Activity: item.name,
+                                      'Start Date': getDateString(residentStartAt),
+                                      'Start At': formatTime(residentStartAt),
+                                      'End Date': getDateString(item.endAt),
+                                      'End At': formatTime(item.endAt),
+                                      Duration: formatHMS(Math.round(residentDuration / 1000)),
+                                      Seconds: Math.round(residentDuration / 1000),
+                                      Deleted: item.deleted ? 'true' : 'false'
+                                    });
+                                  });
+                                }
+                              });
+                              
+                              // 列顺序
+                              const columnOrder = ['Resident Name', 'Activity', 'Start Date', 'Start At', 'End Date', 'End At', 'Duration', 'Seconds', 'Deleted'];
+                              const reorderedRows = rows.map(row => {
+                                const newRow: any = {};
+                                columnOrder.forEach(col => {
+                                  if (row.hasOwnProperty(col)) {
+                                    newRow[col] = row[col];
+                                  }
+                                });
+                                return newRow;
+                              });
                               
                               console.log('Creating worksheet...');
-                              const ws = XLSX.utils.json_to_sheet(rows);
+                              const ws = XLSX.utils.json_to_sheet(reorderedRows);
                               console.log('Worksheet created:', ws);
                               
                               const wb = XLSX.utils.book_new();
@@ -1396,6 +1508,185 @@ function App() {
                 document.body
               )}
                 </div>
+
+                {/* Resident 筛选下拉菜单 */}
+                {residents.length > 0 && (
+                  <div style={{ position: 'relative', width: 'fit-content', zIndex: 999998 }}>
+                    <div
+                      data-resident-filter-button
+                      style={{
+                        display: 'flex',
+                        height: 38,
+                        padding: '10px 14px',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 10,
+                        borderRadius: 200,
+                        border: 'none',
+                        background: '#E9F2F4',
+                        cursor: 'pointer',
+                        boxSizing: 'border-box'
+                      }}
+                      onClick={() => {
+                        if (showResidentFilter) {
+                          setIsResidentFilterClosing(true);
+                          setTimeout(() => {
+                            setShowResidentFilter(false);
+                            setIsResidentFilterClosing(false);
+                          }, 300);
+                        } else {
+                          setShowResidentFilter(true);
+                        }
+                      }}
+                    >
+                      <span style={{
+                        color: '#000',
+                        fontSize: 12,
+                        fontStyle: 'normal',
+                        fontWeight: 700,
+                        lineHeight: 'normal',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {selectedFilterResidents.length === 0 ? 'All Residents' : `${selectedFilterResidents.length} Resident${selectedFilterResidents.length > 1 ? 's' : ''}`}
+                      </span>
+                      <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+
+                    {/* Resident 筛选下拉菜单 - 使用Portal渲染到body顶层 */}
+                    {(showResidentFilter || isResidentFilterClosing) && createPortal(
+                      <div 
+                        data-resident-filter-options
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          position: 'fixed',
+                          top: (() => {
+                            const button = document.querySelector('[data-resident-filter-button]');
+                            if (button) {
+                              const rect = button.getBoundingClientRect();
+                              return rect.bottom + 4;
+                            }
+                            return '50%';
+                          })(),
+                          left: (() => {
+                            const button = document.querySelector('[data-resident-filter-button]');
+                            if (button) {
+                              const rect = button.getBoundingClientRect();
+                              const menuWidth = 200;
+                              const screenWidth = window.innerWidth;
+                              const rightEdge = rect.left + menuWidth;
+                              
+                              if (rightEdge > screenWidth - 20) {
+                                return Math.max(20, screenWidth - menuWidth - 20);
+                              }
+                              return rect.left;
+                            }
+                            return '50%';
+                          })(),
+                          background: '#fff',
+                          borderRadius: 8,
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                          padding: 8,
+                          minWidth: 200,
+                          maxHeight: 350,
+                          overflowY: 'auto',
+                          zIndex: 999998,
+                          scrollbarWidth: 'none',
+                          msOverflowStyle: 'none',
+                          animation: isResidentFilterClosing 
+                            ? 'slideUpAndFadeOut 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                            : 'slideDownAndFadeIn 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                          pointerEvents: 'auto'
+                        }}>
+                        {/* All 选项 */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            borderRadius: 4,
+                            fontSize: 14,
+                            background: selectedFilterResidents.length === 0 ? '#f0f0f0' : 'transparent'
+                          }}
+                          onClick={() => {
+                            setSelectedFilterResidents([]);
+                            setShowResidentFilter(false);
+                          }}
+                        >
+                          <div style={{
+                            width: 16,
+                            height: 16,
+                            border: '2px solid #ddd',
+                            borderRadius: 3,
+                            marginRight: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: selectedFilterResidents.length === 0 ? '#007bff' : 'transparent'
+                          }}>
+                            {selectedFilterResidents.length === 0 && (
+                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
+                          <span>All Residents</span>
+                        </div>
+                        
+                        <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
+                        
+                        {/* 各个 Resident 选项 */}
+                        {/* Residents 列表 - 使用从 history 中提取的所有 resident */}
+                        {getAllResidentsFromHistory().map(resident => (
+                          <div
+                            key={resident}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              borderRadius: 4,
+                              fontSize: 14,
+                              background: selectedFilterResidents.includes(resident) ? '#f0f0f0' : 'transparent'
+                            }}
+                            onClick={() => {
+                              if (selectedFilterResidents.includes(resident)) {
+                                setSelectedFilterResidents(prev => prev.filter(r => r !== resident));
+                              } else {
+                                setSelectedFilterResidents(prev => [...prev, resident]);
+                              }
+                            }}
+                          >
+                            <div style={{
+                              width: 16,
+                              height: 16,
+                              border: '2px solid #ddd',
+                              borderRadius: 3,
+                              marginRight: 8,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: selectedFilterResidents.includes(resident) ? '#007bff' : 'transparent'
+                            }}>
+                              {selectedFilterResidents.includes(resident) && (
+                                <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </div>
+                            <span>{resident}</span>
+                          </div>
+                        ))}
+                      </div>,
+                      document.body
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 内容区域 */}
@@ -1831,9 +2122,16 @@ function App() {
               style={{
                 animation: 'fadeInScale 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               }}
+              onClick={() => {
+                // 点击卡片其他区域取消新增 resident
+                if (showCardResidentDropdown === 'now') {
+                  setShowCardResidentDropdown(null);
+                  setCardNewResidentName('');
+                }
+              }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                   <div className="activity-card-title">Now</div>
                   {/* 当前活动卡片名称可编辑 */}
                   {editingCurrentName ? (
@@ -1865,20 +2163,200 @@ function App() {
                     />
                   ) : (
                     <>
-                      {/* Residents 横向滚动显示 - 在 title 上方 */}
-                      {current.residents && current.residents.length > 0 && (
-                        <div style={{ 
-                          display: 'flex', 
-                          gap: 8, 
-                          overflowX: 'auto', 
-                          marginBottom: 4,
-                          paddingBottom: 4,
-                          scrollbarWidth: 'none',
-                          msOverflowStyle: 'none'
-                        }}>
-                          {current.residents.map((resident: string) => (
+                      {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        gap: 8, 
+                        marginBottom: 4,
+                        position: 'relative',
+                        maxWidth: '100%',
+                        overflowX: 'auto',
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none'
+                      }}>
+                        {/* Add resident 按钮 */}
+                        <button
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            border: '1px dashed #ccc',
+                            background: '#fff',
+                            cursor: 'pointer',
+                            padding: 0,
+                            flexShrink: 0,
+                            position: 'relative'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (showCardResidentDropdown === 'now') {
+                              setShowCardResidentDropdown(null);
+                              setCardDropdownPosition(null);
+                            } else {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                              setShowCardResidentDropdown('now');
+                            }
+                            setIsAddingNewCardResident(false);
+                            setCardNewResidentName('');
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                            <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                        
+                        {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
+                        {showCardResidentDropdown === 'now' && cardDropdownPosition && createPortal(
+                          <div 
+                            data-card-resident-dropdown
+                            style={{
+                              position: 'fixed',
+                              top: cardDropdownPosition.top,
+                              left: cardDropdownPosition.left,
+                              background: '#fff',
+                              borderRadius: 12,
+                              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                              padding: 8,
+                              minWidth: 200,
+                              maxHeight: 300,
+                              overflowY: 'auto',
+                              zIndex: 999999
+                            }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {/* Add new name 选项 */}
+                            {isAddingNewCardResident ? (
+                              <div style={{ padding: '4px 8px' }}>
+                                <input
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: 20,
+                                    fontSize: 14,
+                                    boxSizing: 'border-box',
+                                    outline: 'none'
+                                  }}
+                                  placeholder="Enter new name..."
+                                  value={cardNewResidentName}
+                                  onChange={e => setCardNewResidentName(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter' && cardNewResidentName.trim()) {
+                                      const newName = cardNewResidentName.trim();
+                                      // 同步保存到全局 residents 列表
+                                      if (!residents.includes(newName)) {
+                                        setResidents(prev => [...prev, newName]);
+                                      }
+                                      // 添加到当前活动
+                                      const newResidentEntry = { name: newName, addedAt: new Date() };
+                                      const currentResidents = current.residents || [];
+                                      if (!currentResidents.some((r: any) => (typeof r === 'string' ? r : r.name) === newName)) {
+                                        setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
+                                      }
+                                      setCardNewResidentName('');
+                                      setIsAddingNewCardResident(false);
+                                    } else if (e.key === 'Escape') {
+                                      setCardNewResidentName('');
+                                      setIsAddingNewCardResident(false);
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  padding: '8px 12px',
+                                  cursor: 'pointer',
+                                  borderRadius: 20,
+                                  fontSize: 14,
+                                  border: '1px solid #ddd',
+                                  marginBottom: 8
+                                }}
+                                onClick={() => setIsAddingNewCardResident(true)}
+                                onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
+                                onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+                              >
+                                <span style={{ marginRight: 8 }}>+</span>
+                                <span>Add new name</span>
+                              </div>
+                            )}
+                            
+                            {/* 已有 residents 列表 */}
+                            {residents.map(resident => {
+                              const currentResidents = current.residents || [];
+                              const isSelected = currentResidents.some((cr: any) => (typeof cr === 'string' ? cr : cr.name) === resident);
+                              return (
+                                <div
+                                  key={resident}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    cursor: 'pointer',
+                                    borderRadius: 20,
+                                    fontSize: 14,
+                                    border: '1px solid #ddd',
+                                    marginBottom: 4,
+                                    background: isSelected ? '#E9F2F4' : 'transparent'
+                                  }}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      // 取消选择
+                                      const newResidents = currentResidents.filter((r: any) => {
+                                        const name = typeof r === 'string' ? r : r.name;
+                                        return name !== resident;
+                                      });
+                                      setCurrent({ ...current, residents: newResidents });
+                                    } else {
+                                      // 选择
+                                      const newResidentEntry = { name: resident, addedAt: new Date() };
+                                      setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
+                                    }
+                                  }}
+                                  onMouseEnter={e => {
+                                    if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                  }}
+                                >
+                                  <div style={{
+                                    width: 18,
+                                    height: 18,
+                                    borderRadius: '50%',
+                                    border: isSelected ? 'none' : '2px solid #ddd',
+                                    marginRight: 8,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: isSelected ? '#007bff' : 'transparent',
+                                    flexShrink: 0
+                                  }}>
+                                    {isSelected && (
+                                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                        <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <span>{resident}</span>
+                                </div>
+                              );
+                            })}
+                          </div>,
+                          document.body
+                        )}
+                        
+                        {/* Residents tags - 横向滚动 */}
+                        {current.residents && current.residents.length > 0 && current.residents.map((resident: any) => {
+                          const residentName = typeof resident === 'string' ? resident : resident.name;
+                          return (
                             <span 
-                              key={resident}
+                              key={residentName}
                               style={{
                                 background: '#E9F2F4',
                                 color: '#00313c',
@@ -1890,11 +2368,11 @@ function App() {
                                 flexShrink: 0
                               }}
                             >
-                              {resident}
+                              {residentName}
                             </span>
-                          ))}
-                        </div>
-                      )}
+                          );
+                        })}
+                      </div>
                       <div className="activity-card-title" style={{ fontSize: 24, cursor: 'pointer' }} onClick={() => { setEditingCurrentName(true); setEditingName(current.name); }}>{current.name}</div>
                     </>
                   )}
@@ -1909,15 +2387,18 @@ function App() {
                   style={{ 
                     marginTop: 0, 
                     alignSelf: 'flex-end',
-                    width: '48px',
-                    height: '48px',
+                    width: 48,
+                    minWidth: 48,
+                    height: 48,
+                    minHeight: 48,
                     borderRadius: '50%',
                     padding: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#E9F2F4',
-                    border: 'none'
+                    border: 'none',
+                    flexShrink: 0
                   }} 
                   onClick={stopCurrent}
                 >
@@ -2023,20 +2504,209 @@ function App() {
                       />
                     ) : (
                       <>
-                        {/* Residents 横向滚动显示 - 在 title 上方 */}
-                        {item.residents && item.residents.length > 0 && (
-                          <div style={{ 
-                            display: 'flex', 
-                            gap: 8, 
-                            overflowX: 'auto', 
-                            marginBottom: 4,
-                            paddingBottom: 4,
-                            scrollbarWidth: 'none',
-                            msOverflowStyle: 'none'
-                          }}>
-                            {item.residents.map((resident: string) => (
+                        {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          gap: 8, 
+                          marginBottom: 4,
+                          position: 'relative',
+                          maxWidth: '100%',
+                          overflowX: 'auto',
+                          scrollbarWidth: 'none',
+                          msOverflowStyle: 'none'
+                        }}>
+                          {/* Add resident 按钮 */}
+                          <button
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: '50%',
+                              border: '1px dashed #ccc',
+                              background: '#fff',
+                              cursor: 'pointer',
+                              padding: 0,
+                              flexShrink: 0,
+                              position: 'relative'
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (showCardResidentDropdown === `today-${idx}`) {
+                                setShowCardResidentDropdown(null);
+                                setCardDropdownPosition(null);
+                              } else {
+                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                setShowCardResidentDropdown(`today-${idx}`);
+                              }
+                              setIsAddingNewCardResident(false);
+                              setCardNewResidentName('');
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                              <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                          </button>
+                          
+                          {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
+                          {showCardResidentDropdown === `today-${idx}` && cardDropdownPosition && createPortal(
+                            <div 
+                              data-card-resident-dropdown
+                              style={{
+                                position: 'fixed',
+                                top: cardDropdownPosition.top,
+                                left: cardDropdownPosition.left,
+                                background: '#fff',
+                                borderRadius: 12,
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                                padding: 8,
+                                minWidth: 200,
+                                maxHeight: 300,
+                                overflowY: 'auto',
+                                zIndex: 999999
+                              }}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              {/* Add new name 选项 */}
+                              {isAddingNewCardResident ? (
+                                <div style={{ padding: '4px 8px' }}>
+                                  <input
+                                    style={{
+                                      width: '100%',
+                                      padding: '8px 12px',
+                                      border: '1px solid #ddd',
+                                      borderRadius: 20,
+                                      fontSize: 14,
+                                      boxSizing: 'border-box',
+                                      outline: 'none'
+                                    }}
+                                    placeholder="Enter new name..."
+                                    value={cardNewResidentName}
+                                    onChange={e => setCardNewResidentName(e.target.value)}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter' && cardNewResidentName.trim()) {
+                                        const newName = cardNewResidentName.trim();
+                                        // 同步保存到全局 residents 列表
+                                        if (!residents.includes(newName)) {
+                                          setResidents(prev => [...prev, newName]);
+                                        }
+                                        // 添加到历史卡片
+                                        const newHistory = [...history];
+                                        const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                        if (histIdx !== -1) {
+                                          const currentResidents = newHistory[histIdx].residents || [];
+                                          const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
+                                          if (!residentNames.includes(newName)) {
+                                            newHistory[histIdx].residents = [newName, ...currentResidents];
+                                            setHistory(newHistory);
+                                          }
+                                        }
+                                        setCardNewResidentName('');
+                                        setIsAddingNewCardResident(false);
+                                      } else if (e.key === 'Escape') {
+                                        setCardNewResidentName('');
+                                        setIsAddingNewCardResident(false);
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px 12px',
+                                    cursor: 'pointer',
+                                    borderRadius: 20,
+                                    fontSize: 14,
+                                    border: '1px solid #ddd',
+                                    marginBottom: 8
+                                  }}
+                                  onClick={() => setIsAddingNewCardResident(true)}
+                                  onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
+                                  onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+                                >
+                                  <span style={{ marginRight: 8 }}>+</span>
+                                  <span>Add new name</span>
+                                </div>
+                              )}
+                              
+                              {/* 已有 residents 列表 */}
+                              {residents.map(resident => {
+                                const itemResidents = item.residents || [];
+                                const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
+                                return (
+                                  <div
+                                    key={resident}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      padding: '8px 12px',
+                                      cursor: 'pointer',
+                                      borderRadius: 20,
+                                      fontSize: 14,
+                                      border: '1px solid #ddd',
+                                      marginBottom: 4,
+                                      background: isSelected ? '#E9F2F4' : 'transparent'
+                                    }}
+                                    onClick={() => {
+                                      const newHistory = [...history];
+                                      const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                      if (histIdx !== -1) {
+                                        const currentResidents = newHistory[histIdx].residents || [];
+                                        if (isSelected) {
+                                          // 取消选择
+                                          newHistory[histIdx].residents = currentResidents.filter((r: any) => {
+                                            const name = typeof r === 'string' ? r : r.name;
+                                            return name !== resident;
+                                          });
+                                        } else {
+                                          // 选择
+                                          newHistory[histIdx].residents = [resident, ...currentResidents];
+                                        }
+                                        setHistory(newHistory);
+                                      }
+                                    }}
+                                    onMouseEnter={e => {
+                                      if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                    }}
+                                  >
+                                    <div style={{
+                                      width: 18,
+                                      height: 18,
+                                      borderRadius: '50%',
+                                      border: isSelected ? 'none' : '2px solid #ddd',
+                                      marginRight: 8,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      background: isSelected ? '#007bff' : 'transparent',
+                                      flexShrink: 0
+                                    }}>
+                                      {isSelected && (
+                                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                          <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <span>{resident}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>,
+                            document.body
+                          )}
+                          
+                          {/* Residents tags */}
+                          {item.residents && item.residents.length > 0 && item.residents.map((resident: any) => {
+                            const residentName = typeof resident === 'string' ? resident : resident.name;
+                            return (
                               <span 
-                                key={resident}
+                                key={residentName}
                                 style={{
                                   background: '#E9F2F4',
                                   color: '#00313c',
@@ -2048,11 +2718,11 @@ function App() {
                                   flexShrink: 0
                                 }}
                               >
-                                {resident}
+                                {residentName}
                               </span>
-                            ))}
-                          </div>
-                        )}
+                            );
+                          })}
+                        </div>
                         <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
                       </>
                     )}
@@ -2164,20 +2834,209 @@ function App() {
                         />
                       ) : (
                         <>
-                          {/* Residents 横向滚动显示 - 在 title 上方 */}
-                          {item.residents && item.residents.length > 0 && (
-                            <div style={{ 
-                              display: 'flex', 
-                              gap: 8, 
-                              overflowX: 'auto', 
-                              marginBottom: 4,
-                              paddingBottom: 4,
-                              scrollbarWidth: 'none',
-                              msOverflowStyle: 'none'
-                            }}>
-                              {item.residents.map((resident: string) => (
+                          {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            gap: 8, 
+                            marginBottom: 4,
+                            position: 'relative',
+                            maxWidth: '100%',
+                            overflowX: 'auto',
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none'
+                          }}>
+                            {/* Add resident 按钮 */}
+                            <button
+                              style={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: '50%',
+                                border: '1px dashed #ccc',
+                                background: '#fff',
+                                cursor: 'pointer',
+                                padding: 0,
+                                flexShrink: 0,
+                                position: 'relative'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (showCardResidentDropdown === `${date}-${idx}`) {
+                                  setShowCardResidentDropdown(null);
+                                  setCardDropdownPosition(null);
+                                } else {
+                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                  setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                  setShowCardResidentDropdown(`${date}-${idx}`);
+                                }
+                                setIsAddingNewCardResident(false);
+                                setCardNewResidentName('');
+                              }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                                <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
+                              </svg>
+                            </button>
+                            
+                            {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
+                            {showCardResidentDropdown === `${date}-${idx}` && cardDropdownPosition && createPortal(
+                              <div 
+                                data-card-resident-dropdown
+                                style={{
+                                  position: 'fixed',
+                                  top: cardDropdownPosition.top,
+                                  left: cardDropdownPosition.left,
+                                  background: '#fff',
+                                  borderRadius: 12,
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                                  padding: 8,
+                                  minWidth: 200,
+                                  maxHeight: 300,
+                                  overflowY: 'auto',
+                                  zIndex: 999999
+                                }}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                {/* Add new name 选项 */}
+                                {isAddingNewCardResident ? (
+                                  <div style={{ padding: '4px 8px' }}>
+                                    <input
+                                      style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: 20,
+                                        fontSize: 14,
+                                        boxSizing: 'border-box',
+                                        outline: 'none'
+                                      }}
+                                      placeholder="Enter new name..."
+                                      value={cardNewResidentName}
+                                      onChange={e => setCardNewResidentName(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter' && cardNewResidentName.trim()) {
+                                          const newName = cardNewResidentName.trim();
+                                          // 同步保存到全局 residents 列表
+                                          if (!residents.includes(newName)) {
+                                            setResidents(prev => [...prev, newName]);
+                                          }
+                                          // 添加到历史卡片
+                                          const newHistory = [...history];
+                                          const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                          if (histIdx !== -1) {
+                                            const currentResidents = newHistory[histIdx].residents || [];
+                                            const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
+                                            if (!residentNames.includes(newName)) {
+                                              newHistory[histIdx].residents = [newName, ...currentResidents];
+                                              setHistory(newHistory);
+                                            }
+                                          }
+                                          setCardNewResidentName('');
+                                          setIsAddingNewCardResident(false);
+                                        } else if (e.key === 'Escape') {
+                                          setCardNewResidentName('');
+                                          setIsAddingNewCardResident(false);
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                  </div>
+                                ) : (
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      padding: '8px 12px',
+                                      cursor: 'pointer',
+                                      borderRadius: 20,
+                                      fontSize: 14,
+                                      border: '1px solid #ddd',
+                                      marginBottom: 8
+                                    }}
+                                    onClick={() => setIsAddingNewCardResident(true)}
+                                    onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
+                                    onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+                                  >
+                                    <span style={{ marginRight: 8 }}>+</span>
+                                    <span>Add new name</span>
+                                  </div>
+                                )}
+                                
+                                {/* 已有 residents 列表 */}
+                                {residents.map(resident => {
+                                  const itemResidents = item.residents || [];
+                                  const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
+                                  return (
+                                    <div
+                                      key={resident}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: '8px 12px',
+                                        cursor: 'pointer',
+                                        borderRadius: 20,
+                                        fontSize: 14,
+                                        border: '1px solid #ddd',
+                                        marginBottom: 4,
+                                        background: isSelected ? '#E9F2F4' : 'transparent'
+                                      }}
+                                      onClick={() => {
+                                        const newHistory = [...history];
+                                        const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                        if (histIdx !== -1) {
+                                          const currentResidents = newHistory[histIdx].residents || [];
+                                          if (isSelected) {
+                                            // 取消选择
+                                            newHistory[histIdx].residents = currentResidents.filter((r: any) => {
+                                              const name = typeof r === 'string' ? r : r.name;
+                                              return name !== resident;
+                                            });
+                                          } else {
+                                            // 选择
+                                            newHistory[histIdx].residents = [resident, ...currentResidents];
+                                          }
+                                          setHistory(newHistory);
+                                        }
+                                      }}
+                                      onMouseEnter={e => {
+                                        if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
+                                      }}
+                                      onMouseLeave={e => {
+                                        if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                      }}
+                                    >
+                                      <div style={{
+                                        width: 18,
+                                        height: 18,
+                                        borderRadius: '50%',
+                                        border: isSelected ? 'none' : '2px solid #ddd',
+                                        marginRight: 8,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: isSelected ? '#007bff' : 'transparent',
+                                        flexShrink: 0
+                                      }}>
+                                        {isSelected && (
+                                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                            <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                          </svg>
+                                        )}
+                                      </div>
+                                      <span>{resident}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>,
+                              document.body
+                            )}
+                            
+                            {/* Residents tags */}
+                            {item.residents && item.residents.length > 0 && item.residents.map((resident: any) => {
+                              const residentName = typeof resident === 'string' ? resident : resident.name;
+                              return (
                                 <span 
-                                  key={resident}
+                                  key={residentName}
                                   style={{
                                     background: '#E9F2F4',
                                     color: '#00313c',
@@ -2189,11 +3048,11 @@ function App() {
                                     flexShrink: 0
                                   }}
                                 >
-                                  {resident}
+                                  {residentName}
                                 </span>
-                              ))}
-                            </div>
-                          )}
+                              );
+                            })}
+                          </div>
                           <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date, idx }); setEditingName(item.name); }}>{item.name}</div>
                         </>
                       )}
@@ -2324,80 +3183,62 @@ function App() {
             >
               {/* RESIDENT Section */}
               <div style={{ marginBottom: 20 }}>
+                {/* 标题栏 - 包含 Resident 标题和添加按钮 */}
                 <div style={{ 
-                  fontSize: 12, 
-                  fontWeight: 600, 
-                  color: '#666', 
-                  marginBottom: 12,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5
-                }}>
-                  Resident
-                </div>
-                {/* Resident 名字区域 - 固定高度可滚动 */}
-                <div style={{ 
-                  maxHeight: residents.length > 0 ? 168 : 'auto', // 约3.5行高度
-                  overflowY: residents.length > 6 ? 'auto' : 'visible',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   marginBottom: 12
                 }}>
-                  {residents.length > 0 && (
-                    <Grid columns={2} gap={12} className="activity-btn-grid">
-                      {residents.map(resident => (
-                        <Grid.Item key={resident}>
-                          <Button 
-                            block 
-                            className="activity-btn" 
-                            shape="rounded" 
-                            size="large"
-                            style={{
-                              background: selectedResidents.includes(resident) ? '#00313c' : '#E9F2F4',
-                              color: selectedResidents.includes(resident) ? '#fff' : '#222',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'flex-start',
-                              gap: 8,
-                              paddingLeft: 12
-                            }}
-                            onClick={() => {
-                              setSelectedResidents(prev => 
-                                prev.includes(resident) 
-                                  ? prev.filter(r => r !== resident)
-                                  : [...prev, resident]
-                              );
-                            }}
-                          >
-                            <span style={{
-                              width: 16,
-                              height: 16,
-                              border: selectedResidents.includes(resident) ? '2px solid #fff' : '2px solid #ddd',
-                              borderRadius: '50%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0
-                            }}>
-                              {selectedResidents.includes(resident) && (
-                                <span style={{
-                                  width: 8,
-                                  height: 8,
-                                  background: '#fff',
-                                  borderRadius: '50%'
-                                }} />
-                              )}
-                            </span>
-                            {resident}
-                          </Button>
-                        </Grid.Item>
-                      ))}
-                    </Grid>
+                  <div style={{ 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    color: '#666', 
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5
+                  }}>
+                    Resident
+                  </div>
+                  {/* 有 residents 时显示加号按钮 */}
+                  {residents.length > 0 && !isAddingResident && (
+                    <button
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        border: '1px solid #ddd',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        color: '#666',
+                        padding: 0,
+                        position: 'relative'
+                      }}
+                      onClick={() => setIsAddingResident(true)}
+                    >
+                      <svg 
+                        width="14" 
+                        height="14" 
+                        viewBox="0 0 14 14" 
+                        fill="none" 
+                        style={{ 
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    </button>
                   )}
                 </div>
-                {/* 添加 Resident 按钮/输入框 */}
-                {isAddingResident ? (
+                
+                {/* 输入框 - 添加新 resident */}
+                {isAddingResident && (
                   <input
                     style={{
                       width: '100%',
-                      height: '48px',
+                      height: '44px',
                       padding: '0 16px',
                       border: '1px solid #00313c',
                       borderRadius: '12px',
@@ -2405,7 +3246,8 @@ function App() {
                       fontWeight: '500',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      background: '#f5f9fa'
+                      background: '#f5f9fa',
+                      marginBottom: 12
                     }}
                     placeholder="Enter resident name"
                     value={newResidentName}
@@ -2431,7 +3273,180 @@ function App() {
                       }
                     }}
                   />
-                ) : (
+                )}
+
+                {/* Resident 名字区域 - 横向滚动，最多2行 */}
+                {residents.length > 0 ? (
+                  <div style={{ 
+                    overflowX: 'auto',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    WebkitOverflowScrolling: 'touch'
+                  }}>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateRows: 'repeat(2, 1fr)',
+                      gridAutoFlow: 'column',
+                      gridAutoColumns: 'max-content',
+                      columnGap: 12,
+                      rowGap: 12,
+                      paddingBottom: 4
+                    }}>
+                      {residents.map(resident => (
+                        editingResident === resident ? (
+                          <input
+                            key={resident}
+                            style={{
+                              height: '44px',
+                              padding: '0 16px',
+                              border: '1px solid #00313c',
+                              borderRadius: 12,
+                              fontSize: 15,
+                              fontWeight: 500,
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              background: '#f5f9fa',
+                              minWidth: 120
+                            }}
+                            value={editingResidentName}
+                            autoFocus
+                            onChange={e => setEditingResidentName(e.target.value)}
+                            onBlur={() => {
+                              if (editingResidentName.trim() === '') {
+                                setEditingResidentName(resident);
+                                setEditingResident(null);
+                              } else if (editingResidentName.trim() !== resident) {
+                                // 更新 residents 列表
+                                setResidents(prev => 
+                                  prev.map(r => r === resident ? editingResidentName.trim() : r)
+                                );
+                                // 同时更新 selectedResidents
+                                setSelectedResidents(prev =>
+                                  prev.map(r => r === resident ? editingResidentName.trim() : r)
+                                );
+                                setEditingResident(null);
+                              } else {
+                                setEditingResident(null);
+                              }
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                if (editingResidentName.trim() === '') {
+                                  setEditingResidentName(resident);
+                                  setEditingResident(null);
+                                } else if (editingResidentName.trim() !== resident) {
+                                  setResidents(prev => 
+                                    prev.map(r => r === resident ? editingResidentName.trim() : r)
+                                  );
+                                  setSelectedResidents(prev =>
+                                    prev.map(r => r === resident ? editingResidentName.trim() : r)
+                                  );
+                                  setEditingResident(null);
+                                } else {
+                                  setEditingResident(null);
+                                }
+                              } else if (e.key === 'Escape') {
+                                setEditingResidentName(resident);
+                                setEditingResident(null);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <button
+                            key={resident}
+                            style={{
+                              background: selectedResidents.includes(resident) ? '#00313c' : '#E9F2F4',
+                              color: selectedResidents.includes(resident) ? '#fff' : '#222',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'flex-start',
+                              gap: 4,
+                              padding: '12px 16px',
+                              borderRadius: 12,
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: 15,
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              minWidth: 'fit-content'
+                            }}
+                            onTouchStart={e => {
+                              e.preventDefault();
+                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                              (window as any).__residentLongPressFired = false;
+                              (window as any).__residentLongPressTimer = setTimeout(() => {
+                                (window as any).__residentLongPressFired = true;
+                                setEditingResident(resident);
+                                setEditingResidentName(resident);
+                              }, 1000);
+                            }}
+                            onTouchEnd={() => {
+                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                              // 如果没有触发长按，则执行点击操作
+                              if (!(window as any).__residentLongPressFired) {
+                                setSelectedResidents(prev => 
+                                  prev.includes(resident) 
+                                    ? prev.filter(r => r !== resident)
+                                    : [...prev, resident]
+                                );
+                              }
+                            }}
+                            onTouchMove={() => {
+                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                            }}
+                            onMouseDown={() => {
+                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                              (window as any).__residentLongPressFired = false;
+                              (window as any).__residentLongPressTimer = setTimeout(() => {
+                                (window as any).__residentLongPressFired = true;
+                                setEditingResident(resident);
+                                setEditingResidentName(resident);
+                              }, 1000);
+                            }}
+                            onMouseUp={() => {
+                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                            }}
+                            onMouseLeave={() => {
+                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                            }}
+                            onClick={() => {
+                              // 只有在没有触发长按的情况下才执行点击操作（桌面端）
+                              if (!(window as any).__residentLongPressFired) {
+                                setSelectedResidents(prev => 
+                                  prev.includes(resident) 
+                                    ? prev.filter(r => r !== resident)
+                                    : [...prev, resident]
+                                );
+                              }
+                            }}
+                          >
+                            <span style={{
+                              width: 16,
+                              height: 16,
+                              border: selectedResidents.includes(resident) ? '2px solid #fff' : '2px solid #ddd',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              {selectedResidents.includes(resident) && (
+                                <span style={{
+                                  width: 8,
+                                  height: 8,
+                                  background: '#fff',
+                                  borderRadius: '50%'
+                                }} />
+                              )}
+                            </span>
+                            {resident}
+                          </button>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                ) : !isAddingResident && (
+                  /* 没有 residents 时显示 Add Name 按钮 */
                   <Button 
                     block 
                     className="activity-btn" 

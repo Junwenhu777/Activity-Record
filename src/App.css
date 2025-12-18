@@ -118,6 +118,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   padding: 24px;
   width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .activity-card-history {
