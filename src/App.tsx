@@ -78,6 +78,7 @@ function reviveDate(obj: any): any {
     }
     // 兼容老数据
     if (copy.deleted === undefined) copy.deleted = false;
+    if (copy.residents === undefined) copy.residents = [];
     return copy;
   }
   return obj;
@@ -222,6 +223,15 @@ function App() {
   const [editingRecentActivity, setEditingRecentActivity] = useState<string | null>(null);
   const [editingRecentName, setEditingRecentName] = useState('');
 
+  // RESIDENT 相关 state
+  const [residents, setResidents] = useState<string[]>(() => {
+    const r = localStorage.getItem('activity-residents');
+    return r ? JSON.parse(r) : [];
+  });
+  const [selectedResidents, setSelectedResidents] = useState<string[]>([]);
+  const [isAddingResident, setIsAddingResident] = useState(false);
+  const [newResidentName, setNewResidentName] = useState('');
+
   // 新增 Summary popup 相关状态
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [isDownloadOptionsClosing, setIsDownloadOptionsClosing] = useState(false);
@@ -345,6 +355,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem('activity-recent', JSON.stringify(recentActivities));
   }, [recentActivities]);
+  useEffect(() => {
+    localStorage.setItem('activity-residents', JSON.stringify(residents));
+  }, [residents]);
 
   // 刷新拦截逻辑
   useEffect(() => {
@@ -397,9 +410,17 @@ function App() {
     if (!current) return;
     const endAt = new Date();
     const duration = endAt.getTime() - current.startAt.getTime();
-    const newHistoryItem = { name: current.name, startAt: current.startAt, endAt, duration, deleted: false };
+    const newHistoryItem = { 
+      name: current.name, 
+      startAt: current.startAt, 
+      endAt, 
+      duration, 
+      deleted: false,
+      residents: current.residents || []
+    };
     setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
     setCurrent(null);
+    setSelectedResidents([]); // 重置选中的 residents
   };
 
   // 开始新活动（自动结束当前活动）
@@ -408,7 +429,7 @@ function App() {
     if (current) {
       stopCurrent();
     }
-    setCurrent({ name, startAt: new Date(), deleted: false });
+    setCurrent({ name, startAt: new Date(), deleted: false, residents: selectedResidents });
     setActivityName('');
     
     // 将自定义活动添加到recent列表
@@ -730,7 +751,10 @@ function App() {
               style={{ 
                 textAlign: 'left',
                 cursor: 'pointer',
-                userSelect: 'none'
+                userSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
               }}
               onClick={() => {
                 // 滚动到主内容区顶部
@@ -747,7 +771,8 @@ function App() {
                 });
               }}
             >
-              🐱 Activity Records
+              <img src="/logo.png" alt="logo" style={{ height: '1.2em', width: 'auto' }} />
+              Activity Records
             </div>
             <button 
               onClick={handleDownloadClick}
@@ -950,6 +975,7 @@ function App() {
                               // 使用与主内容区相同的时间格式和列名，并添加日期信息
                               const rows = all.map(item => ({
                                 Activity: item.name,
+                                Resident: item.residents && item.residents.length > 0 ? item.residents.join(', ') : 'none',
                                 'Start Date': getDateString(item.startAt),
                                 'Start At': formatTime(item.startAt),
                                 'End Date': getDateString(item.endAt),
@@ -1838,7 +1864,39 @@ function App() {
                       }}
                     />
                   ) : (
-                    <div className="activity-card-title" style={{ fontSize: 24, cursor: 'pointer' }} onClick={() => { setEditingCurrentName(true); setEditingName(current.name); }}>{current.name}</div>
+                    <>
+                      {/* Residents 横向滚动显示 - 在 title 上方 */}
+                      {current.residents && current.residents.length > 0 && (
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: 8, 
+                          overflowX: 'auto', 
+                          marginBottom: 4,
+                          paddingBottom: 4,
+                          scrollbarWidth: 'none',
+                          msOverflowStyle: 'none'
+                        }}>
+                          {current.residents.map((resident: string) => (
+                            <span 
+                              key={resident}
+                              style={{
+                                background: '#E9F2F4',
+                                color: '#00313c',
+                                padding: '4px 12px',
+                                borderRadius: 12,
+                                fontSize: 12,
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0
+                              }}
+                            >
+                              {resident}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="activity-card-title" style={{ fontSize: 24, cursor: 'pointer' }} onClick={() => { setEditingCurrentName(true); setEditingName(current.name); }}>{current.name}</div>
+                    </>
                   )}
                   <div className="activity-card-label">Start At: {formatTime(current.startAt)}</div>
                   <div className="activity-card-label">Duration: {formatDuration(now.getTime() - current.startAt.getTime())}</div>
@@ -1964,7 +2022,39 @@ function App() {
                         }}
                       />
                     ) : (
-                      <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
+                      <>
+                        {/* Residents 横向滚动显示 - 在 title 上方 */}
+                        {item.residents && item.residents.length > 0 && (
+                          <div style={{ 
+                            display: 'flex', 
+                            gap: 8, 
+                            overflowX: 'auto', 
+                            marginBottom: 4,
+                            paddingBottom: 4,
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none'
+                          }}>
+                            {item.residents.map((resident: string) => (
+                              <span 
+                                key={resident}
+                                style={{
+                                  background: '#E9F2F4',
+                                  color: '#00313c',
+                                  padding: '4px 12px',
+                                  borderRadius: 12,
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0
+                                }}
+                              >
+                                {resident}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
+                      </>
                     )}
                     <div className="activity-card-row">
                       <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Start At:</span>
@@ -2073,7 +2163,39 @@ function App() {
                           }}
                         />
                       ) : (
-                        <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date, idx }); setEditingName(item.name); }}>{item.name}</div>
+                        <>
+                          {/* Residents 横向滚动显示 - 在 title 上方 */}
+                          {item.residents && item.residents.length > 0 && (
+                            <div style={{ 
+                              display: 'flex', 
+                              gap: 8, 
+                              overflowX: 'auto', 
+                              marginBottom: 4,
+                              paddingBottom: 4,
+                              scrollbarWidth: 'none',
+                              msOverflowStyle: 'none'
+                            }}>
+                              {item.residents.map((resident: string) => (
+                                <span 
+                                  key={resident}
+                                  style={{
+                                    background: '#E9F2F4',
+                                    color: '#00313c',
+                                    padding: '4px 12px',
+                                    borderRadius: 12,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  {resident}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date, idx }); setEditingName(item.name); }}>{item.name}</div>
+                        </>
                       )}
                       <div className="activity-card-row">
                         <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Start At:</span>
@@ -2200,6 +2322,132 @@ function App() {
                 e.stopPropagation();
               }}
             >
+              {/* RESIDENT Section */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ 
+                  fontSize: 12, 
+                  fontWeight: 600, 
+                  color: '#666', 
+                  marginBottom: 12,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5
+                }}>
+                  Resident
+                </div>
+                {/* Resident 名字区域 - 固定高度可滚动 */}
+                <div style={{ 
+                  maxHeight: residents.length > 0 ? 168 : 'auto', // 约3.5行高度
+                  overflowY: residents.length > 6 ? 'auto' : 'visible',
+                  marginBottom: 12
+                }}>
+                  {residents.length > 0 && (
+                    <Grid columns={2} gap={12} className="activity-btn-grid">
+                      {residents.map(resident => (
+                        <Grid.Item key={resident}>
+                          <Button 
+                            block 
+                            className="activity-btn" 
+                            shape="rounded" 
+                            size="large"
+                            style={{
+                              background: selectedResidents.includes(resident) ? '#00313c' : '#E9F2F4',
+                              color: selectedResidents.includes(resident) ? '#fff' : '#222',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'flex-start',
+                              gap: 8,
+                              paddingLeft: 12
+                            }}
+                            onClick={() => {
+                              setSelectedResidents(prev => 
+                                prev.includes(resident) 
+                                  ? prev.filter(r => r !== resident)
+                                  : [...prev, resident]
+                              );
+                            }}
+                          >
+                            <span style={{
+                              width: 16,
+                              height: 16,
+                              border: selectedResidents.includes(resident) ? '2px solid #fff' : '2px solid #ddd',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              {selectedResidents.includes(resident) && (
+                                <span style={{
+                                  width: 8,
+                                  height: 8,
+                                  background: '#fff',
+                                  borderRadius: '50%'
+                                }} />
+                              )}
+                            </span>
+                            {resident}
+                          </Button>
+                        </Grid.Item>
+                      ))}
+                    </Grid>
+                  )}
+                </div>
+                {/* 添加 Resident 按钮/输入框 */}
+                {isAddingResident ? (
+                  <input
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      padding: '0 16px',
+                      border: '1px solid #00313c',
+                      borderRadius: '12px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: '#f5f9fa'
+                    }}
+                    placeholder="Enter resident name"
+                    value={newResidentName}
+                    autoFocus
+                    onChange={e => setNewResidentName(e.target.value)}
+                    onBlur={() => {
+                      if (newResidentName.trim()) {
+                        setResidents(prev => [...prev, newResidentName.trim()]);
+                      }
+                      setNewResidentName('');
+                      setIsAddingResident(false);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        if (newResidentName.trim()) {
+                          setResidents(prev => [...prev, newResidentName.trim()]);
+                        }
+                        setNewResidentName('');
+                        setIsAddingResident(false);
+                      } else if (e.key === 'Escape') {
+                        setNewResidentName('');
+                        setIsAddingResident(false);
+                      }
+                    }}
+                  />
+                ) : (
+                  <Button 
+                    block 
+                    className="activity-btn" 
+                    shape="rounded" 
+                    size="large"
+                    style={{
+                      border: '1px dashed #ccc',
+                      background: '#fff'
+                    }}
+                    onClick={() => setIsAddingResident(true)}
+                  >
+                    + Add Name
+                  </Button>
+                )}
+              </div>
+
               {/* 可滚动的tag区域 */}
               <div 
                 style={{ 
