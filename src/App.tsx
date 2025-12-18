@@ -124,14 +124,17 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
     let groupKey = '';
     const date = new Date(item.endAt);
     
+    // 使用本地时间格式化日期（避免时区偏移问题）
+    const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
     switch (granularity) {
       case 'Day':
-        groupKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        groupKey = localDateStr; // YYYY-MM-DD (本地时间)
         break;
       case 'Week':
         const weekStart = new Date(date);
         weekStart.setDate(date.getDate() - date.getDay());
-        groupKey = weekStart.toISOString().split('T')[0];
+        groupKey = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
         break;
       case 'Month':
         groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
@@ -592,9 +595,10 @@ function App() {
   const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   // 今天的活动
   const todaysActivities = history.filter(item => item.endAt >= todayZero);
-  // 历史分组，显示所有历史数据
+  // 历史分组，显示所有历史数据（排除今天，因为今天已经在 Today 区域显示了）
+  const todayDateStr = getDateString(now);
   const groupedHistory = groupAllHistoryByDate(history);
-  const displayHistory: [string, any[]][] = groupedHistory as [string, any[]][];
+  const displayHistory: [string, any[]][] = (groupedHistory as [string, any[]][]).filter(([date]) => date !== todayDateStr);
 
   // 移动端阻止summary弹窗滚动穿透
   useEffect(() => {
@@ -1215,10 +1219,9 @@ function App() {
               <div style={{ 
                 padding: '16px 24px',
                 display: 'flex',
+                flexWrap: 'wrap',
                 gap: 10,
-                boxSizing: 'border-box',
-                overflowX: 'hidden',
-                overflowY: 'visible'
+                boxSizing: 'border-box'
               }}>
                 {/* 时间选择下拉菜单 */}
                 <div style={{ position: 'relative', width: 'fit-content' }}>
