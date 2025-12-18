@@ -2130,8 +2130,8 @@ function App() {
                 }
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
                   <div className="activity-card-title">Now</div>
                   {/* 当前活动卡片名称可编辑 */}
                   {editingCurrentName ? (
