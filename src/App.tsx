@@ -3370,20 +3370,22 @@ function App() {
                               whiteSpace: 'nowrap',
                               minWidth: 'fit-content'
                             }}
-                            onTouchStart={e => {
-                              e.preventDefault();
+                            onTouchStart={() => {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                               (window as any).__residentLongPressFired = false;
+                              (window as any).__residentTouchStartTime = Date.now();
                               (window as any).__residentLongPressTimer = setTimeout(() => {
                                 (window as any).__residentLongPressFired = true;
                                 setEditingResident(resident);
                                 setEditingResidentName(resident);
-                              }, 1000);
+                              }, 800);
                             }}
-                            onTouchEnd={() => {
+                            onTouchEnd={e => {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                              // 如果没有触发长按，则执行点击操作
-                              if (!(window as any).__residentLongPressFired) {
+                              // 如果没有触发长按，且触摸时间短于 800ms，则执行点击操作
+                              const touchDuration = Date.now() - ((window as any).__residentTouchStartTime || 0);
+                              if (!(window as any).__residentLongPressFired && touchDuration < 800) {
+                                e.preventDefault();
                                 setSelectedResidents(prev => 
                                   prev.includes(resident) 
                                     ? prev.filter(r => r !== resident)
@@ -3401,7 +3403,7 @@ function App() {
                                 (window as any).__residentLongPressFired = true;
                                 setEditingResident(resident);
                                 setEditingResidentName(resident);
-                              }, 1000);
+                              }, 800);
                             }}
                             onMouseUp={() => {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
@@ -3409,9 +3411,10 @@ function App() {
                             onMouseLeave={() => {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                             }}
-                            onClick={() => {
+                            onClick={e => {
                               // 只有在没有触发长按的情况下才执行点击操作（桌面端）
                               if (!(window as any).__residentLongPressFired) {
+                                e.stopPropagation();
                                 setSelectedResidents(prev => 
                                   prev.includes(resident) 
                                     ? prev.filter(r => r !== resident)
