@@ -2130,17 +2130,26 @@ function App() {
                 }
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
-                  <div className="activity-card-title">Now</div>
-                  {/* 当前活动卡片名称可编辑 */}
-                  {editingCurrentName ? (
-                    <input
-                      style={{ fontSize: 24, fontWeight: 600, width: '100%', marginBottom: 8 }}
-                      value={editingName}
-                      autoFocus
-                      onChange={e => setEditingName(e.target.value)}
-                      onBlur={() => {
+              <div>
+                <div className="activity-card-title">Now</div>
+                {/* 当前活动卡片名称可编辑 */}
+                {editingCurrentName ? (
+                  <input
+                    style={{ fontSize: 24, fontWeight: 600, width: '100%', marginBottom: 8 }}
+                    value={editingName}
+                    autoFocus
+                    onChange={e => setEditingName(e.target.value)}
+                    onBlur={() => {
+                      if (editingName.trim() === '') {
+                        setEditingName(current.name); // 恢复原标题
+                        setEditingCurrentName(false);
+                      } else {
+                        setCurrent({ ...current, name: editingName });
+                        setEditingCurrentName(false);
+                      }
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
                         if (editingName.trim() === '') {
                           setEditingName(current.name); // 恢复原标题
                           setEditingCurrentName(false);
@@ -2148,31 +2157,21 @@ function App() {
                           setCurrent({ ...current, name: editingName });
                           setEditingCurrentName(false);
                         }
-                      }}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          if (editingName.trim() === '') {
-                            setEditingName(current.name); // 恢复原标题
-                            setEditingCurrentName(false);
-                          } else {
-                            setCurrent({ ...current, name: editingName });
-                            setEditingCurrentName(false);
-                          }
-                        }
-                      }}
-                    />
-                  ) : (
-                    <>
-                      {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        gap: 8, 
-                        marginBottom: 4,
-                        overflowX: 'auto',
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none'
-                      }}>
+                      }
+                    }}
+                  />
+                ) : (
+                  <>
+                    {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 - 独立占满宽度 */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      gap: 8, 
+                      marginBottom: 4,
+                      overflowX: 'auto',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none'
+                    }}>
                         {/* Add resident 按钮 */}
                         <button
                           style={{
@@ -2376,42 +2375,44 @@ function App() {
                             );
                           })}
                       </div>
-                      <div className="activity-card-title" style={{ fontSize: 24, cursor: 'pointer' }} onClick={() => { setEditingCurrentName(true); setEditingName(current.name); }}>{current.name}</div>
-                    </>
-                  )}
-                  <div className="activity-card-label">Start At: {formatTime(current.startAt)}</div>
-                  <div className="activity-card-label">Duration: {formatDuration(now.getTime() - current.startAt.getTime())}</div>
-                  <div className="activity-card-label">End At: -</div>
+                    <div className="activity-card-title" style={{ fontSize: 24, cursor: 'pointer' }} onClick={() => { setEditingCurrentName(true); setEditingName(current.name); }}>{current.name}</div>
+                  </>
+                )}
+                {/* 下方内容和 End 按钮并排 */}
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1 }}>
+                    <div className="activity-card-label">Start At: {formatTime(current.startAt)}</div>
+                    <div className="activity-card-label">Duration: {formatDuration(now.getTime() - current.startAt.getTime())}</div>
+                    <div className="activity-card-label">End At: -</div>
+                  </div>
+                  <Button 
+                    color="danger" 
+                    shape="rounded" 
+                    size="mini" 
+                    style={{ 
+                      width: 48,
+                      minWidth: 48,
+                      height: 48,
+                      minHeight: 48,
+                      borderRadius: '50%',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#E9F2F4',
+                      border: 'none',
+                      flexShrink: 0
+                    }} 
+                    onClick={stopCurrent}
+                  >
+                    <div style={{
+                      width: '18px',
+                      height: '18px',
+                      backgroundColor: '#F13C3F',
+                      borderRadius: '2px'
+                    }}></div>
+                  </Button>
                 </div>
-                <Button 
-                  color="danger" 
-                  shape="rounded" 
-                  size="mini" 
-                  style={{ 
-                    marginTop: 0, 
-                    alignSelf: 'flex-end',
-                    width: 48,
-                    minWidth: 48,
-                    height: 48,
-                    minHeight: 48,
-                    borderRadius: '50%',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#E9F2F4',
-                    border: 'none',
-                    flexShrink: 0
-                  }} 
-                  onClick={stopCurrent}
-                >
-                  <div style={{
-                    width: '18px',
-                    height: '18px',
-                    backgroundColor: '#F13C3F',
-                    borderRadius: '2px'
-                  }}></div>
-                </Button>
               </div>
             </div>
           )}
