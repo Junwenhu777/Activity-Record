@@ -2170,10 +2170,12 @@ function App() {
                         gap: 8, 
                         marginBottom: 4,
                         position: 'relative',
-                        maxWidth: '100%',
+                        width: '100%',
                         overflowX: 'auto',
                         scrollbarWidth: 'none',
-                        msOverflowStyle: 'none'
+                        msOverflowStyle: 'none',
+                        paddingRight: 0,
+                        marginRight: 0
                       }}>
                         {/* Add resident 按钮 */}
                         <button
@@ -2511,10 +2513,12 @@ function App() {
                           gap: 8, 
                           marginBottom: 4,
                           position: 'relative',
-                          maxWidth: '100%',
+                          width: '100%',
                           overflowX: 'auto',
                           scrollbarWidth: 'none',
-                          msOverflowStyle: 'none'
+                          msOverflowStyle: 'none',
+                          paddingRight: 0,
+                          marginRight: 0
                         }}>
                           {/* Add resident 按钮 */}
                           <button
@@ -2841,10 +2845,12 @@ function App() {
                             gap: 8, 
                             marginBottom: 4,
                             position: 'relative',
-                            maxWidth: '100%',
+                            width: '100%',
                             overflowX: 'auto',
                             scrollbarWidth: 'none',
-                            msOverflowStyle: 'none'
+                            msOverflowStyle: 'none',
+                            paddingRight: 0,
+                            marginRight: 0
                           }}>
                             {/* Add resident 按钮 */}
                             <button
