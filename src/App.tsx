@@ -3373,19 +3373,19 @@ function App() {
                             onTouchStart={() => {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                               (window as any).__residentLongPressFired = false;
-                              (window as any).__residentTouchStartTime = Date.now();
+                              (window as any).__residentTouchHandled = false;
                               (window as any).__residentLongPressTimer = setTimeout(() => {
                                 (window as any).__residentLongPressFired = true;
+                                (window as any).__residentTouchHandled = true;
                                 setEditingResident(resident);
                                 setEditingResidentName(resident);
                               }, 800);
                             }}
-                            onTouchEnd={e => {
+                            onTouchEnd={() => {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                              // 如果没有触发长按，且触摸时间短于 800ms，则执行点击操作
-                              const touchDuration = Date.now() - ((window as any).__residentTouchStartTime || 0);
-                              if (!(window as any).__residentLongPressFired && touchDuration < 800) {
-                                e.preventDefault();
+                              // 如果没有触发长按，则执行点击操作
+                              if (!(window as any).__residentLongPressFired && !(window as any).__residentTouchHandled) {
+                                (window as any).__residentTouchHandled = true;
                                 setSelectedResidents(prev => 
                                   prev.includes(resident) 
                                     ? prev.filter(r => r !== resident)
@@ -3397,6 +3397,8 @@ function App() {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                             }}
                             onMouseDown={() => {
+                              // 只在非触摸设备上处理
+                              if ((window as any).__residentTouchHandled) return;
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                               (window as any).__residentLongPressFired = false;
                               (window as any).__residentLongPressTimer = setTimeout(() => {
@@ -3412,7 +3414,12 @@ function App() {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                             }}
                             onClick={e => {
-                              // 只有在没有触发长按的情况下才执行点击操作（桌面端）
+                              // 如果是触摸设备且已处理，跳过 click 事件
+                              if ((window as any).__residentTouchHandled) {
+                                (window as any).__residentTouchHandled = false;
+                                return;
+                              }
+                              // 桌面端：只有在没有触发长按的情况下才执行点击操作
                               if (!(window as any).__residentLongPressFired) {
                                 e.stopPropagation();
                                 setSelectedResidents(prev => 
