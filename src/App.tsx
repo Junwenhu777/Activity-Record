@@ -236,7 +236,7 @@ function App() {
     return h ? reviveDate(JSON.parse(h)) : [];
   });
   const [now, setNow] = useState(new Date());
-  const [showBottomSheet, setShowBottomSheet] = useState(true);
+  const [showBottomSheet, setShowBottomSheet] = useState(false); // 默认收起
   const [isBottomSheetClosing, setIsBottomSheetClosing] = useState(false);
   const [recentActivities, setRecentActivities] = useState<string[]>(() => {
     const r = localStorage.getItem('activity-recent');
