@@ -1,3 +1,18 @@
+/* Global Focus Reset to kill blue glow */
+*,
+*::before,
+*::after {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 body,
 .activity-bg {
   background: #E9F2F4 !important;
@@ -303,8 +318,20 @@ button:focus-visible {
 /* 移除活动 tag 的所有边框和蒙层 - 强制覆盖 */
 .activity-btn {
   --adm-color-primary: #e0e0e0;
-  /* Trick to neutralize internal color shifts */
   --adm-button-border-color: #e0e0e0;
+  position: relative;
+  /* Ensure we can control children */
+}
+
+/* Kill Ant Design Mobile active state overlays */
+.activity-btn::before,
+.activity-btn::after,
+.activity-btn.adm-button::before,
+.activity-btn.adm-button::after {
+  display: none !important;
+  background: transparent !important;
+  opacity: 0 !important;
+  content: none !important;
 }
 
 .activity-btn:focus,
@@ -315,7 +342,6 @@ button:focus-visible {
   outline: none !important;
   box-shadow: none !important;
   border-color: #e0e0e0 !important;
-  /* Force consistent border color */
 }
 
 /* Primary buttons should keep their borderless style */
