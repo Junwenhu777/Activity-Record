@@ -3447,19 +3447,19 @@ function App() {
                   }}>
                     Resident
                   </div>
-                  {/* 有 residents 时显示加号按钮 */}
+                  {/* 有 residents 时显示加号按钮 - 20px图标 */}
                   {residents.length > 0 && !isAddingResident && (
                     <button
                       style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        border: '1px solid #ddd',
-                        background: '#fff',
+                        width: 20,
+                        height: 20,
+                        border: 'none',
+                        background: 'transparent',
                         cursor: 'pointer',
-                        color: '#666',
                         padding: 0,
-                        position: 'relative'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -3474,19 +3474,8 @@ function App() {
                         setIsAddingResident(true);
                       }}
                     >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 14 14"
-                        fill="none"
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)'
-                        }}
-                      >
-                        <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="black" fillOpacity="0.85" />
                       </svg>
                     </button>
                   )}
