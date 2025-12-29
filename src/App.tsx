@@ -3989,17 +3989,8 @@ function App() {
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
-                  onBlur={(e) => {
-                    // iOS 键盘收起后需要强制布局重新计算
-                    const input = e.currentTarget;
-                    // 临时禁用输入框的指针事件
-                    input.style.pointerEvents = 'none';
-                    // 延迟后恢复，确保键盘完全消失
-                    setTimeout(() => {
-                      input.style.pointerEvents = 'auto';
-                      // 强制页面重新布局
-                      window.scrollTo(window.scrollX, window.scrollY);
-                    }, 300);
+                  onBlur={() => {
+                    // 与 Resident input 保持一致 - 不做任何复杂处理
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -4008,16 +3999,8 @@ function App() {
                       if (activityName.trim()) {
                         startActivity(activityName);
                       } else {
-                        // 空输入时收起键盘
-                        const input = e.currentTarget;
-                        input.blur();
-                        // iOS 需要额外处理来确保键盘完全收起
-                        setTimeout(() => {
-                          // 强制移除焦点
-                          if (document.activeElement === input) {
-                            (document.activeElement as HTMLElement).blur();
-                          }
-                        }, 100);
+                        // 空输入时只收起键盘 - 与 Resident input 完全一致
+                        (e.currentTarget as HTMLInputElement).blur();
                       }
                     }
                   }}
