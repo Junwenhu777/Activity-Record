@@ -86,8 +86,8 @@ function reviveDate(obj: any): any {
 
 function isSameDay(d1: Date, d2: Date) {
   return d1.getFullYear() === d2.getFullYear() &&
-         d1.getMonth() === d2.getMonth() &&
-         d1.getDate() === d2.getDate();
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
 }
 
 function formatStartAt(startAt: Date, endAt: Date) {
@@ -120,14 +120,14 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
   }
 
   const groups: Record<string, any[]> = {};
-  
+
   all.forEach(item => {
     let groupKey = '';
     const date = new Date(item.endAt);
-    
+
     // 使用本地时间格式化日期（避免时区偏移问题）
     const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    
+
     switch (granularity) {
       case 'Day':
         groupKey = localDateStr; // YYYY-MM-DD (本地时间)
@@ -144,7 +144,7 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
         groupKey = date.getFullYear().toString(); // YYYY
         break;
     }
-    
+
     if (!groups[groupKey]) groups[groupKey] = [];
     groups[groupKey].push(item);
   });
@@ -153,18 +153,18 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
   return Object.entries(groups)
     .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
     .map(([timeKey, items]) => {
-      const summary: Record<string, { 
-        duration: number; 
-        residents: Set<string>; 
+      const summary: Record<string, {
+        duration: number;
+        residents: Set<string>;
         residentDurations: Record<string, number>;
       }> = {};
-      
+
       items.forEach(item => {
         if (!summary[item.name]) {
           summary[item.name] = { duration: 0, residents: new Set(), residentDurations: {} };
         }
         summary[item.name].duration += item.duration;
-        
+
         // 收集所有 residents 及其各自的时长
         if (item.residents && item.residents.length > 0) {
           item.residents.forEach((r: any) => {
@@ -183,13 +183,13 @@ function groupDataByTimeGranularity(history: any[], current: any, now: Date, gra
           });
         }
       });
-      
+
       return {
         timeKey,
         activities: Object.entries(summary)
-          .map(([name, data]) => ({ 
-            name, 
-            duration: data.duration, 
+          .map(([name, data]) => ({
+            name,
+            duration: data.duration,
             residents: Array.from(data.residents),
             residentDurations: data.residentDurations
           }))
@@ -205,7 +205,7 @@ function formatTimeKey(timeKey: string, granularity: 'Day' | 'Week' | 'Month' | 
     const parts = str.split('-');
     return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2] || '1'));
   };
-  
+
   switch (granularity) {
     case 'Day':
       const dayDate = parseLocalDate(timeKey);
@@ -255,10 +255,10 @@ function App() {
 
   // 在App组件内新增state
   const [editingCurrentName, setEditingCurrentName] = useState(false);
-  const [editingHistory, setEditingHistory] = useState<{date?: string, idx?: number} | null>(null);
+  const [editingHistory, setEditingHistory] = useState<{ date?: string, idx?: number } | null>(null);
   const [editingName, setEditingName] = useState('');
   // 新增state用于滑动删除
-  const [swipeDelete, setSwipeDelete] = useState<{date?: string, idx?: number} | null>(null);
+  const [swipeDelete, setSwipeDelete] = useState<{ date?: string, idx?: number } | null>(null);
   // 新增state用于编辑recent activity
   const [editingRecentActivity, setEditingRecentActivity] = useState<string | null>(null);
   const [editingRecentName, setEditingRecentName] = useState('');
@@ -273,7 +273,7 @@ function App() {
   const [newResidentName, setNewResidentName] = useState('');
   const [editingResident, setEditingResident] = useState<string | null>(null);
   const [editingResidentName, setEditingResidentName] = useState('');
-  
+
   // Card 内添加 resident 的 state
   const [showCardResidentDropdown, setShowCardResidentDropdown] = useState<string | null>(null); // 'now' | 'today-{idx}' | '{date}-{idx}'
   const [cardNewResidentName, setCardNewResidentName] = useState('');
@@ -297,7 +297,7 @@ function App() {
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
   const colorPalette = [
-    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
     '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
     '#a6cee3', '#fb9a99', '#fdbf6f', '#cab2d6', '#ffff99'
   ];
@@ -322,9 +322,9 @@ function App() {
         const target = e.target as Element;
         const downloadButton = document.querySelector('[data-download-button]');
         const downloadOptions = document.querySelector('[data-download-options]');
-        
-        if (downloadButton && !downloadButton.contains(target) && 
-            downloadOptions && !downloadOptions.contains(target)) {
+
+        if (downloadButton && !downloadButton.contains(target) &&
+          downloadOptions && !downloadOptions.contains(target)) {
           setIsDownloadOptionsClosing(true);
           setTimeout(() => {
             setShowDownloadOptions(false);
@@ -332,15 +332,15 @@ function App() {
           }, 300);
         }
       }
-      
+
       // 检查是否点击了活动筛选下拉菜单
       if (showActivityFilter) {
         const target = e.target as Element;
         const activityFilterButton = document.querySelector('[data-activity-filter-button]');
         const activityFilterOptions = document.querySelector('[data-activity-filter-options]');
-        
-        if (activityFilterButton && !activityFilterButton.contains(target) && 
-            activityFilterOptions && !activityFilterOptions.contains(target)) {
+
+        if (activityFilterButton && !activityFilterButton.contains(target) &&
+          activityFilterOptions && !activityFilterOptions.contains(target)) {
           setShowActivityFilter(false);
         }
       }
@@ -350,18 +350,18 @@ function App() {
         const target = e.target as Element;
         const residentFilterButton = document.querySelector('[data-resident-filter-button]');
         const residentFilterOptions = document.querySelector('[data-resident-filter-options]');
-        
-        if (residentFilterButton && !residentFilterButton.contains(target) && 
-            residentFilterOptions && !residentFilterOptions.contains(target)) {
+
+        if (residentFilterButton && !residentFilterButton.contains(target) &&
+          residentFilterOptions && !residentFilterOptions.contains(target)) {
           setShowResidentFilter(false);
         }
       }
-      
+
       // 检查是否点击了卡片 Resident dropdown 外部
       if (showCardResidentDropdown) {
         const target = e.target as Element;
         const cardResidentDropdown = document.querySelector('[data-card-resident-dropdown]');
-        
+
         if (!cardResidentDropdown || !cardResidentDropdown.contains(target)) {
           setShowCardResidentDropdown(null);
           setCardDropdownPosition(null);
@@ -369,13 +369,13 @@ function App() {
           setCardNewResidentName('');
         }
       }
-      
+
       // 检查是否点击了 popup 外部区域
       if (showStatsModal && !isStatsModalClosing) {
         const target = e.target as Element;
         const popupContent = document.querySelector('.summary-popup-content');
         const popupOuter = document.querySelector('.summary-popup-outer');
-        
+
         // 如果点击的是popup内部，则不关闭
         if (popupContent && (popupContent.contains(target) || popupContent === target)) {
           console.log('Click inside popup content, ignoring');
@@ -385,7 +385,7 @@ function App() {
           console.log('Click inside popup outer, ignoring');
           return;
         }
-        
+
         // 点击了 popup 外部区域，开始关闭动画
         // 防止重复触发
         if (!isStatsModalClosing) {
@@ -442,7 +442,7 @@ function App() {
         e.preventDefault();
         e.returnValue = '';
         setShowRefreshModal(true);
-        
+
         return '';
       }
     };
@@ -486,11 +486,11 @@ function App() {
     if (!current) return;
     const endAt = new Date();
     const duration = endAt.getTime() - current.startAt.getTime();
-    const newHistoryItem = { 
-      name: current.name, 
-      startAt: current.startAt, 
-      endAt, 
-      duration, 
+    const newHistoryItem = {
+      name: current.name,
+      startAt: current.startAt,
+      endAt,
+      duration,
       deleted: false,
       residents: current.residents || []
     };
@@ -509,7 +509,7 @@ function App() {
     const residentsWithTime = selectedResidents.map(r => ({ name: r, addedAt: new Date() }));
     setCurrent({ name, startAt: new Date(), deleted: false, residents: residentsWithTime });
     setActivityName('');
-    
+
     // 将自定义活动添加到recent列表
     if (!activityTypes.includes(name)) {
       setRecentActivities(prev => {
@@ -517,7 +517,7 @@ function App() {
         return newList;
       });
     }
-    
+
     // 滚动到主内容区顶部
     setTimeout(() => {
       // 滚动整个页面到顶部
@@ -525,7 +525,7 @@ function App() {
         top: 0,
         behavior: 'smooth'
       });
-      
+
       // 如果mainRef存在，也尝试滚动它
       if (mainRef.current) {
         mainRef.current.scrollTop = 0;
@@ -564,14 +564,14 @@ function App() {
   const throttledScrollHandler = throttle((e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
     console.log('Scroll event triggered, scrollTop:', scrollTop, 'popupRendered:', popupRendered, 'isBottomSheetClosing:', isBottomSheetClosing);
-    
+
     // 检查滚动事件是否来自popup内部
     const target = e.target as Element;
     const popupContent = document.querySelector('.summary-popup-content');
     const popupOuter = document.querySelector('.summary-popup-outer');
     const activityPopupInner = document.querySelector('.activity-popup-inner');
     const activityBottomSheetFixed = document.querySelector('.activity-bottom-sheet-fixed');
-    
+
     // 如果滚动事件来自popup内部，则不关闭popup
     if (popupContent && (popupContent.contains(target) || popupContent === target)) {
       console.log('Scroll event from popup content in throttled handler, ignoring');
@@ -589,13 +589,13 @@ function App() {
       console.log('Scroll event from activity bottom sheet fixed in throttled handler, ignoring');
       return;
     }
-    
+
     // 只有主内容区的滚动才收起popup并显示start按钮
     if (popupRendered && !isBottomSheetClosing) {
       // 检查是否有popup交互标志
       const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
       const hasRecentInteraction = popupContainer && popupContainer.getAttribute('data-recent-interaction') === 'true';
-      
+
       if (!hasRecentInteraction) {
         console.log('Closing popup due to main content scroll');
         setIsBottomSheetClosing(true);
@@ -617,7 +617,7 @@ function App() {
         console.log('Popup has recent interaction, not closing');
       }
     }
-    
+
     lastScrollTop.current = scrollTop;
   }, 50); // 减少到50ms节流，更敏感
 
@@ -654,10 +654,10 @@ function App() {
   // 全局滚动监听，当popup显示时，只有主页面的滚动才关闭popup
   useEffect(() => {
     if (!popupRendered || isBottomSheetClosing) return;
-    
+
     // 添加一个标志来防止popup意外关闭
     let isPopupInteraction = false;
-    
+
     // 监听popup内的交互事件
     const handlePopupInteraction = () => {
       isPopupInteraction = true;
@@ -670,21 +670,21 @@ function App() {
         }, 1000); // 1秒内不关闭popup
       }
     };
-    
+
     const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
     if (popupContainer) {
       popupContainer.addEventListener('touchstart', handlePopupInteraction, { passive: true });
       popupContainer.addEventListener('click', handlePopupInteraction, { passive: true });
-      popupContainer.addEventListener('focus', handlePopupInteraction, { passive: true });
+      popupContainer.addEventListener('focusin', handlePopupInteraction, { passive: true });
     }
-    
+
     const handleGlobalScroll = (e: Event) => {
       // 检查滚动事件是否来自popup内部
       const target = e.target as Element;
       const popupContent = document.querySelector('.summary-popup-content');
       const popupOuter = document.querySelector('.summary-popup-outer');
       const activityPopupInner = document.querySelector('.activity-popup-inner');
-      
+
       // 如果滚动事件来自popup内部，则不关闭popup
       if (popupContent && (popupContent.contains(target) || popupContent === target)) {
         console.log('Scroll event from popup content, ignoring');
@@ -698,7 +698,7 @@ function App() {
         console.log('Scroll event from activity popup inner, ignoring');
         return;
       }
-      
+
       console.log('Global scroll event triggered from main page');
       if (!isBottomSheetClosing && !isPopupInteraction) {
         setIsBottomSheetClosing(true);
@@ -720,7 +720,7 @@ function App() {
       const popupContent = document.querySelector('.summary-popup-content');
       const popupOuter = document.querySelector('.summary-popup-outer');
       const activityPopupInner = document.querySelector('.activity-popup-inner');
-      
+
       // 如果触摸事件来自popup内部，则不关闭popup
       if (popupContent && (popupContent.contains(target) || popupContent === target)) {
         console.log('Touch move event from popup content, ignoring');
@@ -734,7 +734,7 @@ function App() {
         console.log('Touch move event from activity popup inner, ignoring');
         return;
       }
-      
+
       console.log('Global touch move event triggered from main page');
       if (!isBottomSheetClosing && !isPopupInteraction) {
         setIsBottomSheetClosing(true);
@@ -753,17 +753,17 @@ function App() {
     // 监听window的滚动和触摸事件
     window.addEventListener('scroll', handleGlobalScroll, { passive: false });
     window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
-    
+
     return () => {
       window.removeEventListener('scroll', handleGlobalScroll);
       window.removeEventListener('touchmove', handleGlobalTouchMove);
-      
+
       // 清理popup交互监听器
       const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
       if (popupContainer) {
         popupContainer.removeEventListener('touchstart', handlePopupInteraction);
         popupContainer.removeEventListener('click', handlePopupInteraction);
-        popupContainer.removeEventListener('focus', handlePopupInteraction);
+        popupContainer.removeEventListener('focusin', handlePopupInteraction);
       }
     };
   }, [popupRendered, isBottomSheetClosing]);
@@ -771,22 +771,22 @@ function App() {
   // 获取所有可用活动列表
   const getAllActivities = () => {
     const activities = new Set<string>();
-    
+
     // 添加历史活动
     history.forEach(item => {
       if (!item.deleted) {
         activities.add(item.name);
       }
     });
-    
+
     // 添加当前活动
     if (current) {
       activities.add(current.name);
     }
-    
+
     // 添加预设活动类型
     activityTypes.forEach(type => activities.add(type));
-    
+
     return Array.from(activities).sort();
   };
 
@@ -798,13 +798,13 @@ function App() {
         .filter((activity: any) => {
           // 活动名称筛选
           const activityMatch = selectedActivities.length === 0 || selectedActivities.includes(activity.name);
-          
+
           // Resident 筛选 - activity.residents 现在是字符串数组
-          const residentMatch = selectedFilterResidents.length === 0 || 
+          const residentMatch = selectedFilterResidents.length === 0 ||
             (activity.residents && activity.residents.length > 0 && activity.residents.some((r: string) => {
               return selectedFilterResidents.includes(r);
             }));
-          
+
           return activityMatch && residentMatch;
         })
         .map((activity: any) => {
@@ -820,7 +820,7 @@ function App() {
         .filter((activity: any) => activity.duration > 0) // 过滤掉时长为0的活动
     })).filter(group => group.activities.length > 0);
   };
-  
+
   // 获取所有 resident 名字（从 history 和 current 中提取）
   const getAllResidentsFromHistory = (): string[] => {
     const residentSet = new Set<string>();
@@ -868,9 +868,9 @@ function App() {
             paddingLeft: 0, // 移除左侧内边距，让CSS控制
             paddingRight: 0, // 确保右侧也没有内边距
           }}>
-            <div 
-              className="activity-title" 
-              style={{ 
+            <div
+              className="activity-title"
+              style={{
                 textAlign: 'left',
                 cursor: 'pointer',
                 userSelect: 'none',
@@ -896,24 +896,24 @@ function App() {
               <img src="/logo.png" alt="logo" style={{ height: '1.2em', width: 'auto' }} />
               Activity Records
             </div>
-            <button 
+            <button
               onClick={handleDownloadClick}
               style={{
-                width: 36, 
-                height: 36, 
-                borderRadius: '50%', 
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
                 border: 'none',
-                background: 'rgba(110, 176, 188, 0.2)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+                background: 'rgba(110, 176, 188, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: 'pointer',
                 padding: 0
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 3V15M12 15L7 10M12 15L17 10" stroke="#003746" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M3 17V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V17" stroke="#003746" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 3V15M12 15L7 10M12 15L17 10" stroke="#003746" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 17V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V17" stroke="#003746" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           </div>
@@ -932,8 +932,8 @@ function App() {
             flexDirection: 'column',
             paddingTop: '24px',
             boxSizing: 'border-box',
-            animation: isStatsModalClosing 
-              ? 'fadeOut 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+            animation: isStatsModalClosing
+              ? 'fadeOut 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               : 'fadeIn 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
             <div
@@ -950,17 +950,17 @@ function App() {
                 boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
                 position: 'relative',
                 overflow: 'hidden',
-                animation: isStatsModalClosing 
-                  ? 'slideDown 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                animation: isStatsModalClosing
+                  ? 'slideDown 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                   : 'slideUp 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               }}
             >
               {/* 标题区 */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between', 
-                width: '100%', 
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
                 padding: '24px 24px 16px 24px',
                 boxSizing: 'border-box'
               }}>
@@ -968,19 +968,19 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   {/* 下载按钮 */}
                   <div style={{ position: 'relative' }}>
-                    <button 
+                    <button
                       data-download-button
                       onClick={() => {
-                                              console.log('Download button clicked, current state:', showDownloadOptions);
-                      if (showDownloadOptions) {
-                        setIsDownloadOptionsClosing(true);
-                        setTimeout(() => {
-                          setShowDownloadOptions(false);
-                          setIsDownloadOptionsClosing(false);
-                        }, 300);
-                      } else {
-                        setShowDownloadOptions(true);
-                      }
+                        console.log('Download button clicked, current state:', showDownloadOptions);
+                        if (showDownloadOptions) {
+                          setIsDownloadOptionsClosing(true);
+                          setTimeout(() => {
+                            setShowDownloadOptions(false);
+                            setIsDownloadOptionsClosing(false);
+                          }, 300);
+                        } else {
+                          setShowDownloadOptions(true);
+                        }
                       }}
                       style={{
                         width: 38,
@@ -1012,30 +1012,30 @@ function App() {
                         />
                       )}
                       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15.5625 16.1953H2.4375V14.9961H15.5625V16.1953ZM9.59961 10.8672L12.5137 7.95312L13.3613 8.80078L9.42383 12.7383C9.18952 12.9726 8.81048 12.9726 8.57617 12.7383L4.63867 8.80078L5.48633 7.95312L8.40039 10.8672V1.81445H9.59961V10.8672Z" fill="black" fillOpacity="0.85"/>
+                        <path d="M15.5625 16.1953H2.4375V14.9961H15.5625V16.1953ZM9.59961 10.8672L12.5137 7.95312L13.3613 8.80078L9.42383 12.7383C9.18952 12.9726 8.81048 12.9726 8.57617 12.7383L4.63867 8.80078L5.48633 7.95312L8.40039 10.8672V1.81445H9.59961V10.8672Z" fill="black" fillOpacity="0.85" />
                       </svg>
                     </button>
                     {/* 下载选项下拉菜单 */}
                     {(showDownloadOptions || isDownloadOptionsClosing) && (
-                      <div 
+                      <div
                         data-download-options
                         style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        background: '#fff',
-                        borderRadius: 8,
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                        padding: 8,
-                        marginTop: 4,
-                        minWidth: 140,
-                        zIndex: 9999999,
-                        animation: isDownloadOptionsClosing 
-                          ? 'downloadMenuSlideUp 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards'
-                          : 'downloadMenuSlideDown 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-                        transformOrigin: 'top right',
-                        willChange: 'transform, opacity'
-                      }}>
+                          position: 'absolute',
+                          top: '100%',
+                          right: 0,
+                          background: '#fff',
+                          borderRadius: 8,
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                          padding: 8,
+                          marginTop: 4,
+                          minWidth: 140,
+                          zIndex: 9999999,
+                          animation: isDownloadOptionsClosing
+                            ? 'downloadMenuSlideUp 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards'
+                            : 'downloadMenuSlideDown 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                          transformOrigin: 'top right',
+                          willChange: 'transform, opacity'
+                        }}>
                         <button
                           style={{
                             width: '100%',
@@ -1065,7 +1065,7 @@ function App() {
                               console.log('XLSX library:', typeof XLSX);
                               console.log('XLSX.utils:', XLSX.utils);
                               console.log('XLSX.write:', XLSX.write);
-                              
+
                               // 导出所有数据（包括已删除的），deleted 字段会正确反映删除状态
                               const all = [...history];
                               if (current) {
@@ -1077,10 +1077,10 @@ function App() {
                                   deleted: false
                                 });
                               }
-                              
+
                               // 按结束时间排序，最新的在前
                               all.sort((a, b) => b.endAt.getTime() - a.endAt.getTime());
-                              
+
                               console.log('Data prepared:', all.length, 'items');
                               console.log('Sample data:', all[0]);
                               console.log('All data for export:', all.map(item => ({
@@ -1094,14 +1094,14 @@ function App() {
                               })));
                               console.log('Deleted items count:', all.filter(item => item.deleted).length);
                               console.log('Total items count:', all.length);
-                              
+
                               // 新格式：每个 resident 对应一行
                               // Resident Name | Activity | Start Date | Start At | End Date | End At | Duration | Seconds | Deleted
                               const rows: any[] = [];
-                              
+
                               all.forEach(item => {
                                 const itemResidents = item.residents || [];
-                                
+
                                 if (itemResidents.length === 0) {
                                   // 没有 resident 的 activity，Resident Name 为空
                                   rows.push({
@@ -1121,8 +1121,8 @@ function App() {
                                     const residentName = typeof r === 'string' ? r : r.name;
                                     // 如果 resident 有 addedAt 时间，使用它作为该 resident 的开始时间
                                     // 否则使用活动的开始时间
-                                    const residentStartAt = (typeof r === 'object' && r.addedAt) 
-                                      ? new Date(r.addedAt) 
+                                    const residentStartAt = (typeof r === 'object' && r.addedAt)
+                                      ? new Date(r.addedAt)
                                       : item.startAt;
                                     // 计算该 resident 的 duration（从 addedAt 到活动结束）
                                     const residentDuration = item.endAt.getTime() - residentStartAt.getTime();
@@ -1140,7 +1140,7 @@ function App() {
                                   });
                                 }
                               });
-                              
+
                               // 列顺序
                               const columnOrder = ['Resident Name', 'Activity', 'Start Date', 'Start At', 'End Date', 'End At', 'Duration', 'Seconds', 'Deleted'];
                               const reorderedRows = rows.map(row => {
@@ -1152,42 +1152,42 @@ function App() {
                                 });
                                 return newRow;
                               });
-                              
+
                               console.log('Creating worksheet...');
                               const ws = XLSX.utils.json_to_sheet(reorderedRows);
                               console.log('Worksheet created:', ws);
-                              
+
                               const wb = XLSX.utils.book_new();
                               XLSX.utils.book_append_sheet(wb, ws, 'History');
                               console.log('Workbook created:', wb);
-                              
+
                               console.log('Writing file...');
                               const fileName = `activity-history-${new Date().toISOString().split('T')[0]}.xlsx`;
-                              
+
                               // 使用 Blob 方法，兼容性更好
                               const blob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
                               console.log('Blob created:', blob);
                               console.log('Blob size:', blob.length);
-                              
-                              const url = URL.createObjectURL(new Blob([blob], { 
-                                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+
+                              const url = URL.createObjectURL(new Blob([blob], {
+                                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                               }));
                               console.log('URL created:', url);
-                              
+
                               const a = document.createElement('a');
                               a.href = url;
                               a.download = fileName;
                               console.log('Download link created:', a);
-                              
+
                               document.body.appendChild(a);
                               console.log('Link appended to body');
-                              
+
                               a.click();
                               console.log('Click triggered');
-                              
+
                               document.body.removeChild(a);
                               URL.revokeObjectURL(url);
-                              
+
                               console.log('Export completed successfully');
                               setIsDownloadOptionsClosing(true);
                               setTimeout(() => {
@@ -1204,7 +1204,7 @@ function App() {
                           Export as Excel
                         </button>
 
-                          <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
+                        <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
                         <button
                           style={{
                             width: '100%',
@@ -1232,7 +1232,7 @@ function App() {
                     )}
                   </div>
                   {/* 关闭按钮 */}
-                  <button 
+                  <button
                     onClick={() => {
                       // 使用 requestAnimationFrame 确保在下一帧执行，避免 Safari 闪动
                       requestAnimationFrame(() => {
@@ -1261,14 +1261,14 @@ function App() {
                     }}
                   >
                     <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M14.158 5.27173L9.98804 9.44165L14.158 13.6116L13.3103 14.4592L9.14038 10.2893L4.97046 14.4592L4.1228 13.6116L8.29272 9.44165L4.1228 5.27173L4.97046 4.42407L9.14038 8.59399L13.3103 4.42407L14.158 5.27173Z" fill="black" fillOpacity="0.85"/>
+                      <path d="M14.158 5.27173L9.98804 9.44165L14.158 13.6116L13.3103 14.4592L9.14038 10.2893L4.97046 14.4592L4.1228 13.6116L8.29272 9.44165L4.1228 5.27173L4.97046 4.42407L9.14038 8.59399L13.3103 4.42407L14.158 5.27173Z" fill="black" fillOpacity="0.85" />
                     </svg>
                   </button>
                 </div>
               </div>
 
-                            {/* 筛选选项区 */}
-              <div style={{ 
+              {/* 筛选选项区 */}
+              <div style={{
                 padding: '16px 24px',
                 display: 'flex',
                 flexWrap: 'wrap',
@@ -1309,7 +1309,7 @@ function App() {
                       {timeGranularity}
                     </span>
                     <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
+                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round" />
                     </svg>
                   </div>
                   {/* 隐藏的原生 select 用于数据绑定 */}
@@ -1366,7 +1366,7 @@ function App() {
                       {chartType}
                     </span>
                     <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
+                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round" />
                     </svg>
                   </div>
                   {/* 隐藏的原生 select 用于数据绑定 */}
@@ -1429,13 +1429,13 @@ function App() {
                       {selectedActivities.length === 0 ? 'All' : `${selectedActivities.length} Selected`}
                     </span>
                     <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
+                      <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round" />
                     </svg>
                   </div>
 
                   {/* 活动筛选下拉菜单 - 使用Portal渲染到body顶层 */}
                   {(showActivityFilter || isActivityFilterClosing) && createPortal(
-                    <div 
+                    <div
                       data-activity-filter-options
                       onMouseDown={e => e.stopPropagation()}
                       onClick={e => e.stopPropagation()}
@@ -1456,7 +1456,7 @@ function App() {
                             const menuWidth = 200; // 菜单的最小宽度
                             const screenWidth = window.innerWidth;
                             const rightEdge = rect.left + menuWidth;
-                            
+
                             // 如果菜单会溢出右边，则向左调整
                             if (rightEdge > screenWidth - 20) {
                               return Math.max(20, screenWidth - menuWidth - 20);
@@ -1475,93 +1475,93 @@ function App() {
                         zIndex: 999999,
                         scrollbarWidth: 'none',
                         msOverflowStyle: 'none',
-                        animation: isActivityFilterClosing 
-                          ? 'slideUpAndFadeOut 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                        animation: isActivityFilterClosing
+                          ? 'slideUpAndFadeOut 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                           : 'slideDownAndFadeIn 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                         pointerEvents: 'auto'
                       }}>
-                  {/* All 选项 */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      borderRadius: 4,
-                      fontSize: 14,
-                      background: selectedActivities.length === 0 ? '#f0f0f0' : 'transparent'
-                    }}
-                    onClick={() => {
-                      setSelectedActivities([]);
-                      setShowActivityFilter(false);
-                    }}
-                  >
-                    <div style={{
-                      width: 16,
-                      height: 16,
-                      border: '2px solid #ddd',
-                      borderRadius: 3,
-                      marginRight: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: selectedActivities.length === 0 ? '#007bff' : 'transparent'
-                    }}>
-                      {selectedActivities.length === 0 && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                    <span>All</span>
-                  </div>
-                  
-                  <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
-                  
-                  {/* 各个活动选项 */}
-                  {getAllActivities().map(activity => (
-                    <div
-                      key={activity}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        borderRadius: 4,
-                        fontSize: 14,
-                        background: selectedActivities.includes(activity) ? '#f0f0f0' : 'transparent'
-                      }}
-                      onClick={() => {
-                        if (selectedActivities.includes(activity)) {
-                          setSelectedActivities(prev => prev.filter(a => a !== activity));
-                        } else {
-                          setSelectedActivities(prev => [...prev, activity]);
-                        }
-                      }}
-                    >
-                      <div style={{
-                        width: 16,
-                        height: 16,
-                        border: '2px solid #ddd',
-                        borderRadius: 3,
-                        marginRight: 8,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: selectedActivities.includes(activity) ? '#007bff' : 'transparent'
-                      }}>
-                        {selectedActivities.includes(activity) && (
-                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
+                      {/* All 选项 */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderRadius: 4,
+                          fontSize: 14,
+                          background: selectedActivities.length === 0 ? '#f0f0f0' : 'transparent'
+                        }}
+                        onClick={() => {
+                          setSelectedActivities([]);
+                          setShowActivityFilter(false);
+                        }}
+                      >
+                        <div style={{
+                          width: 16,
+                          height: 16,
+                          border: '2px solid #ddd',
+                          borderRadius: 3,
+                          marginRight: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: selectedActivities.length === 0 ? '#007bff' : 'transparent'
+                        }}>
+                          {selectedActivities.length === 0 && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        <span>All</span>
                       </div>
-                      <span>{activity}</span>
-                    </div>
-                  ))}
-                </div>,
-                document.body
-              )}
+
+                      <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
+
+                      {/* 各个活动选项 */}
+                      {getAllActivities().map(activity => (
+                        <div
+                          key={activity}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            borderRadius: 4,
+                            fontSize: 14,
+                            background: selectedActivities.includes(activity) ? '#f0f0f0' : 'transparent'
+                          }}
+                          onClick={() => {
+                            if (selectedActivities.includes(activity)) {
+                              setSelectedActivities(prev => prev.filter(a => a !== activity));
+                            } else {
+                              setSelectedActivities(prev => [...prev, activity]);
+                            }
+                          }}
+                        >
+                          <div style={{
+                            width: 16,
+                            height: 16,
+                            border: '2px solid #ddd',
+                            borderRadius: 3,
+                            marginRight: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: selectedActivities.includes(activity) ? '#007bff' : 'transparent'
+                          }}>
+                            {selectedActivities.includes(activity) && (
+                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
+                          </div>
+                          <span>{activity}</span>
+                        </div>
+                      ))}
+                    </div>,
+                    document.body
+                  )}
                 </div>
 
                 {/* Resident 筛选下拉菜单 */}
@@ -1607,13 +1607,13 @@ function App() {
                         {selectedFilterResidents.length === 0 ? 'All Residents' : `${selectedFilterResidents.length} Resident${selectedFilterResidents.length > 1 ? 's' : ''}`}
                       </span>
                       <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round"/>
+                        <path d="M4.81921 7.20288L9.41296 11.7966L14.0067 7.20288" stroke="black" strokeWidth="1.2" strokeLinejoin="round" />
                       </svg>
                     </div>
 
                     {/* Resident 筛选下拉菜单 - 使用Portal渲染到body顶层 */}
                     {(showResidentFilter || isResidentFilterClosing) && createPortal(
-                      <div 
+                      <div
                         data-resident-filter-options
                         onMouseDown={e => e.stopPropagation()}
                         onClick={e => e.stopPropagation()}
@@ -1634,7 +1634,7 @@ function App() {
                               const menuWidth = 200;
                               const screenWidth = window.innerWidth;
                               const rightEdge = rect.left + menuWidth;
-                              
+
                               if (rightEdge > screenWidth - 20) {
                                 return Math.max(20, screenWidth - menuWidth - 20);
                               }
@@ -1652,8 +1652,8 @@ function App() {
                           zIndex: 999998,
                           scrollbarWidth: 'none',
                           msOverflowStyle: 'none',
-                          animation: isResidentFilterClosing 
-                            ? 'slideUpAndFadeOut 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                          animation: isResidentFilterClosing
+                            ? 'slideUpAndFadeOut 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                             : 'slideDownAndFadeIn 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                           pointerEvents: 'auto'
                         }}>
@@ -1686,15 +1686,15 @@ function App() {
                           }}>
                             {selectedFilterResidents.length === 0 && (
                               <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             )}
                           </div>
                           <span>All Residents</span>
                         </div>
-                        
+
                         <div style={{ height: 1, background: '#f0f0f0', margin: '4px 0' }} />
-                        
+
                         {/* 各个 Resident 选项 */}
                         {/* Residents 列表 - 使用从 history 中提取的所有 resident */}
                         {getAllResidentsFromHistory().map(resident => (
@@ -1730,7 +1730,7 @@ function App() {
                             }}>
                               {selectedFilterResidents.includes(resident) && (
                                 <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                               )}
                             </div>
@@ -1745,7 +1745,7 @@ function App() {
               </div>
 
               {/* 内容区域 */}
-              <div style={{ 
+              <div style={{
                 flex: 1,
                 overflowY: 'auto',
                 padding: '16px 24px 16px 24px',
@@ -1764,18 +1764,18 @@ function App() {
                   return filteredData.map((group, groupIndex) => {
                     const { timeKey, activities } = group;
                     const maxDuration = Math.max(...activities.map((a: any) => a.duration));
-                    
+
                     return (
                       <div key={timeKey} style={{ marginBottom: groupIndex < groupedData.length - 1 ? 24 : 0 }}>
-                        <div style={{ 
-                          fontWeight: 600, 
-                          fontSize: 16, 
+                        <div style={{
+                          fontWeight: 600,
+                          fontSize: 16,
                           marginBottom: 12,
                           color: '#333'
                         }}>
                           {formatTimeKey(timeKey, timeGranularity)}
                         </div>
-                        <div 
+                        <div
                           className="summary-card"
                           style={{
                             borderRadius: 10,
@@ -1787,158 +1787,158 @@ function App() {
                             boxSizing: 'border-box'
                           }}
                         >
-                        
-                        {chartType === 'Bar Chart' ? (
-                          // 条形图显示
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {activities.map((activity: any) => (
-                              <div key={activity.name} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {/* 第一行：活动名和时间 */}
-                                <div style={{ 
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  fontSize: 14,
-                                  fontWeight: 500,
-                                  minWidth: 0
-                                }}>
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activity.name}</span>
-                                  <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666', flexShrink: 0 }}>
-                                    {formatHMS(Math.round(activity.duration / 1000))}
-                                  </span>
-                                </div>
-                                {/* 第二行：条形图 */}
-                                <div style={{ 
-                                  background: getActivityColor(activity.name),
-                                  height: 16,
-                                  borderRadius: 4,
-                                  width: `${Math.max(20, Math.min(100, (activity.duration / maxDuration) * 100))}%`,
-                                  minWidth: 20,
-                                  flexShrink: 0
-                                }} />
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          // 饼图显示
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            {/* 饼图容器 */}
-                            <div style={{ 
-                              display: 'flex', 
-                              justifyContent: 'center', 
-                              marginBottom: 16 
-                            }}>
-                              <div style={{ 
-                                position: 'relative',
-                                width: 120,
-                                height: 120
-                              }}>
-                                <svg width="120" height="120" viewBox="0 0 120 120">
-                                  {(() => {
-                                    const totalDuration = activities.reduce((sum: any, a: any) => sum + a.duration, 0);
-                                    
-                                    // 如果只有一个活动，显示完整圆形
-                                    if (activities.length === 1) {
-                                      const activity = activities[0];
-                                      const radius = 50;
-                                      const centerX = 60;
-                                      const centerY = 60;
-                                      
-                                      return (
-                                        <circle
-                                          cx={centerX}
-                                          cy={centerY}
-                                          r={radius}
-                                          fill={getActivityColor(activity.name)}
-                                          stroke="#fff"
-                                          strokeWidth="2"
-                                        />
-                                      );
-                                    }
-                                    
-                                    // 多个活动时显示饼图
-                                    let currentAngle = 0;
-                                    return activities.map((activity: any) => {
-                                      const percentage = totalDuration > 0 ? activity.duration / totalDuration : 0;
-                                      const angle = percentage * 360;
-                                      const startAngle = currentAngle;
-                                      const endAngle = currentAngle + angle;
-                                      
-                                      // 计算弧线路径
-                                      const radius = 50;
-                                      const centerX = 60;
-                                      const centerY = 60;
-                                      
-                                      const startRad = (startAngle - 90) * Math.PI / 180;
-                                      const endRad = (endAngle - 90) * Math.PI / 180;
-                                      
-                                      const x1 = centerX + radius * Math.cos(startRad);
-                                      const y1 = centerY + radius * Math.sin(startRad);
-                                      const x2 = centerX + radius * Math.cos(endRad);
-                                      const y2 = centerY + radius * Math.sin(endRad);
-                                      
-                                      const largeArcFlag = angle > 180 ? 1 : 0;
-                                      
-                                      const pathData = [
-                                        `M ${centerX} ${centerY}`,
-                                        `L ${x1} ${y1}`,
-                                        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-                                        'Z'
-                                      ].join(' ');
-                                      
-                                      currentAngle += angle;
-                                      
-                                      return (
-                                        <path
-                                          key={activity.name}
-                                          d={pathData}
-                                          fill={getActivityColor(activity.name)}
-                                          stroke="#fff"
-                                          strokeWidth="2"
-                                        />
-                                      );
-                                    });
-                                  })()}
-                                </svg>
-                              </div>
-                            </div>
-                            
-                            {/* 图例 */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+                          {chartType === 'Bar Chart' ? (
+                            // 条形图显示
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                               {activities.map((activity: any) => (
-                                <div key={activity.name} style={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: 12,
-                                  padding: '8px 12px',
-                                  background: '#f8f9fa',
-                                  borderRadius: 8
-                                }}>
+                                <div key={activity.name} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                  {/* 第一行：活动名和时间 */}
                                   <div style={{
-                                    width: 12,
-                                    height: 12,
-                                    borderRadius: '50%',
-                                    background: getActivityColor(activity.name),
-                                    flexShrink: 0
-                                  }} />
-                                  <div style={{ 
-                                    flex: 1,
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     fontSize: 14,
-                                    fontWeight: 500
+                                    fontWeight: 500,
+                                    minWidth: 0
                                   }}>
-                                    <span>{activity.name}</span>
-                                    <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666' }}>
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activity.name}</span>
+                                    <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666', flexShrink: 0 }}>
                                       {formatHMS(Math.round(activity.duration / 1000))}
                                     </span>
                                   </div>
+                                  {/* 第二行：条形图 */}
+                                  <div style={{
+                                    background: getActivityColor(activity.name),
+                                    height: 16,
+                                    borderRadius: 4,
+                                    width: `${Math.max(20, Math.min(100, (activity.duration / maxDuration) * 100))}%`,
+                                    minWidth: 20,
+                                    flexShrink: 0
+                                  }} />
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            // 饼图显示
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                              {/* 饼图容器 */}
+                              <div style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                marginBottom: 16
+                              }}>
+                                <div style={{
+                                  position: 'relative',
+                                  width: 120,
+                                  height: 120
+                                }}>
+                                  <svg width="120" height="120" viewBox="0 0 120 120">
+                                    {(() => {
+                                      const totalDuration = activities.reduce((sum: any, a: any) => sum + a.duration, 0);
+
+                                      // 如果只有一个活动，显示完整圆形
+                                      if (activities.length === 1) {
+                                        const activity = activities[0];
+                                        const radius = 50;
+                                        const centerX = 60;
+                                        const centerY = 60;
+
+                                        return (
+                                          <circle
+                                            cx={centerX}
+                                            cy={centerY}
+                                            r={radius}
+                                            fill={getActivityColor(activity.name)}
+                                            stroke="#fff"
+                                            strokeWidth="2"
+                                          />
+                                        );
+                                      }
+
+                                      // 多个活动时显示饼图
+                                      let currentAngle = 0;
+                                      return activities.map((activity: any) => {
+                                        const percentage = totalDuration > 0 ? activity.duration / totalDuration : 0;
+                                        const angle = percentage * 360;
+                                        const startAngle = currentAngle;
+                                        const endAngle = currentAngle + angle;
+
+                                        // 计算弧线路径
+                                        const radius = 50;
+                                        const centerX = 60;
+                                        const centerY = 60;
+
+                                        const startRad = (startAngle - 90) * Math.PI / 180;
+                                        const endRad = (endAngle - 90) * Math.PI / 180;
+
+                                        const x1 = centerX + radius * Math.cos(startRad);
+                                        const y1 = centerY + radius * Math.sin(startRad);
+                                        const x2 = centerX + radius * Math.cos(endRad);
+                                        const y2 = centerY + radius * Math.sin(endRad);
+
+                                        const largeArcFlag = angle > 180 ? 1 : 0;
+
+                                        const pathData = [
+                                          `M ${centerX} ${centerY}`,
+                                          `L ${x1} ${y1}`,
+                                          `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                          'Z'
+                                        ].join(' ');
+
+                                        currentAngle += angle;
+
+                                        return (
+                                          <path
+                                            key={activity.name}
+                                            d={pathData}
+                                            fill={getActivityColor(activity.name)}
+                                            stroke="#fff"
+                                            strokeWidth="2"
+                                          />
+                                        );
+                                      });
+                                    })()}
+                                  </svg>
+                                </div>
+                              </div>
+
+                              {/* 图例 */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {activities.map((activity: any) => (
+                                  <div key={activity.name} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                    padding: '8px 12px',
+                                    background: '#f8f9fa',
+                                    borderRadius: 8
+                                  }}>
+                                    <div style={{
+                                      width: 12,
+                                      height: 12,
+                                      borderRadius: '50%',
+                                      background: getActivityColor(activity.name),
+                                      flexShrink: 0
+                                    }} />
+                                    <div style={{
+                                      flex: 1,
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      fontSize: 14,
+                                      fontWeight: 500
+                                    }}>
+                                      <span>{activity.name}</span>
+                                      <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#666' }}>
+                                        {formatHMS(Math.round(activity.duration / 1000))}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -2021,7 +2021,7 @@ function App() {
             justifyContent: 'center',
             padding: '0 24px',
             boxSizing: 'border-box',
-                        animation: 'fadeIn 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            animation: 'fadeIn 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
             <div
               className="modal-content"
@@ -2038,9 +2038,9 @@ function App() {
                 animation: 'scaleIn 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               }}
             >
-                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>
-                  There is an ongoing activity. Do you want to stop it and continue?
-                </div>
+              <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 18 }}>
+                There is an ongoing activity. Do you want to stop it and continue?
+              </div>
               <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 24 }}>
                 <button
                   style={{
@@ -2107,7 +2107,7 @@ function App() {
                   }}
                   onClick={() => {
                     setShowRefreshModal(false);
-                
+
                   }}
                 >
                   Cancel
@@ -2119,7 +2119,7 @@ function App() {
                   onClick={() => {
                     stopCurrent();
                     setShowRefreshModal(false);
-                   
+
                     window.location.reload();
                   }}
                 >
@@ -2172,7 +2172,7 @@ function App() {
           </div>
           {/* 当前活动卡片 */}
           {current && (
-            <div 
+            <div
               className="activity-card-now"
               style={{
                 animation: 'fadeInScale 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
@@ -2218,107 +2218,133 @@ function App() {
                 ) : (
                   <>
                     {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 - 独立占满宽度 */}
-                    <div style={{ 
-                      display: 'flex', 
+                    <div style={{
+                      display: 'flex',
                       alignItems: 'center',
-                      gap: 8, 
+                      gap: 8,
                       marginBottom: 4,
                       overflowX: 'auto',
                       scrollbarWidth: 'none',
                       msOverflowStyle: 'none'
                     }}>
-                        {/* Add resident 按钮 */}
-                        <button
+                      {/* Add resident 按钮 */}
+                      <button
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          border: '1px dashed #ccc',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          padding: 0,
+                          flexShrink: 0,
+                          position: 'relative'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (showCardResidentDropdown === 'now') {
+                            setShowCardResidentDropdown(null);
+                            setCardDropdownPosition(null);
+                          } else {
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                            setShowCardResidentDropdown('now');
+                          }
+                          setIsAddingNewCardResident(false);
+                          setCardNewResidentName('');
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                          <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      </button>
+
+                      {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
+                      {showCardResidentDropdown === 'now' && cardDropdownPosition && createPortal(
+                        <div
+                          data-card-resident-dropdown
                           style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: '50%',
-                            border: '1px dashed #ccc',
+                            position: 'fixed',
+                            top: cardDropdownPosition.top,
+                            left: cardDropdownPosition.left,
                             background: '#fff',
-                            cursor: 'pointer',
-                            padding: 0,
-                            flexShrink: 0,
-                            position: 'relative'
+                            borderRadius: 12,
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                            padding: 8,
+                            minWidth: 200,
+                            maxHeight: 300,
+                            overflowY: 'auto',
+                            zIndex: 999999
                           }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (showCardResidentDropdown === 'now') {
-                              setShowCardResidentDropdown(null);
-                              setCardDropdownPosition(null);
-                            } else {
-                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                              setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
-                              setShowCardResidentDropdown('now');
-                            }
-                            setIsAddingNewCardResident(false);
-                            setCardNewResidentName('');
-                          }}
+                          onClick={e => e.stopPropagation()}
                         >
-                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                            <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
-                          </svg>
-                        </button>
-                        
-                        {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
-                        {showCardResidentDropdown === 'now' && cardDropdownPosition && createPortal(
-                          <div 
-                            data-card-resident-dropdown
-                            style={{
-                              position: 'fixed',
-                              top: cardDropdownPosition.top,
-                              left: cardDropdownPosition.left,
-                              background: '#fff',
-                              borderRadius: 12,
-                              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                              padding: 8,
-                              minWidth: 200,
-                              maxHeight: 300,
-                              overflowY: 'auto',
-                              zIndex: 999999
-                            }}
-                            onClick={e => e.stopPropagation()}
-                          >
-                            {/* Add new name 选项 */}
-                            {isAddingNewCardResident ? (
-                              <div style={{ padding: '4px 8px' }}>
-                                <input
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: 20,
-                                    fontSize: 14,
-                                    boxSizing: 'border-box',
-                                    outline: 'none'
-                                  }}
-                                  placeholder="Enter new name..."
-                                  value={cardNewResidentName}
-                                  onChange={e => setCardNewResidentName(e.target.value)}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter' && cardNewResidentName.trim()) {
-                                      const newName = cardNewResidentName.trim();
-                                      // 同步保存到全局 residents 列表
-                                      if (!residents.includes(newName)) {
-                                        setResidents(prev => [...prev, newName]);
-                                      }
-                                      // 添加到当前活动
-                                      const newResidentEntry = { name: newName, addedAt: new Date() };
-                                      const currentResidents = current.residents || [];
-                                      if (!currentResidents.some((r: any) => (typeof r === 'string' ? r : r.name) === newName)) {
-                                        setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
-                                      }
-                                      setCardNewResidentName('');
-                                      setIsAddingNewCardResident(false);
-                                    } else if (e.key === 'Escape') {
-                                      setCardNewResidentName('');
-                                      setIsAddingNewCardResident(false);
+                          {/* Add new name 选项 */}
+                          {isAddingNewCardResident ? (
+                            <div style={{ padding: '4px 8px' }}>
+                              <input
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  border: '1px solid #ddd',
+                                  borderRadius: 20,
+                                  fontSize: 14,
+                                  boxSizing: 'border-box',
+                                  outline: 'none'
+                                }}
+                                placeholder="Enter new name..."
+                                value={cardNewResidentName}
+                                onChange={e => setCardNewResidentName(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter' && cardNewResidentName.trim()) {
+                                    const newName = cardNewResidentName.trim();
+                                    // 同步保存到全局 residents 列表
+                                    if (!residents.includes(newName)) {
+                                      setResidents(prev => [...prev, newName]);
                                     }
-                                  }}
-                                  autoFocus
-                                />
-                              </div>
-                            ) : (
+                                    // 添加到当前活动
+                                    const newResidentEntry = { name: newName, addedAt: new Date() };
+                                    const currentResidents = current.residents || [];
+                                    if (!currentResidents.some((r: any) => (typeof r === 'string' ? r : r.name) === newName)) {
+                                      setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
+                                    }
+                                    setCardNewResidentName('');
+                                    setIsAddingNewCardResident(false);
+                                  } else if (e.key === 'Escape') {
+                                    setCardNewResidentName('');
+                                    setIsAddingNewCardResident(false);
+                                  }
+                                }}
+                                autoFocus
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                borderRadius: 20,
+                                fontSize: 14,
+                                border: '1px solid #ddd',
+                                marginBottom: 8
+                              }}
+                              onClick={() => setIsAddingNewCardResident(true)}
+                              onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
+                              onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+                            >
+                              <span style={{ marginRight: 8 }}>+</span>
+                              <span>Add new name</span>
+                            </div>
+                          )}
+
+                          {/* 已有 residents 列表 */}
+                          {residents.map(resident => {
+                            const currentResidents = current.residents || [];
+                            const isSelected = currentResidents.some((cr: any) => (typeof cr === 'string' ? cr : cr.name) === resident);
+                            return (
                               <div
+                                key={resident}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
@@ -2327,109 +2353,83 @@ function App() {
                                   borderRadius: 20,
                                   fontSize: 14,
                                   border: '1px solid #ddd',
-                                  marginBottom: 8
+                                  marginBottom: 4,
+                                  background: isSelected ? '#E9F2F4' : 'transparent'
                                 }}
-                                onClick={() => setIsAddingNewCardResident(true)}
-                                onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
-                                onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    // 取消选择
+                                    const newResidents = currentResidents.filter((r: any) => {
+                                      const name = typeof r === 'string' ? r : r.name;
+                                      return name !== resident;
+                                    });
+                                    setCurrent({ ...current, residents: newResidents });
+                                  } else {
+                                    // 选择
+                                    const newResidentEntry = { name: resident, addedAt: new Date() };
+                                    setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
+                                  }
+                                }}
+                                onMouseEnter={e => {
+                                  if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
+                                }}
+                                onMouseLeave={e => {
+                                  if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                }}
                               >
-                                <span style={{ marginRight: 8 }}>+</span>
-                                <span>Add new name</span>
-                              </div>
-                            )}
-                            
-                            {/* 已有 residents 列表 */}
-                            {residents.map(resident => {
-                              const currentResidents = current.residents || [];
-                              const isSelected = currentResidents.some((cr: any) => (typeof cr === 'string' ? cr : cr.name) === resident);
-                              return (
-                                <div
-                                  key={resident}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    padding: '8px 12px',
-                                    cursor: 'pointer',
-                                    borderRadius: 20,
-                                    fontSize: 14,
-                                    border: '1px solid #ddd',
-                                    marginBottom: 4,
-                                    background: isSelected ? '#E9F2F4' : 'transparent'
-                                  }}
-                                  onClick={() => {
-                                    if (isSelected) {
-                                      // 取消选择
-                                      const newResidents = currentResidents.filter((r: any) => {
-                                        const name = typeof r === 'string' ? r : r.name;
-                                        return name !== resident;
-                                      });
-                                      setCurrent({ ...current, residents: newResidents });
-                                    } else {
-                                      // 选择
-                                      const newResidentEntry = { name: resident, addedAt: new Date() };
-                                      setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
-                                    }
-                                  }}
-                                  onMouseEnter={e => {
-                                    if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
-                                  }}
-                                  onMouseLeave={e => {
-                                    if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
-                                  }}
-                                >
-                                  <div style={{
-                                    width: 18,
-                                    height: 18,
-                                    borderRadius: '50%',
-                                    border: isSelected ? 'none' : '2px solid #ddd',
-                                    marginRight: 8,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: isSelected ? '#007bff' : 'transparent',
-                                    flexShrink: 0
-                                  }}>
-                                    {isSelected && (
-                                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                        <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                      </svg>
-                                    )}
-                                  </div>
-                                  <span>{resident}</span>
-                                </div>
-                              );
-                            })}
-                          </div>,
-                          document.body
-                        )}
-                        
-                        {/* Residents tags - 横向滚动 */}
-                        {current.residents && current.residents.length > 0 && current.residents
-                          .filter((resident: any) => {
-                            const residentName = typeof resident === 'string' ? resident : resident.name;
-                            return residentName && residentName.trim() !== '';
-                          })
-                          .map((resident: any) => {
-                            const residentName = typeof resident === 'string' ? resident : resident.name;
-                            return (
-                              <span 
-                                key={residentName}
-                                style={{
-                                  background: '#E9F2F4',
-                                  color: '#00313c',
-                                  padding: '4px 12px',
-                                  borderRadius: 12,
-                                  fontSize: 12,
-                                  fontWeight: 500,
-                                  whiteSpace: 'nowrap',
+                                <div style={{
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: '50%',
+                                  border: isSelected ? 'none' : '2px solid #ddd',
+                                  marginRight: 8,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: isSelected ? '#007bff' : 'transparent',
                                   flexShrink: 0
-                                }}
-                              >
-                                {residentName}
-                              </span>
+                                }}>
+                                  {isSelected && (
+                                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                      <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <span>{resident}</span>
+                              </div>
                             );
                           })}
-                      </div>
+                        </div>,
+                        document.body
+                      )}
+
+                      {/* Residents tags - 横向滚动 */}
+                      {current.residents && current.residents.length > 0 && current.residents
+                        .filter((resident: any) => {
+                          const residentName = typeof resident === 'string' ? resident : resident.name;
+                          return residentName && residentName.trim() !== '';
+                        })
+                        .map((resident: any) => {
+                          const residentName = typeof resident === 'string' ? resident : resident.name;
+                          return (
+                            <span
+                              key={residentName}
+                              style={{
+                                background: '#E9F2F4',
+                                color: '#00313c',
+                                padding: '4px 12px',
+                                borderRadius: 12,
+                                fontSize: 12,
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0
+                              }}
+                            >
+                              {residentName}
+                            </span>
+                          );
+                        })}
+                    </div>
                     <div className="activity-card-title" style={{ fontSize: 24, cursor: 'pointer' }} onClick={() => { setEditingCurrentName(true); setEditingName(current.name); }}>{current.name}</div>
                   </>
                 )}
@@ -2440,11 +2440,11 @@ function App() {
                     <div className="activity-card-label">Duration: {formatDuration(now.getTime() - current.startAt.getTime())}</div>
                     <div className="activity-card-label">End At: -</div>
                   </div>
-                  <Button 
-                    color="danger" 
-                    shape="rounded" 
-                    size="mini" 
-                    style={{ 
+                  <Button
+                    color="danger"
+                    shape="rounded"
+                    size="mini"
+                    style={{
                       width: 48,
                       minWidth: 48,
                       height: 48,
@@ -2457,7 +2457,7 @@ function App() {
                       backgroundColor: '#E9F2F4',
                       border: 'none',
                       flexShrink: 0
-                    }} 
+                    }}
                     onClick={stopCurrent}
                   >
                     <div style={{
@@ -2481,11 +2481,11 @@ function App() {
                   <div
                     className="activity-card-history"
                     key={item.startAt.getTime()}
-                    style={{ 
-                      position: 'relative', 
-                      overflow: 'hidden', 
-                      opacity: isDeleted ? 0.6 : 1, 
-                      userSelect: 'none', 
+                    style={{
+                      position: 'relative',
+                      overflow: 'hidden',
+                      opacity: isDeleted ? 0.6 : 1,
+                      userSelect: 'none',
                       touchAction: 'manipulation'
                     }}
                     onTouchStart={() => {
@@ -2564,10 +2564,10 @@ function App() {
                     ) : (
                       <>
                         {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
-                        <div style={{ 
-                          display: 'flex', 
+                        <div style={{
+                          display: 'flex',
                           alignItems: 'center',
-                          gap: 8, 
+                          gap: 8,
                           marginBottom: 4,
                           overflowX: 'auto',
                           scrollbarWidth: 'none',
@@ -2601,13 +2601,13 @@ function App() {
                             }}
                           >
                             <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                              <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
+                              <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
                             </svg>
                           </button>
-                          
+
                           {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
                           {showCardResidentDropdown === `today-${idx}` && cardDropdownPosition && createPortal(
-                            <div 
+                            <div
                               data-card-resident-dropdown
                               style={{
                                 position: 'fixed',
@@ -2688,7 +2688,7 @@ function App() {
                                   <span>Add new name</span>
                                 </div>
                               )}
-                              
+
                               {/* 已有 residents 列表 */}
                               {residents.map(resident => {
                                 const itemResidents = item.residents || [];
@@ -2746,7 +2746,7 @@ function App() {
                                     }}>
                                       {isSelected && (
                                         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                          <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                          <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                       )}
                                     </div>
@@ -2757,7 +2757,7 @@ function App() {
                             </div>,
                             document.body
                           )}
-                          
+
                           {/* Residents tags */}
                           {item.residents && item.residents.length > 0 && item.residents
                             .filter((resident: any) => {
@@ -2767,7 +2767,7 @@ function App() {
                             .map((resident: any) => {
                               const residentName = typeof resident === 'string' ? resident : resident.name;
                               return (
-                                <span 
+                                <span
                                   key={residentName}
                                   style={{
                                     background: '#E9F2F4',
@@ -2780,10 +2780,10 @@ function App() {
                                     flexShrink: 0
                                   }}
                                 >
-                                {residentName}
-                              </span>
-                            );
-                          })}
+                                  {residentName}
+                                </span>
+                              );
+                            })}
                         </div>
                         <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
                       </>
@@ -2897,10 +2897,10 @@ function App() {
                       ) : (
                         <>
                           {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
-                          <div style={{ 
-                            display: 'flex', 
+                          <div style={{
+                            display: 'flex',
                             alignItems: 'center',
-                            gap: 8, 
+                            gap: 8,
                             marginBottom: 4,
                             overflowX: 'auto',
                             scrollbarWidth: 'none',
@@ -2934,13 +2934,13 @@ function App() {
                               }}
                             >
                               <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                                <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
+                                <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
                               </svg>
                             </button>
-                            
+
                             {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
                             {showCardResidentDropdown === `${date}-${idx}` && cardDropdownPosition && createPortal(
-                              <div 
+                              <div
                                 data-card-resident-dropdown
                                 style={{
                                   position: 'fixed',
@@ -3021,7 +3021,7 @@ function App() {
                                     <span>Add new name</span>
                                   </div>
                                 )}
-                                
+
                                 {/* 已有 residents 列表 */}
                                 {residents.map(resident => {
                                   const itemResidents = item.residents || [];
@@ -3079,7 +3079,7 @@ function App() {
                                       }}>
                                         {isSelected && (
                                           <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                            <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                           </svg>
                                         )}
                                       </div>
@@ -3090,7 +3090,7 @@ function App() {
                               </div>,
                               document.body
                             )}
-                            
+
                             {/* Residents tags */}
                             {item.residents && item.residents.length > 0 && item.residents
                               .filter((resident: any) => {
@@ -3100,7 +3100,7 @@ function App() {
                               .map((resident: any) => {
                                 const residentName = typeof resident === 'string' ? resident : resident.name;
                                 return (
-                                  <span 
+                                  <span
                                     key={residentName}
                                     style={{
                                       background: '#E9F2F4',
@@ -3113,10 +3113,10 @@ function App() {
                                       flexShrink: 0
                                     }}
                                   >
-                                  {residentName}
-                                </span>
-                              );
-                            })}
+                                    {residentName}
+                                  </span>
+                                );
+                              })}
                           </div>
                           <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date, idx }); setEditingName(item.name); }}>{item.name}</div>
                         </>
@@ -3211,18 +3211,18 @@ function App() {
               }
             }}
           />
-          <div className="activity-bottom-sheet-fixed" style={{ 
-            zIndex: 200, 
-            position: 'fixed', 
-            left: '50%', 
-            bottom: 0, 
+          <div className="activity-bottom-sheet-fixed" style={{
+            zIndex: 200,
+            position: 'fixed',
+            left: '50%',
+            bottom: 0,
             transform: 'translateX(-50%)',
-            animation: isBottomSheetClosing 
-              ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+            animation: isBottomSheetClosing
+              ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
-            <div 
-              className="activity-popup-inner" 
+            <div
+              className="activity-popup-inner"
               style={{ padding: '0 24px', height: '100%', display: 'flex', flexDirection: 'column' }}
               onScroll={(e) => {
                 e.stopPropagation();
@@ -3249,16 +3249,16 @@ function App() {
               {/* RESIDENT Section */}
               <div style={{ marginBottom: 20 }}>
                 {/* 标题栏 - 包含 Resident 标题和添加按钮 */}
-                <div style={{ 
+                <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   marginBottom: 12
                 }}>
-                  <div style={{ 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    color: '#666', 
+                  <div style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#666',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5
                   }}>
@@ -3278,26 +3278,37 @@ function App() {
                         padding: 0,
                         position: 'relative'
                       }}
-                      onClick={() => setIsAddingResident(true)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // 设置交互标记，防止popup被关闭
+                        const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                        if (popupContainer) {
+                          popupContainer.setAttribute('data-recent-interaction', 'true');
+                          setTimeout(() => {
+                            popupContainer.removeAttribute('data-recent-interaction');
+                          }, 1000);
+                        }
+                        setIsAddingResident(true);
+                      }}
                     >
-                      <svg 
-                        width="14" 
-                        height="14" 
-                        viewBox="0 0 14 14" 
-                        fill="none" 
-                        style={{ 
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        style={{
                           position: 'absolute',
                           top: '50%',
                           left: '50%',
                           transform: 'translate(-50%, -50%)'
                         }}
                       >
-                        <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
                       </svg>
                     </button>
                   )}
                 </div>
-                
+
                 {/* 输入框 - 添加新 resident */}
                 {isAddingResident && (
                   <input
@@ -3318,6 +3329,28 @@ function App() {
                     value={newResidentName}
                     autoFocus
                     onChange={e => setNewResidentName(e.target.value)}
+                    onFocus={(e) => {
+                      e.stopPropagation();
+                      // 设置交互标记，防止popup被关闭
+                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                      if (popupContainer) {
+                        popupContainer.setAttribute('data-recent-interaction', 'true');
+                        setTimeout(() => {
+                          popupContainer.removeAttribute('data-recent-interaction');
+                        }, 1000);
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // 设置交互标记，防止popup被关闭
+                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                      if (popupContainer) {
+                        popupContainer.setAttribute('data-recent-interaction', 'true');
+                        setTimeout(() => {
+                          popupContainer.removeAttribute('data-recent-interaction');
+                        }, 1000);
+                      }
+                    }}
                     onBlur={() => {
                       if (newResidentName.trim()) {
                         setResidents(prev => [...prev, newResidentName.trim()]);
@@ -3342,7 +3375,7 @@ function App() {
 
                 {/* Resident 名字区域 - 横向滚动，最多2行 */}
                 {residents.length > 0 ? (
-                  <div style={{ 
+                  <div style={{
                     overflowX: 'auto',
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
@@ -3382,7 +3415,7 @@ function App() {
                                 setEditingResident(null);
                               } else if (editingResidentName.trim() !== resident) {
                                 // 更新 residents 列表
-                                setResidents(prev => 
+                                setResidents(prev =>
                                   prev.map(r => r === resident ? editingResidentName.trim() : r)
                                 );
                                 // 同时更新 selectedResidents
@@ -3400,7 +3433,7 @@ function App() {
                                   setEditingResidentName(resident);
                                   setEditingResident(null);
                                 } else if (editingResidentName.trim() !== resident) {
-                                  setResidents(prev => 
+                                  setResidents(prev =>
                                     prev.map(r => r === resident ? editingResidentName.trim() : r)
                                   );
                                   setSelectedResidents(prev =>
@@ -3451,8 +3484,8 @@ function App() {
                               // 如果没有触发长按，则执行点击操作
                               if (!(window as any).__residentLongPressFired && !(window as any).__residentTouchHandled) {
                                 (window as any).__residentTouchHandled = true;
-                                setSelectedResidents(prev => 
-                                  prev.includes(resident) 
+                                setSelectedResidents(prev =>
+                                  prev.includes(resident)
                                     ? prev.filter(r => r !== resident)
                                     : [...prev, resident]
                                 );
@@ -3487,8 +3520,8 @@ function App() {
                               // 桌面端：只有在没有触发长按的情况下才执行点击操作
                               if (!(window as any).__residentLongPressFired) {
                                 e.stopPropagation();
-                                setSelectedResidents(prev => 
-                                  prev.includes(resident) 
+                                setSelectedResidents(prev =>
+                                  prev.includes(resident)
                                     ? prev.filter(r => r !== resident)
                                     : [...prev, resident]
                                 );
@@ -3522,16 +3555,27 @@ function App() {
                   </div>
                 ) : !isAddingResident && (
                   /* 没有 residents 时显示 Add Name 按钮 */
-                  <Button 
-                    block 
-                    className="activity-btn" 
-                    shape="rounded" 
+                  <Button
+                    block
+                    className="activity-btn"
+                    shape="rounded"
                     size="large"
                     style={{
                       border: '1px dashed #ccc',
                       background: '#fff'
                     }}
-                    onClick={() => setIsAddingResident(true)}
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      // 设置交互标记，防止popup被关闭
+                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                      if (popupContainer) {
+                        popupContainer.setAttribute('data-recent-interaction', 'true');
+                        setTimeout(() => {
+                          popupContainer.removeAttribute('data-recent-interaction');
+                        }, 1000);
+                      }
+                      setIsAddingResident(true);
+                    }}
                   >
                     + Add Name
                   </Button>
@@ -3539,8 +3583,8 @@ function App() {
               </div>
 
               {/* 可滚动的tag区域 */}
-              <div 
-                style={{ 
+              <div
+                style={{
                   flex: 1,
                   overflowY: 'auto',
                   paddingRight: '8px'
@@ -3555,10 +3599,10 @@ function App() {
                 {/* Recent Activities */}
                 {recentActivities.length > 0 && (
                   <div style={{ marginBottom: 20 }}>
-                    <div style={{ 
-                      fontSize: 12, 
-                      fontWeight: 600, 
-                      color: '#666', 
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#666',
                       marginBottom: 12,
                       textTransform: 'uppercase',
                       letterSpacing: 0.5
@@ -3590,8 +3634,8 @@ function App() {
                                   setEditingRecentActivity(null);
                                 } else {
                                   // 更新recent activities
-                                  setRecentActivities(prev => 
-                                    prev.map(item => 
+                                  setRecentActivities(prev =>
+                                    prev.map(item =>
                                       item === activity ? editingRecentName : item
                                     )
                                   );
@@ -3605,8 +3649,8 @@ function App() {
                                     setEditingRecentActivity(null);
                                   } else {
                                     // 更新recent activities
-                                    setRecentActivities(prev => 
-                                      prev.map(item => 
+                                    setRecentActivities(prev =>
+                                      prev.map(item =>
                                         item === activity ? editingRecentName : item
                                       )
                                     );
@@ -3661,10 +3705,10 @@ function App() {
                               }}
                               onContextMenu={e => e.preventDefault()}
                             >
-                              <Button 
-                                block 
-                                className="activity-btn" 
-                                shape="rounded" 
+                              <Button
+                                block
+                                className="activity-btn"
+                                shape="rounded"
                                 size="large"
                               >
                                 {activity}
@@ -3676,13 +3720,13 @@ function App() {
                     </Grid>
                   </div>
                 )}
-                
+
                 {/* ADLs Activities */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    color: '#666', 
+                  <div style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#666',
                     marginBottom: 12,
                     textTransform: 'uppercase',
                     letterSpacing: 0.5
@@ -3698,9 +3742,9 @@ function App() {
                   </Grid>
                 </div>
               </div>
-              
+
               {/* 固定在底部的输入框 */}
-              <div className="activity-input-row-inner" style={{ 
+              <div className="activity-input-row-inner" style={{
                 marginTop: 16,
                 flexShrink: 0,
                 paddingTop: 16,
@@ -3716,12 +3760,28 @@ function App() {
                   style={{ flex: 1 }}
                   onFocus={(e: React.FocusEvent<HTMLInputElement>) => {
                     e.stopPropagation();
+                    // 设置交互标记，防止popup被关闭
+                    const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                    if (popupContainer) {
+                      popupContainer.setAttribute('data-recent-interaction', 'true');
+                      setTimeout(() => {
+                        popupContainer.removeAttribute('data-recent-interaction');
+                      }, 1000);
+                    }
                   }}
                   onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
                     e.stopPropagation();
                   }}
                   onClick={(e: React.MouseEvent<HTMLInputElement>) => {
                     e.stopPropagation();
+                    // 设置交互标记，防止popup被关闭
+                    const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                    if (popupContainer) {
+                      popupContainer.setAttribute('data-recent-interaction', 'true');
+                      setTimeout(() => {
+                        popupContainer.removeAttribute('data-recent-interaction');
+                      }, 1000);
+                    }
                   }}
                 />
                 <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName}>Start</Button>
