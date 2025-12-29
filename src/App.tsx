@@ -3279,8 +3279,8 @@ function App() {
               position: 'fixed',
               top: 0,
               left: 0,
-              width: '100vw',
-              height: '100vh',
+              right: 0,
+              bottom: 0,
               zIndex: 999, // 高于header的200，覆盖整个页面
               background: showBottomSheet ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0)',
               transition: 'background 0.3s ease',

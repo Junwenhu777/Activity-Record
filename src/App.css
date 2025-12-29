@@ -300,18 +300,32 @@ button:focus-visible {
 
 /* 移除活动 tag 的所有边框和蒙层 */
 /* 移除活动 tag 的所有边框和蒙层 */
-.activity-btn:focus,
-.activity-btn:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-  /* 不强制设置border，让它跟随原本状态，只是去掉 glow */
+/* 移除活动 tag 的所有边框和蒙层 - 强制覆盖 */
+.activity-btn {
+  --adm-color-primary: #e0e0e0;
+  /* Trick to neutralize internal color shifts */
+  --adm-button-border-color: #e0e0e0;
 }
 
-/* 活动 tag 按下效果 - 使用 brightness 变暗，避免颜色重叠 */
-.activity-btn:active {
+.activity-btn:focus,
+.activity-btn:focus-visible,
+.activity-btn:active,
+.activity-btn.adm-button:active,
+.activity-btn.adm-button:focus {
   outline: none !important;
   box-shadow: none !important;
+  border-color: #e0e0e0 !important;
+  /* Force consistent border color */
+}
 
+/* Primary buttons should keep their borderless style */
+.activity-btn.ant-btn-primary:focus,
+.activity-btn.ant-btn-primary:active {
+  border: none !important;
+}
+
+/* 活动 tag 按下效果 - 使用 brightness 变暗 */
+.activity-btn:active {
   filter: brightness(0.9);
   /* 自然变暗 */
   transform: scale(0.98);
