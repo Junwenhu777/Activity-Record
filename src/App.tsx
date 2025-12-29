@@ -3328,17 +3328,16 @@ function App() {
               e.stopPropagation();
             }}
           >
-            {/* 半屏标题栏 - 48px高度 */}
+            {/* 半屏标题栏 - 匹配Summary样式 */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '0 24px',
-              height: 48,
-              flexShrink: 0
-              // 无底部分割线
+              width: '100%',
+              padding: '24px 24px 16px 24px',
+              boxSizing: 'border-box'
             }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: '#000' }}>Start Activity</span>
+              <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Start Activity</div>
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -3359,17 +3358,20 @@ function App() {
                   }
                 }}
                 style={{
-                  background: 'transparent',
+                  width: 38,
+                  height: 38,
+                  background: '#E9F2F4',
                   border: 'none',
-                  padding: 8,
+                  borderRadius: '50%',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  padding: 0
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M15 5L5 15M5 5L15 15" stroke="#666" strokeWidth="2" strokeLinecap="round" />
+                <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14.158 5.27173L9.98804 9.44165L14.158 13.6116L13.3103 14.4592L9.14038 10.2893L4.97046 14.4592L4.1228 13.6116L8.29272 9.44165L4.1228 5.27173L4.97046 4.42407L9.14038 8.59399L13.3103 4.42407L14.158 5.27173Z" fill="black" fillOpacity="0.85" />
                 </svg>
               </button>
             </div>
@@ -3377,12 +3379,12 @@ function App() {
               className="activity-popup-inner"
               style={{
                 padding: '0 24px',
-                paddingTop: 20, // 距离标题区20px间距
+                paddingTop: 0, // 标题区已有padding，无需额外间距
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
                 overflowY: 'auto',
-                overscrollBehavior: 'contain' // 防止过度滚动穿透
+                overscrollBehavior: 'contain'
               }}
               onScroll={(e) => {
                 e.stopPropagation();
