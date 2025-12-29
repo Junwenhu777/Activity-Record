@@ -3514,51 +3514,26 @@ function App() {
                     onChange={e => setNewResidentName(e.target.value)}
                     onFocus={(e) => {
                       e.stopPropagation();
-                      // 设置交互标记，防止popup被关闭
-                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
-                      if (popupContainer) {
-                        popupContainer.setAttribute('data-recent-interaction', 'true');
-                        setTimeout(() => {
-                          popupContainer.removeAttribute('data-recent-interaction');
-                        }, 1000);
-                      }
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      // 设置交互标记，防止popup被关闭
-                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
-                      if (popupContainer) {
-                        popupContainer.setAttribute('data-recent-interaction', 'true');
-                        setTimeout(() => {
-                          popupContainer.removeAttribute('data-recent-interaction');
-                        }, 1000);
-                      }
                     }}
-                    onBlur={() => {
-                      // 设置保护标记，防止状态冲突
-                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
-                      if (popupContainer) {
-                        popupContainer.setAttribute('data-recent-interaction', 'true');
-                        setTimeout(() => {
-                          popupContainer.removeAttribute('data-recent-interaction');
-                        }, 500);
+                    onBlur={(e) => {
+                      e.stopPropagation(); // 阻止冒泡防止关闭popup
+                      if (newResidentName.trim()) {
+                        setResidents(prev => [newResidentName.trim(), ...prev]);
                       }
-                      // 延迟处理，确保键盘完全收起
-                      setTimeout(() => {
-                        if (newResidentName.trim()) {
-                          setResidents(prev => [newResidentName.trim(), ...prev]);
-                        }
-                        setNewResidentName('');
-                        setIsAddingResident(false);
-                      }, 50);
+                      setNewResidentName('');
+                      setIsAddingResident(false);
                     }}
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         e.stopPropagation();
-                        // 空输入时只收起键盘
-                        (e.currentTarget as HTMLInputElement).blur();
+                        e.currentTarget.blur();
                       } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.stopPropagation();
                         setNewResidentName('');
                         setIsAddingResident(false);
                       }
