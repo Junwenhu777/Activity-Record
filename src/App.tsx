@@ -577,6 +577,7 @@ function App() {
     const residentsWithTime = selectedResidents.map(r => ({ name: r, addedAt: new Date() }));
     setCurrent({ name, startAt: new Date(), deleted: false, residents: residentsWithTime });
     setActivityName('');
+    setSelectedResidents([]); // 始终重置选中的 residents，确保下次打开时从空白开始
 
     // 将自定义活动添加到recent列表
     if (!activityTypes.includes(name)) {
