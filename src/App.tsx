@@ -296,8 +296,8 @@ function App() {
   const [showResidentFilter, setShowResidentFilter] = useState(false);
   const [isResidentFilterClosing, setIsResidentFilterClosing] = useState(false);
   const [selectedFilterResidents, setSelectedFilterResidents] = useState<string[]>([]);
-  const [showStartButton, setShowStartButton] = useState(false);
-  const [popupRendered, setPopupRendered] = useState(true);
+  const [showStartButton, setShowStartButton] = useState(true); // 默认显示按钮
+  const [popupRendered, setPopupRendered] = useState(false); // 默认不渲染popup
 
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
