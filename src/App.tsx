@@ -2,7 +2,7 @@ import React from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Input, Grid } from 'antd-mobile';
+import { Button, Grid } from 'antd-mobile';
 import './App.css';
 import * as XLSX from 'xlsx';
 
@@ -3960,18 +3960,33 @@ function App() {
                 flexShrink: 0,
                 paddingTop: 16,
                 paddingBottom: 10,
-                borderTop: '1px solid #f0f0f0'
+                borderTop: '1px solid #f0f0f0',
+                display: 'flex',
+                gap: 10,
+                alignItems: 'center'
               }}>
-                <Input
+                <input
+                  ref={(el) => {
+                    // 保存引用到 window 以便在 blur() 时使用
+                    (window as any).__activityNameInput = el;
+                  }}
                   className="activity-input"
                   placeholder="Write Activity Name"
                   value={activityName}
-                  onChange={val => setActivityName(val)}
-                  clearable
-                  style={{ flex: 1 }}
-                  onFocus={(e: React.FocusEvent<HTMLInputElement>) => {
+                  onChange={(e) => setActivityName(e.target.value)}
+                  style={{
+                    flex: 1,
+                    height: '44px',
+                    padding: '0 16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: '#f8f8f8'
+                  }}
+                  onFocus={(e) => {
                     e.stopPropagation();
-                    // 设置交互标记，防止popup被关闭
                     const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
                     if (popupContainer) {
                       popupContainer.setAttribute('data-recent-interaction', 'true');
@@ -3980,20 +3995,8 @@ function App() {
                       }, 1000);
                     }
                   }}
-                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                  onClick={(e) => {
                     e.stopPropagation();
-                    // 设置保护标记，防止状态冲突 - 延长保护时间
-                    const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
-                    if (popupContainer) {
-                      popupContainer.setAttribute('data-recent-interaction', 'true');
-                      setTimeout(() => {
-                        popupContainer.removeAttribute('data-recent-interaction');
-                      }, 800);
-                    }
-                  }}
-                  onClick={(e: React.MouseEvent<HTMLInputElement>) => {
-                    e.stopPropagation();
-                    // 设置交互标记，防止popup被关闭
                     const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
                     if (popupContainer) {
                       popupContainer.setAttribute('data-recent-interaction', 'true');
@@ -4002,26 +4005,27 @@ function App() {
                       }, 1000);
                     }
                   }}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                  onBlur={() => {
+                    // 设置保护标记
+                    const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                    if (popupContainer) {
+                      popupContainer.setAttribute('data-recent-interaction', 'true');
+                      setTimeout(() => {
+                        popupContainer.removeAttribute('data-recent-interaction');
+                      }, 500);
+                    }
+                    // 与 Resident input 相同 - 延迟处理确保键盘完全收起
+                    // Activity Name 不需要清空，所以这里不做状态处理
+                  }}
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       e.stopPropagation();
-                      // 设置保护标记
-                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
-                      if (popupContainer) {
-                        popupContainer.setAttribute('data-recent-interaction', 'true');
-                        setTimeout(() => {
-                          popupContainer.removeAttribute('data-recent-interaction');
-                        }, 800);
-                      }
                       if (activityName.trim()) {
-                        // 有内容则开始活动
                         startActivity(activityName);
                       } else {
-                        // 空输入时只收起键盘 - 使用 requestAnimationFrame 确保安全
-                        requestAnimationFrame(() => {
-                          (e.currentTarget as HTMLInputElement).blur();
-                        });
+                        // 空输入时只收起键盘 - 直接blur，不用异步
+                        e.currentTarget.blur();
                       }
                     }
                   }}
