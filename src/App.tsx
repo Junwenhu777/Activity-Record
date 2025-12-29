@@ -524,7 +524,28 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
+  // 当半屏弹窗打开时锁定 body 滚动，防止背景页面滚动穿透
+  useEffect(() => {
+    if (showBottomSheet || showStatsModal) {
+      // 保存当前滚动位置
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.overflow = 'hidden';
 
+      return () => {
+        // 恢复滚动
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [showBottomSheet, showStatsModal]);
 
 
 
@@ -3961,13 +3982,13 @@ function App() {
                   }}
                   onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
                     e.stopPropagation();
-                    // 设置保护标记，防止状态冲突
+                    // 设置保护标记，防止状态冲突 - 延长保护时间
                     const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
                     if (popupContainer) {
                       popupContainer.setAttribute('data-recent-interaction', 'true');
                       setTimeout(() => {
                         popupContainer.removeAttribute('data-recent-interaction');
-                      }, 500);
+                      }, 800);
                     }
                   }}
                   onClick={(e: React.MouseEvent<HTMLInputElement>) => {
@@ -3985,12 +4006,22 @@ function App() {
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       e.stopPropagation();
+                      // 设置保护标记
+                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                      if (popupContainer) {
+                        popupContainer.setAttribute('data-recent-interaction', 'true');
+                        setTimeout(() => {
+                          popupContainer.removeAttribute('data-recent-interaction');
+                        }, 800);
+                      }
                       if (activityName.trim()) {
                         // 有内容则开始活动
                         startActivity(activityName);
                       } else {
-                        // 空输入时只收起键盘
-                        (e.currentTarget as HTMLInputElement).blur();
+                        // 空输入时只收起键盘 - 使用 requestAnimationFrame 确保安全
+                        requestAnimationFrame(() => {
+                          (e.currentTarget as HTMLInputElement).blur();
+                        });
                       }
                     }
                   }}
