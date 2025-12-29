@@ -502,6 +502,8 @@ button:focus-visible {
   border: 1px solid #e0e0e0;
   font-size: 15px;
   padding: 8px 12px;
+  color: #222;
+  /* 确保深色文字 */
 }
 
 .modal-content {

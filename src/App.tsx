@@ -3982,7 +3982,8 @@ function App() {
                     fontSize: '16px',
                     outline: 'none',
                     boxSizing: 'border-box',
-                    background: '#f8f8f8'
+                    background: '#f8f8f8',
+                    color: '#222' // 确保深色文字
                   }}
                   onFocus={(e) => {
                     e.stopPropagation();
