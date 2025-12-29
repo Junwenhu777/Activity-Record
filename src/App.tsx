@@ -676,7 +676,10 @@ function App() {
     }
 
     // 只有主内容区的滚动才收起popup并显示start按钮
-    if (popupRendered && !isBottomSheetClosing) {
+    // 如果popup打开了(popupRendered)，则忽略滚动事件(防止键盘收起触发滚动导致误关)
+    if (popupRendered) return;
+
+    if (!isBottomSheetClosing) {
       // 检查是否有popup交互标志
       const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
       const hasRecentInteraction = popupContainer && popupContainer.getAttribute('data-recent-interaction') === 'true';
@@ -3556,6 +3559,7 @@ function App() {
                       gridAutoColumns: 'max-content',
                       columnGap: 12,
                       rowGap: 12,
+                      padding: 4, // 防止input被截断
                       paddingBottom: 4
                     }}>
                       {residents.map(resident => (
@@ -3567,7 +3571,7 @@ function App() {
                               padding: '0 16px',
                               border: '1px solid #00313c',
                               borderRadius: 12,
-                              fontSize: 15,
+                              fontSize: 16, // 防止iOS缩放
                               fontWeight: 500,
                               outline: 'none',
                               boxSizing: 'border-box',
