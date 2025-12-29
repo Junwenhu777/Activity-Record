@@ -2592,7 +2592,8 @@ function App() {
                         touchAction: 'pan-y',
                         transform: `translateX(${currentOffset}px)`,
                         transition: swipeState.isDragging ? 'none' : 'transform 0.3s ease',
-                        willChange: 'transform'
+                        willChange: 'transform',
+                        marginBottom: 0 // 覆盖CSS的margin，让按钮高度与卡片一致
                       }}
                       onTouchStart={(e) => handleSwipeTouchStart(e, cardId)}
                       onTouchMove={(e) => handleSwipeTouchMove(e, cardId)}
@@ -2957,7 +2958,8 @@ function App() {
                           touchAction: 'pan-y',
                           transform: `translateX(${currentOffset}px)`,
                           transition: swipeState.isDragging ? 'none' : 'transform 0.3s ease',
-                          willChange: 'transform'
+                          willChange: 'transform',
+                          marginBottom: 0 // 覆盖CSS的margin，让按钮高度与卡片一致
                         }}
                         onTouchStart={(e) => handleSwipeTouchStart(e, cardId)}
                         onTouchMove={(e) => handleSwipeTouchMove(e, cardId)}
