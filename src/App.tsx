@@ -3249,6 +3249,7 @@ function App() {
       {/* 底部固定活动选择与输入区 */}
       {popupRendered && (
         <>
+          {/* iOS风格半透明遮罩层 - 阻止触摸事件穿透 */}
           <div
             style={{
               position: 'fixed',
@@ -3257,63 +3258,37 @@ function App() {
               width: '100vw',
               height: '100vh',
               zIndex: 199,
-              background: 'rgba(0,0,0,0)', // 可根据需要加深遮罩色
+              background: showBottomSheet ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0)',
+              transition: 'background 0.3s ease',
+              touchAction: 'none', // 阻止触摸事件穿透
+              WebkitTapHighlightColor: 'transparent',
             }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               if (!isBottomSheetClosing) {
                 setIsBottomSheetClosing(true);
-                setShowStartButton(false); // 立即隐藏start按钮
-                // 先等待动画完成，再隐藏元素
+                setShowStartButton(false);
                 setTimeout(() => {
                   setShowBottomSheet(false);
                   setEditingRecentActivity(null);
                   setEditingRecentName('');
-                  // 立即重置关闭状态，确保popup从DOM中移除
                   setIsBottomSheetClosing(false);
-                  // 立即从DOM中移除popup
                   setPopupRendered(false);
-                  // 延迟显示start按钮，确保popup完全消失
                   setTimeout(() => {
                     setShowStartButton(true);
                   }, 100);
                 }, 450);
               }
             }}
-            onScroll={(e) => {
-              e.preventDefault();
+            onTouchStart={(e) => {
+              // 只阻止事件传播，不关闭popup（除非点击）
               e.stopPropagation();
-              console.log('Overlay scroll event triggered');
-              if (!isBottomSheetClosing) {
-                setIsBottomSheetClosing(true);
-                setShowStartButton(false);
-                setTimeout(() => {
-                  setShowBottomSheet(false);
-                  setIsBottomSheetClosing(false);
-                  setPopupRendered(false);
-                  setTimeout(() => {
-                    setShowStartButton(true);
-                  }, 100);
-                }, 450);
-              }
             }}
             onTouchMove={(e) => {
+              // 阻止滑动事件穿透到下层页面
               e.preventDefault();
               e.stopPropagation();
-              console.log('Overlay touch move event triggered');
-              if (!isBottomSheetClosing) {
-                setIsBottomSheetClosing(true);
-                setShowStartButton(false);
-                setTimeout(() => {
-                  setShowBottomSheet(false);
-                  setIsBottomSheetClosing(false);
-                  setPopupRendered(false);
-                  setTimeout(() => {
-                    setShowStartButton(true);
-                  }, 100);
-                }, 450);
-              }
             }}
           />
           <div className="activity-bottom-sheet-fixed" style={{
@@ -3895,7 +3870,7 @@ function App() {
           </div>
         </>
       )}
-      {/* 底部固定活动选择与输入区 */}
+      {/* ✨ Start Activity 按钮 - popup关闭时显示 */}
       {!showBottomSheet && !isBottomSheetClosing && showStartButton && !showStatsModal && !isStatsModalClosing && (
         <div style={{
           position: 'fixed',
