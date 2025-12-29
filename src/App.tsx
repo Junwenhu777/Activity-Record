@@ -569,6 +569,8 @@ function App() {
 
   // 开始新活动（自动结束当前活动）
   const startActivity = (name: string) => {
+    // 如果正在编辑 Resident 且名字不为空，优先处理 Resident 编辑，不启动 Activity
+    if (editingResident || (isAddingResident && newResidentName)) return;
     if (!name) return;
     if (current) {
       stopCurrent();
@@ -855,6 +857,21 @@ function App() {
       }
     };
   }, [popupRendered, isBottomSheetClosing]);
+
+  // 安全守卫：防止 isBottomSheetClosing 卡死导致半屏无法唤起
+  useEffect(() => {
+    if (isBottomSheetClosing) {
+      const timer = setTimeout(() => {
+        console.warn('Force reseting stuck isBottomSheetClosing state');
+        setIsBottomSheetClosing(false);
+        setPopupRendered(false);
+        setShowStartButton(true);
+        setShowBottomSheet(false);
+        setEditingRecentActivity(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isBottomSheetClosing]);
 
   // 获取所有可用活动列表
   const getAllActivities = () => {
@@ -3836,9 +3853,10 @@ function App() {
                                 padding: '0 16px',
                                 border: '1px solid #ddd',
                                 borderRadius: '12px',
-                                fontSize: '16px',
-                                fontWeight: '500',
+                                fontSize: 16,
+                                fontWeight: 500,
                                 outline: 'none',
+                                enterKeyHint: 'done', // 优化键盘显示
                                 boxSizing: 'border-box',
                                 background: '#f8f8f8', // 统一浅色背景
                                 color: '#222' // 确保深色文字
