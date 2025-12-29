@@ -257,8 +257,13 @@ function App() {
   const [editingCurrentName, setEditingCurrentName] = useState(false);
   const [editingHistory, setEditingHistory] = useState<{ date?: string, idx?: number } | null>(null);
   const [editingName, setEditingName] = useState('');
-  // 新增state用于滑动删除
-  const [swipeDelete, setSwipeDelete] = useState<{ date?: string, idx?: number } | null>(null);
+  // iOS风格滑动删除状态
+  const [swipeState, setSwipeState] = useState<{
+    cardId: string | null;  // 'today-{idx}' 或 '{date}-{idx}'
+    offset: number;         // 当前偏移量 (负数表示向左滑)
+    startX: number;         // 触摸起始 X 坐标
+    isDragging: boolean;    // 是否正在拖动
+  }>({ cardId: null, offset: 0, startX: 0, isDragging: false });
   // 新增state用于编辑recent activity
   const [editingRecentActivity, setEditingRecentActivity] = useState<string | null>(null);
   const [editingRecentName, setEditingRecentName] = useState('');
@@ -311,8 +316,50 @@ function App() {
     return activityColors.current[activityName];
   };
 
-  // 用于长按定时器
-  let longPressTimer: any = null;
+  // iOS风格滑动手势处理
+  const SWIPE_THRESHOLD = 40; // 滑动超过40px则展开
+  const SWIPE_ACTION_WIDTH = 80; // 操作按钮区域宽度
+
+  const handleSwipeTouchStart = (e: React.TouchEvent, cardId: string) => {
+    // 如果点击其他卡片，先关闭当前展开的卡片
+    if (swipeState.cardId && swipeState.cardId !== cardId && swipeState.offset !== 0) {
+      setSwipeState({ cardId: null, offset: 0, startX: 0, isDragging: false });
+      return;
+    }
+    const touch = e.touches[0];
+    // 如果卡片已经展开，记录当前offset作为起始状态
+    const currentOffset = swipeState.cardId === cardId ? swipeState.offset : 0;
+    setSwipeState({
+      cardId,
+      offset: currentOffset,
+      startX: touch.clientX - currentOffset, // 调整startX以保持连续性
+      isDragging: true
+    });
+  };
+
+  const handleSwipeTouchMove = (e: React.TouchEvent, cardId: string) => {
+    if (!swipeState.isDragging || swipeState.cardId !== cardId) return;
+    const touch = e.touches[0];
+    const diff = touch.clientX - swipeState.startX;
+    // 只允许向左滑动，最大滑动距离为 SWIPE_ACTION_WIDTH
+    const newOffset = Math.max(-SWIPE_ACTION_WIDTH, Math.min(0, diff));
+    setSwipeState(prev => ({ ...prev, offset: newOffset }));
+  };
+
+  const handleSwipeTouchEnd = (cardId: string) => {
+    if (swipeState.cardId !== cardId) return;
+    // 如果滑动超过阈值，则展开；否则收起
+    if (swipeState.offset < -SWIPE_THRESHOLD) {
+      setSwipeState(prev => ({ ...prev, offset: -SWIPE_ACTION_WIDTH, isDragging: false }));
+    } else {
+      setSwipeState({ cardId: null, offset: 0, startX: 0, isDragging: false });
+    }
+  };
+
+  // 关闭滑动操作
+  const closeSwipe = () => {
+    setSwipeState({ cardId: null, offset: 0, startX: 0, isDragging: false });
+  };
 
   // 点击外部关闭下载选项
   useEffect(() => {
@@ -2137,7 +2184,7 @@ function App() {
           onClick={e => {
             // 如果点击的是卡片内的按钮，不处理
             if ((e.target as HTMLElement).tagName.toLowerCase() === 'button') return;
-            setSwipeDelete(null);
+            closeSwipe();
           }}
           style={{
             minHeight: '100vh',
@@ -2475,78 +2522,79 @@ function App() {
           {todaysActivities.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               {todaysActivities.map((item, idx) => {
-                const isShowDelete = swipeDelete && swipeDelete.idx === idx && swipeDelete.date === 'today';
+                const cardId = `today-${idx}`;
+                const currentOffset = swipeState.cardId === cardId ? swipeState.offset : 0;
                 const isDeleted = item.deleted;
                 return (
                   <div
-                    className="activity-card-history"
                     key={item.startAt.getTime()}
                     style={{
                       position: 'relative',
                       overflow: 'hidden',
-                      opacity: isDeleted ? 0.6 : 1,
-                      userSelect: 'none',
-                      touchAction: 'manipulation'
-                    }}
-                    onTouchStart={() => {
-                      longPressTimer = setTimeout(() => setSwipeDelete({ date: 'today', idx }), 600);
-                    }}
-                    onTouchEnd={() => {
-                      clearTimeout(longPressTimer);
-                    }}
-                    onMouseDown={() => {
-                      longPressTimer = setTimeout(() => setSwipeDelete({ date: 'today', idx }), 600);
-                    }}
-                    onMouseUp={() => {
-                      clearTimeout(longPressTimer);
+                      marginBottom: 12,
+                      borderRadius: 12
                     }}
                   >
-                    {/* delete/recover 按钮 */}
-                    {isShowDelete && !isDeleted && (
+                    {/* 背景操作按钮区域 - 固定在右侧 */}
+                    <div style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: SWIPE_ACTION_WIDTH,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: isDeleted ? '#00b96b' : '#d70015',
+                      borderRadius: '0 12px 12px 0'
+                    }}>
                       <button
-                        style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, background: '#d70015', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontWeight: 600, cursor: 'pointer' }}
-                        onClick={() => {
-                          const newHistory = [...history];
-                          const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                          if (todayIdx !== -1) newHistory[todayIdx].deleted = true;
-                          setHistory(newHistory);
-                          setSwipeDelete(null);
+                        style={{
+                          background: 'transparent',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '8px 16px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontSize: 14
                         }}
-                      >delete</button>
-                    )}
-                    {isShowDelete && isDeleted && (
-                      <button
-                        style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, background: '#00b96b', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontWeight: 600, cursor: 'pointer' }}
                         onClick={() => {
-                          const newHistory = [...history];
-                          const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                          if (todayIdx !== -1) newHistory[todayIdx].deleted = false;
-                          setHistory(newHistory);
-                          setSwipeDelete(null);
-                        }}
-                      >recover</button>
-                    )}
-                    {editingHistory && editingHistory.idx === idx && editingHistory.date === 'today' ? (
-                      <input
-                        style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6 }}
-                        value={editingName}
-                        autoFocus
-                        onChange={e => setEditingName(e.target.value)}
-                        onBlur={() => {
                           const newHistory = [...history];
                           const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
                           if (todayIdx !== -1) {
-                            if (editingName.trim() === '') {
-                              setEditingName(history[todayIdx].name); // 恢复原标题
-                            } else {
-                              newHistory[todayIdx].name = editingName;
-                              setHistory(newHistory);
-                            }
+                            newHistory[todayIdx].deleted = !isDeleted;
+                            setHistory(newHistory);
                           }
-                          setEditingHistory(null);
+                          closeSwipe();
                         }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
+                      >
+                        {isDeleted ? 'Recover' : 'Delete'}
+                      </button>
+                    </div>
+
+                    {/* 可滑动的卡片内容 */}
+                    <div
+                      className="activity-card-history"
+                      style={{
+                        position: 'relative',
+                        opacity: isDeleted ? 0.6 : 1,
+                        userSelect: 'none',
+                        touchAction: 'pan-y',
+                        transform: `translateX(${currentOffset}px)`,
+                        transition: swipeState.isDragging ? 'none' : 'transform 0.3s ease',
+                        willChange: 'transform'
+                      }}
+                      onTouchStart={(e) => handleSwipeTouchStart(e, cardId)}
+                      onTouchMove={(e) => handleSwipeTouchMove(e, cardId)}
+                      onTouchEnd={() => handleSwipeTouchEnd(cardId)}
+                    >
+                      {editingHistory && editingHistory.idx === idx && editingHistory.date === 'today' ? (
+                        <input
+                          style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6 }}
+                          value={editingName}
+                          autoFocus
+                          onChange={e => setEditingName(e.target.value)}
+                          onBlur={() => {
                             const newHistory = [...history];
                             const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
                             if (todayIdx !== -1) {
@@ -2558,335 +2606,16 @@ function App() {
                               }
                             }
                             setEditingHistory(null);
-                          }
-                        }}
-                      />
-                    ) : (
-                      <>
-                        {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          marginBottom: 4,
-                          overflowX: 'auto',
-                          scrollbarWidth: 'none',
-                          msOverflowStyle: 'none'
-                        }}>
-                          {/* Add resident 按钮 */}
-                          <button
-                            style={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              border: '1px dashed #ccc',
-                              background: '#fff',
-                              cursor: 'pointer',
-                              padding: 0,
-                              flexShrink: 0,
-                              position: 'relative'
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (showCardResidentDropdown === `today-${idx}`) {
-                                setShowCardResidentDropdown(null);
-                                setCardDropdownPosition(null);
-                              } else {
-                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
-                                setShowCardResidentDropdown(`today-${idx}`);
-                              }
-                              setIsAddingNewCardResident(false);
-                              setCardNewResidentName('');
-                            }}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                              <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                          </button>
-
-                          {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
-                          {showCardResidentDropdown === `today-${idx}` && cardDropdownPosition && createPortal(
-                            <div
-                              data-card-resident-dropdown
-                              style={{
-                                position: 'fixed',
-                                top: cardDropdownPosition.top,
-                                left: cardDropdownPosition.left,
-                                background: '#fff',
-                                borderRadius: 12,
-                                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                                padding: 8,
-                                minWidth: 200,
-                                maxHeight: 300,
-                                overflowY: 'auto',
-                                zIndex: 999999
-                              }}
-                              onClick={e => e.stopPropagation()}
-                            >
-                              {/* Add new name 选项 */}
-                              {isAddingNewCardResident ? (
-                                <div style={{ padding: '4px 8px' }}>
-                                  <input
-                                    style={{
-                                      width: '100%',
-                                      padding: '8px 12px',
-                                      border: '1px solid #ddd',
-                                      borderRadius: 20,
-                                      fontSize: 14,
-                                      boxSizing: 'border-box',
-                                      outline: 'none'
-                                    }}
-                                    placeholder="Enter new name..."
-                                    value={cardNewResidentName}
-                                    onChange={e => setCardNewResidentName(e.target.value)}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter' && cardNewResidentName.trim()) {
-                                        const newName = cardNewResidentName.trim();
-                                        // 同步保存到全局 residents 列表
-                                        if (!residents.includes(newName)) {
-                                          setResidents(prev => [...prev, newName]);
-                                        }
-                                        // 添加到历史卡片
-                                        const newHistory = [...history];
-                                        const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                        if (histIdx !== -1) {
-                                          const currentResidents = newHistory[histIdx].residents || [];
-                                          const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
-                                          if (!residentNames.includes(newName)) {
-                                            newHistory[histIdx].residents = [newName, ...currentResidents];
-                                            setHistory(newHistory);
-                                          }
-                                        }
-                                        setCardNewResidentName('');
-                                        setIsAddingNewCardResident(false);
-                                      } else if (e.key === 'Escape') {
-                                        setCardNewResidentName('');
-                                        setIsAddingNewCardResident(false);
-                                      }
-                                    }}
-                                    autoFocus
-                                  />
-                                </div>
-                              ) : (
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    padding: '8px 12px',
-                                    cursor: 'pointer',
-                                    borderRadius: 20,
-                                    fontSize: 14,
-                                    border: '1px solid #ddd',
-                                    marginBottom: 8
-                                  }}
-                                  onClick={() => setIsAddingNewCardResident(true)}
-                                  onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
-                                  onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
-                                >
-                                  <span style={{ marginRight: 8 }}>+</span>
-                                  <span>Add new name</span>
-                                </div>
-                              )}
-
-                              {/* 已有 residents 列表 */}
-                              {residents.map(resident => {
-                                const itemResidents = item.residents || [];
-                                const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
-                                return (
-                                  <div
-                                    key={resident}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      padding: '8px 12px',
-                                      cursor: 'pointer',
-                                      borderRadius: 20,
-                                      fontSize: 14,
-                                      border: '1px solid #ddd',
-                                      marginBottom: 4,
-                                      background: isSelected ? '#E9F2F4' : 'transparent'
-                                    }}
-                                    onClick={() => {
-                                      const newHistory = [...history];
-                                      const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                      if (histIdx !== -1) {
-                                        const currentResidents = newHistory[histIdx].residents || [];
-                                        if (isSelected) {
-                                          // 取消选择
-                                          newHistory[histIdx].residents = currentResidents.filter((r: any) => {
-                                            const name = typeof r === 'string' ? r : r.name;
-                                            return name !== resident;
-                                          });
-                                        } else {
-                                          // 选择
-                                          newHistory[histIdx].residents = [resident, ...currentResidents];
-                                        }
-                                        setHistory(newHistory);
-                                      }
-                                    }}
-                                    onMouseEnter={e => {
-                                      if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
-                                    }}
-                                    onMouseLeave={e => {
-                                      if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
-                                    }}
-                                  >
-                                    <div style={{
-                                      width: 18,
-                                      height: 18,
-                                      borderRadius: '50%',
-                                      border: isSelected ? 'none' : '2px solid #ddd',
-                                      marginRight: 8,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      background: isSelected ? '#007bff' : 'transparent',
-                                      flexShrink: 0
-                                    }}>
-                                      {isSelected && (
-                                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                          <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                      )}
-                                    </div>
-                                    <span>{resident}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>,
-                            document.body
-                          )}
-
-                          {/* Residents tags */}
-                          {item.residents && item.residents.length > 0 && item.residents
-                            .filter((resident: any) => {
-                              const residentName = typeof resident === 'string' ? resident : resident.name;
-                              return residentName && residentName.trim() !== '';
-                            })
-                            .map((resident: any) => {
-                              const residentName = typeof resident === 'string' ? resident : resident.name;
-                              return (
-                                <span
-                                  key={residentName}
-                                  style={{
-                                    background: '#E9F2F4',
-                                    color: '#00313c',
-                                    padding: '4px 12px',
-                                    borderRadius: 12,
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0
-                                  }}
-                                >
-                                  {residentName}
-                                </span>
-                              );
-                            })}
-                        </div>
-                        <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
-                      </>
-                    )}
-                    <div className="activity-card-row">
-                      <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Start At:</span>
-                      <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatStartAt(item.startAt, item.endAt)}</span>
-                    </div>
-                    <div className="activity-card-row">
-                      <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>End At:</span>
-                      <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatTime(item.endAt)}</span>
-                    </div>
-                    <div className="activity-card-row">
-                      <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Duration:</span>
-                      <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatDuration(item.duration)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {/* 历史活动分组卡片 */}
-          <div style={{ marginBottom: 16 }}>
-            {displayHistory.map(([date, items]: [string, any[]]) => (
-              <div key={date}>
-                <div style={{ fontWeight: 700, fontSize: 16, margin: '18px 0 8px 0' }}>{formatHeaderDateStr(date)}</div>
-                {items.length === 0 && (
-                  <div style={{ color: '#bbb', fontSize: 14, marginBottom: 12 }}>No activity</div>
-                )}
-                {items.map((item, idx) => {
-                  const isShowDelete = swipeDelete && swipeDelete.idx === idx && swipeDelete.date === date;
-                  const isDeleted = item.deleted;
-                  return (
-                    <div
-                      className="activity-card-history"
-                      key={item.startAt.getTime()}
-                      style={{ position: 'relative', overflow: 'hidden', opacity: isDeleted ? 0.6 : 1, userSelect: 'none', touchAction: 'manipulation' }}
-                      onTouchStart={() => {
-                        longPressTimer = setTimeout(() => setSwipeDelete({ date, idx }), 600);
-                      }}
-                      onTouchEnd={() => {
-                        clearTimeout(longPressTimer);
-                      }}
-                      onMouseDown={() => {
-                        longPressTimer = setTimeout(() => setSwipeDelete({ date, idx }), 600);
-                      }}
-                      onMouseUp={() => {
-                        clearTimeout(longPressTimer);
-                      }}
-                    >
-                      {/* delete/recover 按钮 */}
-                      {isShowDelete && !isDeleted && (
-                        <button
-                          style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, background: '#d70015', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontWeight: 600, cursor: 'pointer' }}
-                          onClick={() => {
-                            const newHistory = [...history];
-                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                            if (histIdx !== -1) newHistory[histIdx].deleted = true;
-                            setHistory(newHistory);
-                            setSwipeDelete(null);
-                          }}
-                        >delete</button>
-                      )}
-                      {isShowDelete && isDeleted && (
-                        <button
-                          style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, background: '#00b96b', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontWeight: 600, cursor: 'pointer' }}
-                          onClick={() => {
-                            const newHistory = [...history];
-                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                            if (histIdx !== -1) newHistory[histIdx].deleted = false;
-                            setHistory(newHistory);
-                            setSwipeDelete(null);
-                          }}
-                        >recover</button>
-                      )}
-                      {editingHistory && editingHistory.idx === idx && editingHistory.date === date ? (
-                        <input
-                          style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6 }}
-                          value={editingName}
-                          autoFocus
-                          onChange={e => setEditingName(e.target.value)}
-                          onBlur={() => {
-                            const newHistory = [...history];
-                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                            if (histIdx !== -1) {
-                              if (editingName.trim() === '') {
-                                setEditingName(history[histIdx].name); // 恢复原标题
-                              } else {
-                                newHistory[histIdx].name = editingName;
-                                setHistory(newHistory);
-                              }
-                            }
-                            setEditingHistory(null);
                           }}
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
                               const newHistory = [...history];
-                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                              if (histIdx !== -1) {
+                              const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                              if (todayIdx !== -1) {
                                 if (editingName.trim() === '') {
-                                  setEditingName(history[histIdx].name); // 恢复原标题
+                                  setEditingName(history[todayIdx].name); // 恢复原标题
                                 } else {
-                                  newHistory[histIdx].name = editingName;
+                                  newHistory[todayIdx].name = editingName;
                                   setHistory(newHistory);
                                 }
                               }
@@ -2921,13 +2650,13 @@ function App() {
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (showCardResidentDropdown === `${date}-${idx}`) {
+                                if (showCardResidentDropdown === `today-${idx}`) {
                                   setShowCardResidentDropdown(null);
                                   setCardDropdownPosition(null);
                                 } else {
                                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                   setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
-                                  setShowCardResidentDropdown(`${date}-${idx}`);
+                                  setShowCardResidentDropdown(`today-${idx}`);
                                 }
                                 setIsAddingNewCardResident(false);
                                 setCardNewResidentName('');
@@ -2939,7 +2668,7 @@ function App() {
                             </button>
 
                             {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
-                            {showCardResidentDropdown === `${date}-${idx}` && cardDropdownPosition && createPortal(
+                            {showCardResidentDropdown === `today-${idx}` && cardDropdownPosition && createPortal(
                               <div
                                 data-card-resident-dropdown
                                 style={{
@@ -3118,7 +2847,7 @@ function App() {
                                 );
                               })}
                           </div>
-                          <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date, idx }); setEditingName(item.name); }}>{item.name}</div>
+                          <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
                         </>
                       )}
                       <div className="activity-card-row">
@@ -3132,6 +2861,362 @@ function App() {
                       <div className="activity-card-row">
                         <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Duration:</span>
                         <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatDuration(item.duration)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {/* 历史活动分组卡片 */}
+          <div style={{ marginBottom: 16 }}>
+            {displayHistory.map(([date, items]: [string, any[]]) => (
+              <div key={date}>
+                <div style={{ fontWeight: 700, fontSize: 16, margin: '18px 0 8px 0' }}>{formatHeaderDateStr(date)}</div>
+                {items.length === 0 && (
+                  <div style={{ color: '#bbb', fontSize: 14, marginBottom: 12 }}>No activity</div>
+                )}
+                {items.map((item, idx) => {
+                  const cardId = `${date}-${idx}`;
+                  const currentOffset = swipeState.cardId === cardId ? swipeState.offset : 0;
+                  const isDeleted = item.deleted;
+                  return (
+                    <div
+                      key={item.startAt.getTime()}
+                      style={{
+                        position: 'relative',
+                        overflow: 'hidden',
+                        marginBottom: 12,
+                        borderRadius: 12
+                      }}
+                    >
+                      {/* 背景操作按钮区域 - 固定在右侧 */}
+                      <div style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: SWIPE_ACTION_WIDTH,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: isDeleted ? '#00b96b' : '#d70015',
+                        borderRadius: '0 12px 12px 0'
+                      }}>
+                        <button
+                          style={{
+                            background: 'transparent',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '8px 16px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            fontSize: 14
+                          }}
+                          onClick={() => {
+                            const newHistory = [...history];
+                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                            if (histIdx !== -1) {
+                              newHistory[histIdx].deleted = !isDeleted;
+                              setHistory(newHistory);
+                            }
+                            closeSwipe();
+                          }}
+                        >
+                          {isDeleted ? 'Recover' : 'Delete'}
+                        </button>
+                      </div>
+
+                      {/* 可滑动的卡片内容 */}
+                      <div
+                        className="activity-card-history"
+                        style={{
+                          position: 'relative',
+                          opacity: isDeleted ? 0.6 : 1,
+                          userSelect: 'none',
+                          touchAction: 'pan-y',
+                          transform: `translateX(${currentOffset}px)`,
+                          transition: swipeState.isDragging ? 'none' : 'transform 0.3s ease',
+                          willChange: 'transform'
+                        }}
+                        onTouchStart={(e) => handleSwipeTouchStart(e, cardId)}
+                        onTouchMove={(e) => handleSwipeTouchMove(e, cardId)}
+                        onTouchEnd={() => handleSwipeTouchEnd(cardId)}
+                      >
+                        {editingHistory && editingHistory.idx === idx && editingHistory.date === date ? (
+                          <input
+                            style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6 }}
+                            value={editingName}
+                            autoFocus
+                            onChange={e => setEditingName(e.target.value)}
+                            onBlur={() => {
+                              const newHistory = [...history];
+                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                              if (histIdx !== -1) {
+                                if (editingName.trim() === '') {
+                                  setEditingName(history[histIdx].name); // 恢复原标题
+                                } else {
+                                  newHistory[histIdx].name = editingName;
+                                  setHistory(newHistory);
+                                }
+                              }
+                              setEditingHistory(null);
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                const newHistory = [...history];
+                                const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                if (histIdx !== -1) {
+                                  if (editingName.trim() === '') {
+                                    setEditingName(history[histIdx].name); // 恢复原标题
+                                  } else {
+                                    newHistory[histIdx].name = editingName;
+                                    setHistory(newHistory);
+                                  }
+                                }
+                                setEditingHistory(null);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <>
+                            {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              marginBottom: 4,
+                              overflowX: 'auto',
+                              scrollbarWidth: 'none',
+                              msOverflowStyle: 'none'
+                            }}>
+                              {/* Add resident 按钮 */}
+                              <button
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  border: '1px dashed #ccc',
+                                  background: '#fff',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  flexShrink: 0,
+                                  position: 'relative'
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (showCardResidentDropdown === `${date}-${idx}`) {
+                                    setShowCardResidentDropdown(null);
+                                    setCardDropdownPosition(null);
+                                  } else {
+                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                    setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                    setShowCardResidentDropdown(`${date}-${idx}`);
+                                  }
+                                  setIsAddingNewCardResident(false);
+                                  setCardNewResidentName('');
+                                }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                                  <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                              </button>
+
+                              {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
+                              {showCardResidentDropdown === `${date}-${idx}` && cardDropdownPosition && createPortal(
+                                <div
+                                  data-card-resident-dropdown
+                                  style={{
+                                    position: 'fixed',
+                                    top: cardDropdownPosition.top,
+                                    left: cardDropdownPosition.left,
+                                    background: '#fff',
+                                    borderRadius: 12,
+                                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                                    padding: 8,
+                                    minWidth: 200,
+                                    maxHeight: 300,
+                                    overflowY: 'auto',
+                                    zIndex: 999999
+                                  }}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  {/* Add new name 选项 */}
+                                  {isAddingNewCardResident ? (
+                                    <div style={{ padding: '4px 8px' }}>
+                                      <input
+                                        style={{
+                                          width: '100%',
+                                          padding: '8px 12px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: 20,
+                                          fontSize: 14,
+                                          boxSizing: 'border-box',
+                                          outline: 'none'
+                                        }}
+                                        placeholder="Enter new name..."
+                                        value={cardNewResidentName}
+                                        onChange={e => setCardNewResidentName(e.target.value)}
+                                        onKeyDown={e => {
+                                          if (e.key === 'Enter' && cardNewResidentName.trim()) {
+                                            const newName = cardNewResidentName.trim();
+                                            // 同步保存到全局 residents 列表
+                                            if (!residents.includes(newName)) {
+                                              setResidents(prev => [...prev, newName]);
+                                            }
+                                            // 添加到历史卡片
+                                            const newHistory = [...history];
+                                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                            if (histIdx !== -1) {
+                                              const currentResidents = newHistory[histIdx].residents || [];
+                                              const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
+                                              if (!residentNames.includes(newName)) {
+                                                newHistory[histIdx].residents = [newName, ...currentResidents];
+                                                setHistory(newHistory);
+                                              }
+                                            }
+                                            setCardNewResidentName('');
+                                            setIsAddingNewCardResident(false);
+                                          } else if (e.key === 'Escape') {
+                                            setCardNewResidentName('');
+                                            setIsAddingNewCardResident(false);
+                                          }
+                                        }}
+                                        autoFocus
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: '8px 12px',
+                                        cursor: 'pointer',
+                                        borderRadius: 20,
+                                        fontSize: 14,
+                                        border: '1px solid #ddd',
+                                        marginBottom: 8
+                                      }}
+                                      onClick={() => setIsAddingNewCardResident(true)}
+                                      onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
+                                      onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+                                    >
+                                      <span style={{ marginRight: 8 }}>+</span>
+                                      <span>Add new name</span>
+                                    </div>
+                                  )}
+
+                                  {/* 已有 residents 列表 */}
+                                  {residents.map(resident => {
+                                    const itemResidents = item.residents || [];
+                                    const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
+                                    return (
+                                      <div
+                                        key={resident}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          padding: '8px 12px',
+                                          cursor: 'pointer',
+                                          borderRadius: 20,
+                                          fontSize: 14,
+                                          border: '1px solid #ddd',
+                                          marginBottom: 4,
+                                          background: isSelected ? '#E9F2F4' : 'transparent'
+                                        }}
+                                        onClick={() => {
+                                          const newHistory = [...history];
+                                          const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                          if (histIdx !== -1) {
+                                            const currentResidents = newHistory[histIdx].residents || [];
+                                            if (isSelected) {
+                                              // 取消选择
+                                              newHistory[histIdx].residents = currentResidents.filter((r: any) => {
+                                                const name = typeof r === 'string' ? r : r.name;
+                                                return name !== resident;
+                                              });
+                                            } else {
+                                              // 选择
+                                              newHistory[histIdx].residents = [resident, ...currentResidents];
+                                            }
+                                            setHistory(newHistory);
+                                          }
+                                        }}
+                                        onMouseEnter={e => {
+                                          if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
+                                        }}
+                                        onMouseLeave={e => {
+                                          if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                        }}
+                                      >
+                                        <div style={{
+                                          width: 18,
+                                          height: 18,
+                                          borderRadius: '50%',
+                                          border: isSelected ? 'none' : '2px solid #ddd',
+                                          marginRight: 8,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          background: isSelected ? '#007bff' : 'transparent',
+                                          flexShrink: 0
+                                        }}>
+                                          {isSelected && (
+                                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                              <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                          )}
+                                        </div>
+                                        <span>{resident}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>,
+                                document.body
+                              )}
+
+                              {/* Residents tags */}
+                              {item.residents && item.residents.length > 0 && item.residents
+                                .filter((resident: any) => {
+                                  const residentName = typeof resident === 'string' ? resident : resident.name;
+                                  return residentName && residentName.trim() !== '';
+                                })
+                                .map((resident: any) => {
+                                  const residentName = typeof resident === 'string' ? resident : resident.name;
+                                  return (
+                                    <span
+                                      key={residentName}
+                                      style={{
+                                        background: '#E9F2F4',
+                                        color: '#00313c',
+                                        padding: '4px 12px',
+                                        borderRadius: 12,
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0
+                                      }}
+                                    >
+                                      {residentName}
+                                    </span>
+                                  );
+                                })}
+                            </div>
+                            <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date, idx }); setEditingName(item.name); }}>{item.name}</div>
+                          </>
+                        )}
+                        <div className="activity-card-row">
+                          <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Start At:</span>
+                          <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatStartAt(item.startAt, item.endAt)}</span>
+                        </div>
+                        <div className="activity-card-row">
+                          <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>End At:</span>
+                          <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatTime(item.endAt)}</span>
+                        </div>
+                        <div className="activity-card-row">
+                          <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Duration:</span>
+                          <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatDuration(item.duration)}</span>
+                        </div>
                       </div>
                     </div>
                   );
