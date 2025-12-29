@@ -3598,24 +3598,47 @@ function App() {
                               boxSizing: 'border-box',
                               background: '#f5f9fa',
                               color: '#222', // 确保深色文字
-                              minWidth: 120
+                              // 自动宽度，根据内容长度，最小120px
+                              width: Math.max(120, editingResidentName.length * 10 + 32) + 'px',
+                              maxWidth: '200px'
                             }}
                             value={editingResidentName}
                             autoFocus
+                            onClick={e => e.stopPropagation()}
+                            onFocus={e => e.stopPropagation()}
                             onChange={e => setEditingResidentName(e.target.value)}
-                            onBlur={() => {
-                              if (editingResidentName.trim() === '') {
-                                setEditingResidentName(resident);
+                            onBlur={(e) => {
+                              e.stopPropagation(); // 阻止冒泡防止关闭popup
+                              const newName = editingResidentName.trim();
+
+                              if (newName === '') {
+                                // 空值恢复原名
                                 setEditingResident(null);
-                              } else if (editingResidentName.trim() !== resident) {
-                                // 更新 residents 列表
-                                setResidents(prev =>
-                                  prev.map(r => r === resident ? editingResidentName.trim() : r)
-                                );
-                                // 同时更新 selectedResidents
-                                setSelectedResidents(prev =>
-                                  prev.map(r => r === resident ? editingResidentName.trim() : r)
-                                );
+                              } else if (newName !== resident) {
+                                // 查重逻辑：如果新名字已存在，先删除旧的那个，再把当前这个改名
+                                // 这样就保留了“最新的这个”（即当前编辑的这个）
+                                setResidents(prev => {
+                                  // 1. 过滤掉所有等于 newName 的项 (删除旧的同名tag)
+                                  const filtered = prev.filter(r => r !== newName);
+                                  // 2. 把当前的 resident 改为 newName
+                                  return filtered.map(r => r === resident ? newName : r);
+                                });
+
+                                setSelectedResidents(prev => {
+                                  // 选中状态也需要同步处理
+                                  // 如果改名后的 tag 原本被选中，或者旧 tag 被选中，都需要处理
+                                  // 这里简单点：如果 resident 被选中，则新名字也被选中
+                                  const wasSelected = prev.includes(resident);
+                                  // 如果新名字本身也被选中（作为另一个tag），也应该保持选中
+                                  const newNameWasSelected = prev.includes(newName);
+
+                                  let newSelected = prev.filter(r => r !== resident && r !== newName);
+                                  if (wasSelected || newNameWasSelected) {
+                                    newSelected.push(newName);
+                                  }
+                                  return newSelected;
+                                });
+
                                 setEditingResident(null);
                               } else {
                                 setEditingResident(null);
@@ -3623,21 +3646,12 @@ function App() {
                             }}
                             onKeyDown={e => {
                               if (e.key === 'Enter') {
-                                if (editingResidentName.trim() === '') {
-                                  setEditingResidentName(resident);
-                                  setEditingResident(null);
-                                } else if (editingResidentName.trim() !== resident) {
-                                  setResidents(prev =>
-                                    prev.map(r => r === resident ? editingResidentName.trim() : r)
-                                  );
-                                  setSelectedResidents(prev =>
-                                    prev.map(r => r === resident ? editingResidentName.trim() : r)
-                                  );
-                                  setEditingResident(null);
-                                } else {
-                                  setEditingResident(null);
-                                }
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.currentTarget.blur(); // 触发 onBlur
                               } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 setEditingResidentName(resident);
                                 setEditingResident(null);
                               }
@@ -3660,7 +3674,11 @@ function App() {
                               fontSize: 15,
                               fontWeight: 500,
                               whiteSpace: 'nowrap',
-                              minWidth: 'fit-content'
+                              minWidth: 'fit-content',
+                              // 禁止文本选中，优化长按体验
+                              userSelect: 'none',
+                              WebkitUserSelect: 'none',
+                              touchAction: 'manipulation'
                             }}
                             onTouchStart={(e) => {
                               const touch = e.touches[0];
@@ -3676,7 +3694,9 @@ function App() {
                                 (window as any).__residentTouchHandled = true;
                                 setEditingResident(resident);
                                 setEditingResidentName(resident);
-                              }, 800);
+                                // 震动反馈
+                                if (navigator.vibrate) navigator.vibrate(50);
+                              }, 300); // 缩短到300ms提高灵敏度
                             }}
                             onTouchMove={(e) => {
                               const touch = e.touches[0];
