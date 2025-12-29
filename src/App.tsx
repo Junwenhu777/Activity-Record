@@ -3524,7 +3524,12 @@ function App() {
                     onBlur={(e) => {
                       e.stopPropagation(); // 阻止冒泡防止关闭popup
                       if (newResidentName.trim()) {
-                        setResidents(prev => [newResidentName.trim(), ...prev]);
+                        setResidents(prev => {
+                          const name = newResidentName.trim();
+                          const filtered = prev.filter(r => r !== name);
+                          return [name, ...filtered];
+                        });
+                        // 同时也可能需要自动选中刚添加的 resident? 当前逻辑只添加到列表。
                       }
                       setNewResidentName('');
                       setIsAddingResident(false);
