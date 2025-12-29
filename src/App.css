@@ -299,17 +299,23 @@ button:focus-visible {
 }
 
 /* 移除活动 tag 的所有边框和蒙层 */
+/* 移除活动 tag 的所有边框和蒙层 */
 .activity-btn:focus,
-.activity-btn:focus-visible,
-.activity-btn:active {
+.activity-btn:focus-visible {
   outline: none !important;
-  border: 1px solid #e0e0e0 !important;
-  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03) !important;
+  box-shadow: none !important;
+  /* 不强制设置border，让它跟随原本状态，只是去掉 glow */
 }
 
-/* 活动 tag 按下效果 - 只改变背景色 */
+/* 活动 tag 按下效果 - 使用 brightness 变暗，避免颜色重叠 */
 .activity-btn:active {
-  background: rgba(0, 146, 189, 0.2) !important;
+  outline: none !important;
+  box-shadow: none !important;
+
+  filter: brightness(0.9);
+  /* 自然变暗 */
+  transform: scale(0.98);
+  /* 增加轻微按压反馈 */
 }
 
 /* 移除所有可能的浏览器默认样式 */
