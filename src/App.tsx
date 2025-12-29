@@ -3529,6 +3529,7 @@ function App() {
                       color: '#222' // 确保深色文字
                     }}
                     placeholder="Enter resident name"
+                    enterKeyHint="done"
                     value={newResidentName}
                     autoFocus
                     onChange={e => setNewResidentName(e.target.value)}
@@ -3603,6 +3604,7 @@ function App() {
                               width: Math.max(120, editingResidentName.length * 10 + 32) + 'px',
                               maxWidth: '200px'
                             }}
+                            enterKeyHint="done"
                             value={editingResidentName}
                             autoFocus
                             onClick={e => e.stopPropagation()}
@@ -3856,11 +3858,12 @@ function App() {
                                 fontSize: 16,
                                 fontWeight: 500,
                                 outline: 'none',
-                                enterKeyHint: 'done', // 优化键盘显示
+                                // enterKeyHint removed from style
                                 boxSizing: 'border-box',
                                 background: '#f8f8f8', // 统一浅色背景
                                 color: '#222' // 确保深色文字
                               }}
+                              enterKeyHint="done"
                               value={editingRecentName}
                               autoFocus
                               onChange={e => setEditingRecentName(e.target.value)}
