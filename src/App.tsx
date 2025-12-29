@@ -2535,18 +2535,19 @@ function App() {
                       borderRadius: 16
                     }}
                   >
-                    {/* 背景操作按钮区域 - 固定在右侧 */}
+                    {/* 背景操作按钮区域 - 固定在右侧，与卡片10px间距 */}
                     <div style={{
                       position: 'absolute',
                       right: 0,
                       top: 0,
                       bottom: 0,
-                      width: SWIPE_ACTION_WIDTH,
+                      width: SWIPE_ACTION_WIDTH - 10,
+                      marginRight: 0,
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'stretch',
                       justifyContent: 'center',
                       background: isDeleted ? '#00b96b' : '#d70015',
-                      borderRadius: '0 16px 16px 0',
+                      borderRadius: 16,
                       opacity: Math.min(1, Math.abs(currentOffset) / 20),
                       visibility: currentOffset === 0 ? 'hidden' : 'visible',
                       transition: swipeState.isDragging ? 'none' : 'opacity 0.2s ease'
@@ -2560,6 +2561,11 @@ function App() {
                           fontWeight: 600,
                           cursor: 'pointer',
                           fontSize: 14,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '100%',
                           opacity: Math.min(1, Math.abs(currentOffset) / 40)
                         }}
                         onClick={() => {
@@ -2894,18 +2900,19 @@ function App() {
                         borderRadius: 16
                       }}
                     >
-                      {/* 背景操作按钮区域 - 固定在右侧 */}
+                      {/* 背景操作按钮区域 - 固定在右侧，与卡片10px间距 */}
                       <div style={{
                         position: 'absolute',
                         right: 0,
                         top: 0,
                         bottom: 0,
-                        width: SWIPE_ACTION_WIDTH,
+                        width: SWIPE_ACTION_WIDTH - 10,
+                        marginRight: 0,
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'stretch',
                         justifyContent: 'center',
                         background: isDeleted ? '#00b96b' : '#d70015',
-                        borderRadius: '0 16px 16px 0',
+                        borderRadius: 16,
                         opacity: Math.min(1, Math.abs(currentOffset) / 20),
                         visibility: currentOffset === 0 ? 'hidden' : 'visible',
                         transition: swipeState.isDragging ? 'none' : 'opacity 0.2s ease'
@@ -2919,6 +2926,11 @@ function App() {
                             fontWeight: 600,
                             cursor: 'pointer',
                             fontSize: 14,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100%',
+                            height: '100%',
                             opacity: Math.min(1, Math.abs(currentOffset) / 40)
                           }}
                           onClick={() => {
