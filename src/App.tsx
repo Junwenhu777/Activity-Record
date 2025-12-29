@@ -3737,6 +3737,7 @@ function App() {
                             }}
                           >
                             <span style={{
+                              boxSizing: 'border-box',
                               width: 16,
                               height: 16,
                               border: selectedResidents.includes(resident) ? '2px solid #fff' : '1px solid rgba(2, 48, 59, 0.4)',
