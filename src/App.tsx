@@ -3350,7 +3350,13 @@ function App() {
               justifyContent: 'space-between',
               width: '100%',
               padding: '24px 24px 16px 24px',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              background: '#fff',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              position: 'sticky',
+              top: 0,
+              zIndex: 10
             }}>
               <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Start Activity</div>
               <button
@@ -3445,8 +3451,8 @@ function App() {
                   {residents.length > 0 && !isAddingResident && (
                     <button
                       style={{
-                        width: 20,
-                        height: 20,
+                        width: 24,
+                        height: 24,
                         border: 'none',
                         background: 'transparent',
                         cursor: 'pointer',
@@ -3468,8 +3474,8 @@ function App() {
                         setIsAddingResident(true);
                       }}
                     >
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="black" fillOpacity="0.85" />
+                      <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="#02303B" fillOpacity="0.85" />
                       </svg>
                     </button>
                   )}
@@ -3639,7 +3645,7 @@ function App() {
                               gap: 4,
                               padding: '12px 16px',
                               borderRadius: 12,
-                              border: 'none',
+                              border: '1px solid rgba(2, 48, 59, 0.04)',
                               cursor: 'pointer',
                               fontSize: 15,
                               fontWeight: 500,
@@ -3733,7 +3739,7 @@ function App() {
                             <span style={{
                               width: 16,
                               height: 16,
-                              border: selectedResidents.includes(resident) ? '2px solid #fff' : '2px solid #ddd',
+                              border: selectedResidents.includes(resident) ? '2px solid #fff' : '1px solid rgba(2, 48, 59, 0.4)',
                               borderRadius: '50%',
                               display: 'flex',
                               alignItems: 'center',

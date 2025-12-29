@@ -200,7 +200,8 @@ body::-webkit-scrollbar {
   font-size: 15px;
   font-weight: 500;
   box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
-  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(2, 48, 59, 0.04);
   margin-bottom: 0;
 }
 
@@ -317,8 +318,8 @@ button:focus-visible {
 /* 移除活动 tag 的所有边框和蒙层 */
 /* 移除活动 tag 的所有边框和蒙层 - 强制覆盖 */
 .activity-btn {
-  --adm-color-primary: #e0e0e0;
-  --adm-button-border-color: #e0e0e0;
+  --adm-color-primary: rgba(2, 48, 59, 0.04);
+  --adm-button-border-color: rgba(2, 48, 59, 0.04);
   position: relative;
   /* Ensure we can control children */
 }
@@ -341,7 +342,7 @@ button:focus-visible {
 .activity-btn.adm-button:focus {
   outline: none !important;
   box-shadow: none !important;
-  border-color: #e0e0e0 !important;
+  border-color: rgba(2, 48, 59, 0.04) !important;
 }
 
 /* Primary buttons should keep their borderless style */
@@ -393,7 +394,7 @@ button:focus-visible {
 @media (hover: none) {
   .activity-btn:hover {
 
-    border-color: #e0e0e0 !important;
+    border-color: rgba(2, 48, 59, 0.04) !important;
     box-shadow: none !important;
     outline: none !important;
     opacity: 1 !important;
