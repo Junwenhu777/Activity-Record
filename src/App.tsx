@@ -3597,6 +3597,7 @@ function App() {
                               outline: 'none',
                               boxSizing: 'border-box',
                               background: '#f5f9fa',
+                              color: '#222', // 确保深色文字
                               minWidth: 120
                             }}
                             value={editingResidentName}
