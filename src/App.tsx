@@ -3430,7 +3430,7 @@ function App() {
               }}
             >
               {/* RESIDENT Section */}
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ marginBottom: 28, marginTop: 28 }}>
                 {/* 标题栏 - 包含 Resident 标题和添加按钮 */}
                 <div style={{
                   display: 'flex',
@@ -3440,7 +3440,7 @@ function App() {
                 }}>
                   <div style={{
                     fontSize: 12,
-                    fontWeight: 600,
+                    fontWeight: 400,
                     color: '#666',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5
@@ -3806,10 +3806,10 @@ function App() {
               >
                 {/* Recent Activities */}
                 {recentActivities.length > 0 && (
-                  <div style={{ marginBottom: 20 }}>
+                  <div style={{ marginBottom: 28 }}>
                     <div style={{
                       fontSize: 12,
-                      fontWeight: 600,
+                      fontWeight: 400,
                       color: '#666',
                       marginBottom: 12,
                       textTransform: 'uppercase',
@@ -3934,10 +3934,10 @@ function App() {
                 )}
 
                 {/* ADLs Activities */}
-                <div style={{ marginBottom: 20 }}>
+                <div style={{ marginBottom: 28 }}>
                   <div style={{
                     fontSize: 12,
-                    fontWeight: 600,
+                    fontWeight: 400,
                     color: '#666',
                     marginBottom: 12,
                     textTransform: 'uppercase',
@@ -4006,7 +4006,7 @@ function App() {
                   enterKeyHint="done"
                   autoComplete="off"
                 />
-                <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName}>Start</Button>
+                <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName} style={{ height: '44px' }}>Start</Button>
               </div>
             </div>
           </div>

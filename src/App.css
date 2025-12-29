@@ -197,7 +197,7 @@ body::-webkit-scrollbar {
   background: #E9F2F4;
   color: #222;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 15px !important;
   font-weight: 500;
   box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
   box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
