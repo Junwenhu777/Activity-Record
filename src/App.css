@@ -392,7 +392,7 @@ button:focus-visible {
 /* 触摸设备上强行禁止 hover 带来的副作用 */
 @media (hover: none) {
   .activity-btn:hover {
-    background: inherit !important;
+
     border-color: #e0e0e0 !important;
     box-shadow: none !important;
     outline: none !important;
