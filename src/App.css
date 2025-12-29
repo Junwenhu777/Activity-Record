@@ -373,12 +373,36 @@ button:focus-visible {
 }
 
 /* 移除所有状态下的蒙层 */
+/* 移除所有状态下的蒙层 */
 .activity-btn:active,
 .activity-btn:focus,
-.activity-btn:focus-visible,
-.activity-btn:hover {
+.activity-btn:focus-visible {
   -webkit-tap-highlight-color: transparent !important;
   -webkit-touch-callout: none !important;
+}
+
+/* 仅在支持 hover 的设备上应用 hover 样式 */
+@media (hover: hover) {
+  .activity-btn:hover {
+    opacity: 0.9;
+    /* 桌面端简单的 hover 效果 */
+  }
+}
+
+/* 触摸设备上强行禁止 hover 带来的副作用 */
+@media (hover: none) {
+  .activity-btn:hover {
+    background: inherit !important;
+    border-color: #e0e0e0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    opacity: 1 !important;
+  }
+
+  /* 针对 ant design mobile 的内部 hover 类 */
+  .adm-button:hover {
+    background-color: var(--adm-color-background, inherit) !important;
+  }
 }
 
 /* 全局动画效果 - 移除可能导致压缩的动画 */
