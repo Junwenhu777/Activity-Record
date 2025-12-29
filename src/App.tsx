@@ -768,41 +768,8 @@ function App() {
       popupContainer.addEventListener('focusin', handlePopupInteraction, { passive: true });
     }
 
-    const handleGlobalScroll = (e: Event) => {
-      // 检查滚动事件是否来自popup内部
-      const target = e.target as Element;
-      const popupContent = document.querySelector('.summary-popup-content');
-      const popupOuter = document.querySelector('.summary-popup-outer');
-      const activityPopupInner = document.querySelector('.activity-popup-inner');
+    // handleGlobalScroll removed
 
-      // 如果滚动事件来自popup内部，则不关闭popup
-      if (popupContent && (popupContent.contains(target) || popupContent === target)) {
-        console.log('Scroll event from popup content, ignoring');
-        return;
-      }
-      if (popupOuter && (popupOuter.contains(target) || popupOuter === target)) {
-        console.log('Scroll event from popup outer, ignoring');
-        return;
-      }
-      if (activityPopupInner && (activityPopupInner.contains(target) || activityPopupInner === target)) {
-        console.log('Scroll event from activity popup inner, ignoring');
-        return;
-      }
-
-      console.log('Global scroll event triggered from main page');
-      if (!isBottomSheetClosing && !isPopupInteraction) {
-        setIsBottomSheetClosing(true);
-        setShowStartButton(false);
-        setTimeout(() => {
-          setShowBottomSheet(false);
-          setIsBottomSheetClosing(false);
-          setPopupRendered(false);
-          setTimeout(() => {
-            setShowStartButton(true);
-          }, 100);
-        }, 450);
-      }
-    };
 
     const handleGlobalTouchMove = (e: TouchEvent) => {
       // 检查触摸事件是否来自popup内部
@@ -840,12 +807,9 @@ function App() {
       }
     };
 
-    // 监听window的滚动和触摸事件
-    window.addEventListener('scroll', handleGlobalScroll, { passive: false });
     window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
 
     return () => {
-      window.removeEventListener('scroll', handleGlobalScroll);
       window.removeEventListener('touchmove', handleGlobalTouchMove);
 
       // 清理popup交互监听器
@@ -3530,6 +3494,7 @@ function App() {
                     }}
                     placeholder="Enter resident name"
                     enterKeyHint="done"
+                    autoComplete="off"
                     value={newResidentName}
                     autoFocus
                     onChange={e => setNewResidentName(e.target.value)}
@@ -3604,7 +3569,9 @@ function App() {
                               width: Math.max(120, editingResidentName.length * 10 + 32) + 'px',
                               maxWidth: '200px'
                             }}
+
                             enterKeyHint="done"
+                            autoComplete="off"
                             value={editingResidentName}
                             autoFocus
                             onClick={e => e.stopPropagation()}
@@ -4020,29 +3987,25 @@ function App() {
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
-                  onBlur={() => {
-                    // 与 Resident input 保持一致 - 不做任何复杂处理
+                  onBlur={(e) => {
+                    e.stopPropagation();
                   }}
-                  onKeyDown={(e) => {
+                  onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (activityName.trim()) {
-                        startActivity(activityName);
-                      } else {
-                        // 空输入时只收起键盘 - 与 Resident input 完全一致
-                        (e.currentTarget as HTMLInputElement).blur();
-                      }
+                      e.currentTarget.blur();
                     }
                   }}
+                  enterKeyHint="done"
+                  autoComplete="off"
                 />
                 <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName}>Start</Button>
               </div>
             </div>
           </div>
         </>
-      )
-      }
+      )}
       {/* ✨ Start Activity 按钮 - popup关闭时显示 */}
       {
         !showBottomSheet && !isBottomSheetClosing && showStartButton && !showStatsModal && !isStatsModalClosing && (
@@ -4089,7 +4052,7 @@ function App() {
           </div>
         )
       }
-    </div >
+    </div>
   );
 }
 
