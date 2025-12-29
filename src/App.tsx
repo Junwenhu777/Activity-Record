@@ -578,6 +578,22 @@ function App() {
         mainRef.current.scrollTop = 0;
       }
     }, 200);
+
+    // 自动关闭半屏
+    if (showBottomSheet && !isBottomSheetClosing) {
+      setIsBottomSheetClosing(true);
+      setShowStartButton(false);
+      setTimeout(() => {
+        setShowBottomSheet(false);
+        setEditingRecentActivity(null);
+        setEditingRecentName('');
+        setIsBottomSheetClosing(false);
+        setPopupRendered(false);
+        setTimeout(() => {
+          setShowStartButton(true);
+        }, 100);
+      }, 450);
+    }
   };
 
 
@@ -2346,7 +2362,7 @@ function App() {
                                     const newName = cardNewResidentName.trim();
                                     // 同步保存到全局 residents 列表
                                     if (!residents.includes(newName)) {
-                                      setResidents(prev => [...prev, newName]);
+                                      setResidents(prev => [newName, ...prev]);
                                     }
                                     // 添加到当前活动
                                     const newResidentEntry = { name: newName, addedAt: new Date() };
@@ -2718,7 +2734,7 @@ function App() {
                                           const newName = cardNewResidentName.trim();
                                           // 同步保存到全局 residents 列表
                                           if (!residents.includes(newName)) {
-                                            setResidents(prev => [...prev, newName]);
+                                            setResidents(prev => [newName, ...prev]);
                                           }
                                           // 添加到历史卡片
                                           const newHistory = [...history];
@@ -3084,7 +3100,7 @@ function App() {
                                             const newName = cardNewResidentName.trim();
                                             // 同步保存到全局 residents 列表
                                             if (!residents.includes(newName)) {
-                                              setResidents(prev => [...prev, newName]);
+                                              setResidents(prev => [newName, ...prev]);
                                             }
                                             // 添加到历史卡片
                                             const newHistory = [...history];
@@ -3251,7 +3267,7 @@ function App() {
       {/* 底部固定活动选择与输入区 */}
       {popupRendered && (
         <>
-          {/* iOS风格半透明遮罩层 - 阻止触摸事件穿透 */}
+          {/* iOS风格半透明遮罩层 - 全局覆盖包括标题区域 */}
           <div
             style={{
               position: 'fixed',
@@ -3259,10 +3275,10 @@ function App() {
               left: 0,
               width: '100vw',
               height: '100vh',
-              zIndex: 199,
+              zIndex: 999, // 高于header的200，覆盖整个页面
               background: showBottomSheet ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0)',
               transition: 'background 0.3s ease',
-              touchAction: 'none', // 阻止触摸事件穿透
+              touchAction: 'none',
               WebkitTapHighlightColor: 'transparent',
             }}
             onClick={(e) => {
@@ -3284,28 +3300,71 @@ function App() {
               }
             }}
             onTouchStart={(e) => {
-              // 只阻止事件传播，不关闭popup（除非点击）
               e.stopPropagation();
             }}
             onTouchMove={(e) => {
-              // 阻止滑动事件穿透到下层页面
               e.preventDefault();
               e.stopPropagation();
             }}
           />
           <div className="activity-bottom-sheet-fixed" style={{
-            zIndex: 200,
+            zIndex: 1000, // 高于遮罩层
             position: 'fixed',
             left: '50%',
             bottom: 0,
             transform: 'translateX(-50%)',
+            maxHeight: 'calc(100vh - 80px)', // 自适应高度，max到标题底部
+            height: 'auto',
             animation: isBottomSheetClosing
               ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}>
+            {/* 半屏标题栏 */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 24px 12px 24px',
+              borderBottom: '1px solid #f0f0f0'
+            }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: '#000' }}>Start Activity</span>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!isBottomSheetClosing) {
+                    setIsBottomSheetClosing(true);
+                    setShowStartButton(false);
+                    setTimeout(() => {
+                      setShowBottomSheet(false);
+                      setEditingRecentActivity(null);
+                      setEditingRecentName('');
+                      setIsBottomSheetClosing(false);
+                      setPopupRendered(false);
+                      setTimeout(() => {
+                        setShowStartButton(true);
+                      }, 100);
+                    }, 450);
+                  }
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 8,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M15 5L5 15M5 5L15 15" stroke="#666" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
             <div
               className="activity-popup-inner"
-              style={{ padding: '0 24px', height: '100%', display: 'flex', flexDirection: 'column' }}
+              style={{ padding: '0 24px', flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}
               onScroll={(e) => {
                 e.stopPropagation();
               }}
@@ -3434,19 +3493,29 @@ function App() {
                       }
                     }}
                     onBlur={() => {
-                      if (newResidentName.trim()) {
-                        setResidents(prev => [...prev, newResidentName.trim()]);
+                      // 设置保护标记，防止状态冲突
+                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                      if (popupContainer) {
+                        popupContainer.setAttribute('data-recent-interaction', 'true');
+                        setTimeout(() => {
+                          popupContainer.removeAttribute('data-recent-interaction');
+                        }, 500);
                       }
-                      setNewResidentName('');
-                      setIsAddingResident(false);
-                    }}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
+                      // 延迟处理，确保键盘完全收起
+                      setTimeout(() => {
                         if (newResidentName.trim()) {
-                          setResidents(prev => [...prev, newResidentName.trim()]);
+                          setResidents(prev => [newResidentName.trim(), ...prev]);
                         }
                         setNewResidentName('');
                         setIsAddingResident(false);
+                      }, 50);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // 空输入时只收起键盘
+                        (e.currentTarget as HTMLInputElement).blur();
                       } else if (e.key === 'Escape') {
                         setNewResidentName('');
                         setIsAddingResident(false);
@@ -3550,10 +3619,15 @@ function App() {
                               whiteSpace: 'nowrap',
                               minWidth: 'fit-content'
                             }}
-                            onTouchStart={() => {
+                            onTouchStart={(e) => {
+                              const touch = e.touches[0];
+                              (window as any).__residentTouchStartX = touch.clientX;
+                              (window as any).__residentTouchStartY = touch.clientY;
+                              (window as any).__residentTouchStartTime = Date.now();
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                               (window as any).__residentLongPressFired = false;
                               (window as any).__residentTouchHandled = false;
+                              (window as any).__residentIsSwiping = false;
                               (window as any).__residentLongPressTimer = setTimeout(() => {
                                 (window as any).__residentLongPressFired = true;
                                 (window as any).__residentTouchHandled = true;
@@ -3561,10 +3635,26 @@ function App() {
                                 setEditingResidentName(resident);
                               }, 800);
                             }}
+                            onTouchMove={(e) => {
+                              const touch = e.touches[0];
+                              const startX = (window as any).__residentTouchStartX || 0;
+                              const startY = (window as any).__residentTouchStartY || 0;
+                              const moveX = Math.abs(touch.clientX - startX);
+                              const moveY = Math.abs(touch.clientY - startY);
+                              // 移动超过10px视为滑动
+                              if (moveX > 10 || moveY > 10) {
+                                (window as any).__residentIsSwiping = true;
+                                if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                              }
+                            }}
                             onTouchEnd={() => {
                               if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                              // 如果没有触发长按，则执行点击操作
-                              if (!(window as any).__residentLongPressFired && !(window as any).__residentTouchHandled) {
+                              const elapsed = Date.now() - ((window as any).__residentTouchStartTime || 0);
+                              // 只有在非滑动且非长按且时间<300ms时才视为点击
+                              if (!(window as any).__residentLongPressFired &&
+                                !(window as any).__residentTouchHandled &&
+                                !(window as any).__residentIsSwiping &&
+                                elapsed < 300) {
                                 (window as any).__residentTouchHandled = true;
                                 setSelectedResidents(prev =>
                                   prev.includes(resident)
@@ -3572,9 +3662,6 @@ function App() {
                                     : [...prev, resident]
                                 );
                               }
-                            }}
-                            onTouchMove={() => {
-                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                             }}
                             onMouseDown={() => {
                               // 只在非触摸设备上处理
@@ -3853,6 +3940,14 @@ function App() {
                   }}
                   onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
                     e.stopPropagation();
+                    // 设置保护标记，防止状态冲突
+                    const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                    if (popupContainer) {
+                      popupContainer.setAttribute('data-recent-interaction', 'true');
+                      setTimeout(() => {
+                        popupContainer.removeAttribute('data-recent-interaction');
+                      }, 500);
+                    }
                   }}
                   onClick={(e: React.MouseEvent<HTMLInputElement>) => {
                     e.stopPropagation();
@@ -3865,58 +3960,74 @@ function App() {
                       }, 1000);
                     }
                   }}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (activityName.trim()) {
+                        // 有内容则开始活动
+                        startActivity(activityName);
+                      } else {
+                        // 空输入时只收起键盘
+                        (e.currentTarget as HTMLInputElement).blur();
+                      }
+                    }
+                  }}
                 />
                 <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName}>Start</Button>
               </div>
             </div>
           </div>
         </>
-      )}
+      )
+      }
       {/* ✨ Start Activity 按钮 - popup关闭时显示 */}
-      {!showBottomSheet && !isBottomSheetClosing && showStartButton && !showStatsModal && !isStatsModalClosing && (
-        <div style={{
-          position: 'fixed',
-          left: '50%',
-          bottom: '24px',
-          transform: 'translateX(-50%)',
-          width: 'auto',
-          background: 'transparent',
-          zIndex: 399,
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-        }}>
-          <button
-            className="activity-bottom-sheet-toggle-btn"
-            style={{
-              position: 'relative',
-              marginBottom: 16,
-              background: '#00313c',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 24,
-              padding: '12px 32px',
-              fontSize: 18,
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              boxShadow: '0px 91px 25px 0px rgba(0, 0, 0, 0.00), 0px 58px 23px 0px rgba(0, 0, 0, 0.01), 0px 33px 20px 0px rgba(0, 0, 0, 0.05), 0px 14px 14px 0px rgba(0, 0, 0, 0.09), 0px 4px 8px 0px rgba(0, 0, 0, 0.10)',
-              cursor: 'pointer',
-              pointerEvents: 'auto',
-              animation: 'fadeInScale 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-              transform: 'translateZ(0)',
-              willChange: 'transform, opacity'
-            }}
-            onClick={() => {
-              setShowBottomSheet(true);
-              setPopupRendered(true);
-            }}
-          >
-            ✨ Start Activity
-          </button>
-        </div>
-      )}
-    </div>
+      {
+        !showBottomSheet && !isBottomSheetClosing && showStartButton && !showStatsModal && !isStatsModalClosing && (
+          <div style={{
+            position: 'fixed',
+            left: '50%',
+            bottom: '24px',
+            transform: 'translateX(-50%)',
+            width: 'auto',
+            background: 'transparent',
+            zIndex: 399,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            <button
+              className="activity-bottom-sheet-toggle-btn"
+              style={{
+                position: 'relative',
+                marginBottom: 16,
+                background: '#00313c',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 24,
+                padding: '12px 32px',
+                fontSize: 18,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                boxShadow: '0px 91px 25px 0px rgba(0, 0, 0, 0.00), 0px 58px 23px 0px rgba(0, 0, 0, 0.01), 0px 33px 20px 0px rgba(0, 0, 0, 0.05), 0px 14px 14px 0px rgba(0, 0, 0, 0.09), 0px 4px 8px 0px rgba(0, 0, 0, 0.10)',
+                cursor: 'pointer',
+                pointerEvents: 'auto',
+                animation: 'fadeInScale 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                transform: 'translateZ(0)',
+                willChange: 'transform, opacity'
+              }}
+              onClick={() => {
+                setShowBottomSheet(true);
+                setPopupRendered(true);
+              }}
+            >
+              ✨ Start Activity
+            </button>
+          </div>
+        )
+      }
+    </div >
   );
 }
 
