@@ -3505,7 +3505,8 @@ function App() {
                       outline: 'none',
                       boxSizing: 'border-box',
                       background: '#f5f9fa',
-                      marginBottom: 12
+                      marginBottom: 12,
+                      color: '#222' // 确保深色文字
                     }}
                     placeholder="Enter resident name"
                     value={newResidentName}
@@ -3833,7 +3834,9 @@ function App() {
                                 fontSize: '16px',
                                 fontWeight: '500',
                                 outline: 'none',
-                                boxSizing: 'border-box'
+                                boxSizing: 'border-box',
+                                background: '#f8f8f8', // 统一浅色背景
+                                color: '#222' // 确保深色文字
                               }}
                               value={editingRecentName}
                               autoFocus
