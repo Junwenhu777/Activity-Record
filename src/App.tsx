@@ -3307,25 +3307,36 @@ function App() {
               e.stopPropagation();
             }}
           />
-          <div className="activity-bottom-sheet-fixed" style={{
-            zIndex: 1000, // 高于遮罩层
-            position: 'fixed',
-            left: '50%',
-            bottom: 0,
-            transform: 'translateX(-50%)',
-            maxHeight: 'calc(100vh - 80px)', // 自适应高度，max到标题底部
-            height: 'auto',
-            animation: isBottomSheetClosing
-              ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-              : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-          }}>
-            {/* 半屏标题栏 */}
+          <div
+            className="activity-bottom-sheet-fixed"
+            style={{
+              zIndex: 1000,
+              position: 'fixed',
+              left: '50%',
+              bottom: 0,
+              transform: 'translateX(-50%)',
+              maxHeight: 'calc(100vh - 120px)', // 减少40px
+              height: 'auto',
+              animation: isBottomSheetClosing
+                ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+              overscrollBehavior: 'contain', // 防止滚动穿透
+              touchAction: 'pan-y' // 只允许垂直滑动
+            }}
+            onTouchMove={(e) => {
+              // 阻止触摸事件穿透到遮罩层
+              e.stopPropagation();
+            }}
+          >
+            {/* 半屏标题栏 - 48px高度 */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '16px 24px 12px 24px',
-              borderBottom: '1px solid #f0f0f0'
+              padding: '0 24px',
+              height: 48,
+              flexShrink: 0
+              // 无底部分割线
             }}>
               <span style={{ fontSize: 18, fontWeight: 700, color: '#000' }}>Start Activity</span>
               <button
@@ -3364,7 +3375,15 @@ function App() {
             </div>
             <div
               className="activity-popup-inner"
-              style={{ padding: '0 24px', flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}
+              style={{
+                padding: '0 24px',
+                paddingTop: 20, // 距离标题区20px间距
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflowY: 'auto',
+                overscrollBehavior: 'contain' // 防止过度滚动穿透
+              }}
               onScroll={(e) => {
                 e.stopPropagation();
               }}
