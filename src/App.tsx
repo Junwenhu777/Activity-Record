@@ -3336,16 +3336,25 @@ function App() {
               left: '50%',
               bottom: 0,
               transform: 'translateX(-50%)',
-              maxHeight: 'calc(100vh - 120px)', // 减少40px
+              maxHeight: 'calc(100vh - 120px)',
               height: 'auto',
               animation: isBottomSheetClosing
                 ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                 : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-              overscrollBehavior: 'contain', // 防止滚动穿透
-              touchAction: 'pan-y' // 只允许垂直滑动
+              overscrollBehavior: 'contain',
+              touchAction: 'pan-y'
+            }}
+            onClick={(e) => {
+              // 阻止点击事件冒泡到遮罩层，防止意外关闭
+              e.stopPropagation();
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
             }}
             onTouchMove={(e) => {
-              // 阻止触摸事件穿透到遮罩层
+              e.stopPropagation();
+            }}
+            onTouchEnd={(e) => {
               e.stopPropagation();
             }}
           >
