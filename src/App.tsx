@@ -2532,7 +2532,7 @@ function App() {
                       position: 'relative',
                       overflow: 'hidden',
                       marginBottom: 12,
-                      borderRadius: 12
+                      borderRadius: 16
                     }}
                   >
                     {/* 背景操作按钮区域 - 固定在右侧 */}
@@ -2546,7 +2546,10 @@ function App() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       background: isDeleted ? '#00b96b' : '#d70015',
-                      borderRadius: '0 12px 12px 0'
+                      borderRadius: '0 16px 16px 0',
+                      opacity: Math.min(1, Math.abs(currentOffset) / 20),
+                      visibility: currentOffset === 0 ? 'hidden' : 'visible',
+                      transition: swipeState.isDragging ? 'none' : 'opacity 0.2s ease'
                     }}>
                       <button
                         style={{
@@ -2556,7 +2559,8 @@ function App() {
                           padding: '8px 16px',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          fontSize: 14
+                          fontSize: 14,
+                          opacity: Math.min(1, Math.abs(currentOffset) / 40)
                         }}
                         onClick={() => {
                           const newHistory = [...history];
@@ -2887,7 +2891,7 @@ function App() {
                         position: 'relative',
                         overflow: 'hidden',
                         marginBottom: 12,
-                        borderRadius: 12
+                        borderRadius: 16
                       }}
                     >
                       {/* 背景操作按钮区域 - 固定在右侧 */}
@@ -2901,7 +2905,10 @@ function App() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         background: isDeleted ? '#00b96b' : '#d70015',
-                        borderRadius: '0 12px 12px 0'
+                        borderRadius: '0 16px 16px 0',
+                        opacity: Math.min(1, Math.abs(currentOffset) / 20),
+                        visibility: currentOffset === 0 ? 'hidden' : 'visible',
+                        transition: swipeState.isDragging ? 'none' : 'opacity 0.2s ease'
                       }}>
                         <button
                           style={{
@@ -2911,7 +2918,8 @@ function App() {
                             padding: '8px 16px',
                             fontWeight: 600,
                             cursor: 'pointer',
-                            fontSize: 14
+                            fontSize: 14,
+                            opacity: Math.min(1, Math.abs(currentOffset) / 40)
                           }}
                           onClick={() => {
                             const newHistory = [...history];
