@@ -2903,7 +2903,7 @@ function App() {
                   zIndex: 999999,
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 12,
+                  gap: 6,
                   boxSizing: 'border-box'
                 }}
                 onClick={e => e.stopPropagation()}
@@ -3143,7 +3143,7 @@ function App() {
                           ) : hasActiveExtra ? (
                             <div style={{
                               width: '100%',
-                              marginBottom: 12,
+                              marginBottom: 0,
                               padding: '12px 16px',
                               borderRadius: 12,
                               background: '#D8EACE',
@@ -3203,7 +3203,7 @@ function App() {
                             <button
                               style={{
                                 width: '100%',
-                                marginBottom: 6,
+                                marginBottom: 0,
                                 padding: '14px 20px',
                                 borderRadius: 12,
                                 border: 'none',
@@ -3231,7 +3231,7 @@ function App() {
                           <button
                             style={{
                               width: '100%',
-                              marginBottom: 6,
+                              marginBottom: 0,
                               padding: '14px 20px',
                               borderRadius: 12,
                               border: 'none',
@@ -3262,7 +3262,7 @@ function App() {
                         <button
                           style={{
                             width: '100%',
-                            marginBottom: 6,
+                            marginBottom: 0,
                             padding: '14px 20px',
                             borderRadius: 12,
                             border: 'none',
@@ -3305,7 +3305,7 @@ function App() {
                       {/* Records */}
                       {records.length > 0 && (
                         <>
-                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>Records</div>
+                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Records</div>
                           {records.slice().reverse().map((record: any, idx: number) => {
                             const originalIdx = records.length - 1 - idx;
                             const recordTime = record.time ? new Date(record.time) : null;
