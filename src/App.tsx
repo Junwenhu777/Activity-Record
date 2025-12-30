@@ -2932,6 +2932,28 @@ function App() {
                   const hasActiveExtra = typeof resident !== 'string' && resident?.extraActivity;
                   const isInputMode = extraActivityInputMode === residentName;
 
+                  const handleAddExtra = () => {
+                    if (!extraActivityInputValue.trim()) return;
+
+                    const newResidents = current.residents.map((r: any) => {
+                      const name = typeof r === 'string' ? r : r.name;
+                      if (name === residentName) {
+                        const base = typeof r === 'string' ? { name: r, addedAt: new Date() } : r;
+                        return {
+                          ...base,
+                          extraActivity: {
+                            name: extraActivityInputValue.trim(),
+                            startAt: new Date()
+                          }
+                        };
+                      }
+                      return r;
+                    });
+                    setCurrent({ ...current, residents: newResidents });
+                    setExtraActivityInputMode(null);
+                    setExtraActivityInputValue('');
+                  };
+
                   const handleEndExtra = () => {
                     const endTime = new Date();
                     const newResidents = current.residents.map((r: any) => {
@@ -3253,26 +3275,8 @@ function App() {
                                   if (e.key === 'Enter' || e.key === 'Done') {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    if (extraActivityInputValue.trim()) {
-                                      const newResidents = current.residents.map((r: any) => {
-                                        const name = typeof r === 'string' ? r : r.name;
-                                        if (name === residentName) {
-                                          const base = typeof r === 'string' ? { name: r, addedAt: new Date() } : r;
-                                          return {
-                                            ...base,
-                                            extraActivity: {
-                                              name: extraActivityInputValue.trim(),
-                                              startAt: new Date()
-                                            }
-                                          };
-                                        }
-                                        return r;
-                                      });
-                                      setCurrent({ ...current, residents: newResidents });
-                                      setExtraActivityInputMode(null);
-                                      setExtraActivityInputValue('');
-                                      (e.target as HTMLInputElement).blur();
-                                    }
+                                    handleAddExtra();
+                                    (e.target as HTMLInputElement).blur();
                                   }
                                 }}
                               />
@@ -3298,6 +3302,37 @@ function App() {
                                   <line x1="6" y1="6" x2="18" y2="18"></line>
                                 </svg>
                               </button>
+
+                              {/* Confirm Button */}
+                              {extraActivityInputValue.trim().length > 0 && (
+                                <button
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleAddExtra();
+                                  }}
+                                  onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleAddExtra();
+                                  }}
+                                >
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#006D49" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                  </svg>
+                                </button>
+                              )}
                             </div>
                           ) : hasActiveExtra ? (
                             <div style={{
