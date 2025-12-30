@@ -2784,7 +2784,9 @@ function App() {
           )}
 
           {/* Resident Action Popup Portal */}
-          {residentPopupState.isOpen && residentPopupState.residentName && residentPopupState.position && current && createPortal(
+          {residentPopupState.isOpen && residentPopupState.residentName && residentPopupState.position && (
+            residentPopupState.popupType === 'now' ? current : residentPopupState.residentData
+          ) && createPortal(
             <>
               {/* Overlay */}
               <div
