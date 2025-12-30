@@ -2583,7 +2583,7 @@ function App() {
                                       if (isSelected) {
                                         // Show toast hint instead of removing
                                         setToastMessage('Click name on the card to do more.');
-                                        setTimeout(() => setToastMessage(null), 2500);
+                                        setTimeout(() => setToastMessage(null), 3000);
                                       } else {
                                         const newResidentEntry = { name: resident, addedAt: new Date() };
                                         setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
