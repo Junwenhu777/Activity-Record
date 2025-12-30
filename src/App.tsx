@@ -313,6 +313,7 @@ function App() {
     position: { top?: number; bottom?: number; left: number } | null;
     popupType: 'now' | 'history';
     residentData?: any; // The full resident object for history cards
+    globalHistoryIdx?: number; // Index in the global history array
   }>({ isOpen: false, residentName: null, position: null, popupType: 'now' });
 
   // Extra Activity State
@@ -3042,11 +3043,33 @@ function App() {
                               justifyContent: 'center'
                             }}
                             onClick={() => {
-                              const newResidents = current.residents.filter((r: any) => {
-                                const name = typeof r === 'string' ? r : r.name;
-                                return name !== residentName;
-                              });
-                              setCurrent({ ...current, residents: newResidents });
+                              if (isHistoryPopup && residentPopupState.globalHistoryIdx !== undefined) {
+                                // History Mode Delete - Robust Global Index
+                                const globalIdx = residentPopupState.globalHistoryIdx;
+                                const targetActivity = history[globalIdx];
+
+                                if (targetActivity) {
+                                  // Update global history
+                                  const newHistory = [...history];
+                                  const residents = targetActivity.residents || [];
+
+                                  newHistory[globalIdx] = {
+                                    ...targetActivity,
+                                    residents: residents.filter((r: any) => {
+                                      const name = typeof r === 'string' ? r : r.name;
+                                      return name !== residentName;
+                                    })
+                                  };
+                                  setHistory(newHistory);
+                                }
+                              } else {
+                                // Current Activity Delete
+                                const newResidents = current.residents.filter((r: any) => {
+                                  const name = typeof r === 'string' ? r : r.name;
+                                  return name !== residentName;
+                                });
+                                setCurrent({ ...current, residents: newResidents });
+                              }
                               setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' });
                             }}
                           >
@@ -3364,17 +3387,57 @@ function App() {
                                     onTouchEnd={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      const newResidents = current.residents.map((r: any) => {
-                                        const name = typeof r === 'string' ? r : r.name;
-                                        if (name === residentName) {
-                                          const base = typeof r === 'string' ? { name: r, addedAt: new Date() } : r;
-                                          const newRecords = [...(base.records || [])];
-                                          newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
-                                          return { ...base, records: newRecords };
+
+                                      if (isHistoryPopup && residentPopupState.globalHistoryIdx !== undefined) {
+                                        // History Mode Record Delete - Robust Global Index
+                                        const globalIdx = residentPopupState.globalHistoryIdx;
+                                        const targetActivity = history[globalIdx];
+
+                                        if (targetActivity) {
+                                          const newHistory = [...history];
+                                          const residents = targetActivity.residents || [];
+
+                                          const newResidents = residents.map((r: any) => {
+                                            const name = typeof r === 'string' ? r : r.name;
+                                            if (name === residentName) {
+                                              const base = typeof r === 'string' ? { name: r, addedAt: targetActivity.startAt } : r;
+                                              const newRecords = [...(base.records || [])];
+                                              if (newRecords[originalIdx]) {
+                                                newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
+                                              }
+                                              return { ...base, records: newRecords };
+                                            }
+                                            return r;
+                                          });
+
+                                          newHistory[globalIdx] = {
+                                            ...targetActivity,
+                                            residents: newResidents
+                                          };
+                                          setHistory(newHistory);
+
+                                          // Update local snapshot so UI reflects change immediately without closing popup
+                                          // Find the updated resident data to update snapshot
+                                          const updatedResident = newResidents.find((r: any) => (typeof r === 'string' ? r : r.name) === residentName);
+                                          setResidentPopupState(prev => ({
+                                            ...prev,
+                                            residentData: updatedResident
+                                          }));
                                         }
-                                        return r;
-                                      });
-                                      setCurrent({ ...current, residents: newResidents });
+                                      } else {
+                                        // Current Activity Record Delete
+                                        const newResidents = current.residents.map((r: any) => {
+                                          const name = typeof r === 'string' ? r : r.name;
+                                          if (name === residentName) {
+                                            const base = typeof r === 'string' ? { name: r, addedAt: new Date() } : r;
+                                            const newRecords = [...(base.records || [])];
+                                            newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
+                                            return { ...base, records: newRecords };
+                                          }
+                                          return r;
+                                        });
+                                        setCurrent({ ...current, residents: newResidents });
+                                      }
                                       setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
                                     }}
 
@@ -3946,6 +4009,7 @@ function App() {
                                       }}
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        const globalIdx = history.indexOf(item);
                                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                         const MENU_HEIGHT = 300;
                                         const viewportHeight = window.innerHeight;
@@ -3956,7 +4020,8 @@ function App() {
                                             residentName,
                                             position: { bottom: viewportHeight - rect.top + 8, left: 48 },
                                             popupType: 'history',
-                                            residentData: resident
+                                            residentData: resident,
+                                            globalHistoryIdx: globalIdx
                                           });
                                         } else {
                                           setResidentPopupState({
@@ -3964,7 +4029,8 @@ function App() {
                                             residentName,
                                             position: { top: rect.bottom + 8, left: 48 },
                                             popupType: 'history',
-                                            residentData: resident
+                                            residentData: resident,
+                                            globalHistoryIdx: globalIdx
                                           });
                                         }
                                       }}
@@ -4468,6 +4534,7 @@ function App() {
                                       }}
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        const globalIdx = history.indexOf(item);
                                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                         const MENU_HEIGHT = 300;
                                         const viewportHeight = window.innerHeight;
@@ -4478,7 +4545,8 @@ function App() {
                                             residentName,
                                             position: { bottom: viewportHeight - rect.top + 8, left: 48 },
                                             popupType: 'history',
-                                            residentData: resident
+                                            residentData: resident,
+                                            globalHistoryIdx: globalIdx
                                           });
                                         } else {
                                           setResidentPopupState({
@@ -4486,7 +4554,8 @@ function App() {
                                             residentName,
                                             position: { top: rect.bottom + 8, left: 48 },
                                             popupType: 'history',
-                                            residentData: resident
+                                            residentData: resident,
+                                            globalHistoryIdx: globalIdx
                                           });
                                         }
                                       }}
