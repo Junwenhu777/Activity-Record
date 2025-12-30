@@ -1862,41 +1862,23 @@ function App() {
                         onMouseDown={e => e.stopPropagation()}
                         onClick={e => e.stopPropagation()}
                         style={{
-                          position: 'fixed',
-                          top: (() => {
-                            const button = document.querySelector('[data-resident-filter-button]');
-                            if (button) {
-                              const rect = button.getBoundingClientRect();
-                              return rect.bottom + 4;
-                            }
-                            return '50%';
-                          })(),
-                          left: (() => {
-                            const button = document.querySelector('[data-resident-filter-button]');
-                            if (button) {
-                              const rect = button.getBoundingClientRect();
-                              const menuWidth = 200;
-                              const screenWidth = window.innerWidth;
-                              const rightEdge = rect.left + menuWidth;
-
-                              if (rightEdge > screenWidth - 20) {
-                                return Math.max(20, screenWidth - menuWidth - 20);
-                              }
-                              return rect.left;
-                            }
-                            return '50%';
-                          })(),
+                          position: 'absolute',
+                          left: residentPopupState.position?.left || 20,
+                          top: residentPopupState.position?.top || 100,
+                          width: 280,
+                          maxHeight: `calc(100vh - ${(residentPopupState.position?.top || 100)}px - 20px)`,
                           background: '#fff',
-                          borderRadius: 8,
-                          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                          padding: 8,
-                          minWidth: 200,
-                          maxHeight: 350,
+                          borderRadius: 16,
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                          zIndex: 1001,
+                          padding: 16,
+                          display: 'flex',
+                          flexDirection: 'column',
                           overflowY: 'auto',
-                          zIndex: 999998,
+                          overscrollBehavior: 'contain',
                           scrollbarWidth: 'none',
                           msOverflowStyle: 'none',
-                          animation: isResidentFilterClosing
+                          animation: isActivityFilterClosing
                             ? 'slideUpAndFadeOut 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                             : 'slideDownAndFadeIn 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                           pointerEvents: 'auto'
@@ -2954,20 +2936,18 @@ function App() {
                     const endTime = new Date();
                     const newResidents = current.residents.map((r: any) => {
                       const name = typeof r === 'string' ? r : r.name;
-                      if (name === residentName && r.extraActivity) {
+                      if (name === residentName && r.extraActivity) { // Only update if it's an object with extraActivity
                         const records = r.records || [];
                         return {
                           ...r,
                           extraActivity: null,
-                          records: [
-                            ...records,
-                            {
-                              type: 'extra',
-                              name: r.extraActivity.name,
-                              startAt: r.extraActivity.startAt,
-                              endAt: endTime
-                            }
-                          ]
+                          records: [...records, {
+                            type: 'extra',
+                            name: r.extraActivity.name,
+                            startAt: r.extraActivity.startAt,
+                            endAt: endTime,
+                            deleted: false
+                          }]
                         };
                       }
                       return r;
@@ -3135,35 +3115,23 @@ function App() {
                                       width: '100%',
                                       height: '100%'
                                     }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const newResidents = current.residents.map((r: any) => {
-                                        const name = typeof r === 'string' ? r : r.name;
-                                        if (name === residentName) {
-                                          const newRecords = [...(r.records || [])];
-                                          newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
-                                          return { ...r, records: newRecords };
-                                        }
-                                        return r;
-                                      });
-                                      setCurrent({ ...current, residents: newResidents });
-                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
-                                    }}
                                     onTouchEnd={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       const newResidents = current.residents.map((r: any) => {
                                         const name = typeof r === 'string' ? r : r.name;
                                         if (name === residentName) {
-                                          const newRecords = [...(r.records || [])];
+                                          const base = typeof r === 'string' ? { name: r, addedAt: new Date() } : r;
+                                          const newRecords = [...(base.records || [])];
                                           newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
-                                          return { ...r, records: newRecords };
+                                          return { ...base, records: newRecords };
                                         }
                                         return r;
                                       });
                                       setCurrent({ ...current, residents: newResidents });
                                       setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
                                     }}
+
                                   >
                                     {isDeleted ? 'Restore' : 'Delete'}
                                   </button>
@@ -3245,6 +3213,13 @@ function App() {
                         </>
                       )}
 
+                      {/* No Record state */}
+                      {records.length === 0 && (
+                        <div style={{ padding: '20px 0', textAlign: 'center', color: '#999', fontSize: 14 }}>
+                          No records
+                        </div>
+                      )}
+
 
                       {/* Action Buttons (Only for active residents) */}
                       {isActive && (
@@ -3282,8 +3257,9 @@ function App() {
                                       const newResidents = current.residents.map((r: any) => {
                                         const name = typeof r === 'string' ? r : r.name;
                                         if (name === residentName) {
+                                          const base = typeof r === 'string' ? { name: r, addedAt: new Date() } : r;
                                           return {
-                                            ...r,
+                                            ...base,
                                             extraActivity: {
                                               name: extraActivityInputValue.trim(),
                                               startAt: new Date()
@@ -3463,11 +3439,12 @@ function App() {
                             const newResidents = current.residents.map((r: any) => {
                               const name = typeof r === 'string' ? r : r.name;
                               if (name === residentName) {
-                                const existingRecords = typeof r === 'string' ? [] : (r.records || []);
-                                const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
+                                const base = typeof r === 'string' ? { name: r, addedAt: new Date() } : r;
+                                const existingRecords = base.records || [];
+                                const addedAt = base.addedAt || new Date();
                                 return {
-                                  name,
-                                  addedAt,
+                                  name: name,
+                                  addedAt: addedAt,
                                   status: 'active',
                                   records: [...existingRecords, { type: 'backed', time: new Date() }]
                                 };
