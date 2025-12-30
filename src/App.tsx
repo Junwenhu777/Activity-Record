@@ -1241,27 +1241,72 @@ function App() {
                                     Deleted: item.deleted ? 'true' : 'false'
                                   });
                                 } else {
-                                  // 每个 resident 生成一行
+                                  // 每个 resident 的每个活动周期生成一行
                                   itemResidents.forEach((r: any) => {
                                     const residentName = typeof r === 'string' ? r : r.name;
-                                    // 如果 resident 有 addedAt 时间，使用它作为该 resident 的开始时间
-                                    // 否则使用活动的开始时间
-                                    const residentStartAt = (typeof r === 'object' && r.addedAt)
-                                      ? new Date(r.addedAt)
-                                      : item.startAt;
-                                    // 计算该 resident 的 duration（从 addedAt 到活动结束）
-                                    const residentDuration = item.endAt.getTime() - residentStartAt.getTime();
-                                    rows.push({
-                                      'Resident Name': residentName,
-                                      Activity: item.name,
-                                      'Start Date': getDateString(residentStartAt),
-                                      'Start At': formatTime(residentStartAt),
-                                      'End Date': getDateString(item.endAt),
-                                      'End At': formatTime(item.endAt),
-                                      Duration: formatHMS(Math.round(residentDuration / 1000)),
-                                      Seconds: Math.round(residentDuration / 1000),
-                                      Deleted: item.deleted ? 'true' : 'false'
-                                    });
+                                    const records = typeof r === 'string' ? [] : (r.records || []);
+                                    const addedAt = typeof r === 'string' ? item.startAt : (r.addedAt ? new Date(r.addedAt) : item.startAt);
+                                    const residentStatus = typeof r === 'string' ? 'active' : (r.status || 'active');
+
+                                    if (records.length === 0) {
+                                      // No records - single entry from addedAt to activity end
+                                      // If status is 'leaved' but no records, treat as if they left at activity end
+                                      const residentDuration = item.endAt.getTime() - addedAt.getTime();
+                                      rows.push({
+                                        'Resident Name': residentName,
+                                        Activity: item.name,
+                                        'Start Date': getDateString(addedAt),
+                                        'Start At': formatTime(addedAt),
+                                        'End Date': getDateString(item.endAt),
+                                        'End At': formatTime(item.endAt),
+                                        Duration: formatHMS(Math.round(residentDuration / 1000)),
+                                        Seconds: Math.round(residentDuration / 1000),
+                                        Deleted: item.deleted ? 'true' : 'false'
+                                      });
+                                    } else {
+                                      // Has records - expand each leave cycle into separate rows
+                                      let currentStartTime = addedAt;
+
+                                      records.forEach((record: any) => {
+                                        const recordTime = new Date(record.time);
+
+                                        if (record.type === 'leaved') {
+                                          // Create a record from currentStartTime to this leave time
+                                          const duration = recordTime.getTime() - currentStartTime.getTime();
+                                          rows.push({
+                                            'Resident Name': residentName,
+                                            Activity: item.name,
+                                            'Start Date': getDateString(currentStartTime),
+                                            'Start At': formatTime(currentStartTime),
+                                            'End Date': getDateString(recordTime),
+                                            'End At': formatTime(recordTime),
+                                            Duration: formatHMS(Math.round(duration / 1000)),
+                                            Seconds: Math.round(duration / 1000),
+                                            Deleted: item.deleted ? 'true' : 'false'
+                                          });
+                                        } else if (record.type === 'backed') {
+                                          // Update currentStartTime to this backed time
+                                          currentStartTime = recordTime;
+                                        }
+                                      });
+
+                                      // If currently active (last action was 'backed' or started and never left),
+                                      // add a final record from last start to activity end
+                                      if (residentStatus === 'active') {
+                                        const duration = item.endAt.getTime() - currentStartTime.getTime();
+                                        rows.push({
+                                          'Resident Name': residentName,
+                                          Activity: item.name,
+                                          'Start Date': getDateString(currentStartTime),
+                                          'Start At': formatTime(currentStartTime),
+                                          'End Date': getDateString(item.endAt),
+                                          'End At': formatTime(item.endAt),
+                                          Duration: formatHMS(Math.round(duration / 1000)),
+                                          Seconds: Math.round(duration / 1000),
+                                          Deleted: item.deleted ? 'true' : 'false'
+                                        });
+                                      }
+                                    }
                                   });
                                 }
                               });
