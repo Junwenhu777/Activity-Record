@@ -2442,9 +2442,12 @@ function App() {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       const newName = cardNewResidentName.trim();
-                                      if (!residents.includes(newName)) {
-                                        setResidents(prev => [newName, ...prev]);
-                                      }
+                                      // Logic update: Remove duplicates and move to top (match bottom sheet)
+                                      setResidents(prev => {
+                                        const filtered = prev.filter(r => r !== newName);
+                                        return [newName, ...filtered];
+                                      });
+
                                       const newResidentEntry = { name: newName, addedAt: new Date() };
                                       const currentResidents = current.residents || [];
                                       if (!currentResidents.some((r: any) => (typeof r === 'string' ? r : r.name) === newName)) {
@@ -2767,154 +2770,220 @@ function App() {
 
                             {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
                             {showCardResidentDropdown === `today-${idx}` && cardDropdownPosition && createPortal(
-                              <div
-                                data-card-resident-dropdown
-                                style={{
-                                  position: 'fixed',
-                                  top: cardDropdownPosition.top,
-                                  left: cardDropdownPosition.left,
-                                  background: '#fff',
-                                  borderRadius: 12,
-                                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                                  padding: 8,
-                                  minWidth: 200,
-                                  maxHeight: 300,
-                                  overflowY: 'auto',
-                                  zIndex: 999999
-                                }}
-                                onClick={e => e.stopPropagation()}
-                              >
-                                {/* Add new name 选项 */}
-                                {isAddingNewCardResident ? (
-                                  <div style={{ padding: '4px 8px' }}>
-                                    <input
-                                      style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #ddd',
-                                        borderRadius: 20,
-                                        fontSize: 14,
-                                        boxSizing: 'border-box',
-                                        outline: 'none'
-                                      }}
-                                      placeholder="Enter new name..."
-                                      value={cardNewResidentName}
-                                      onChange={e => setCardNewResidentName(e.target.value)}
-                                      onKeyDown={e => {
-                                        if (e.key === 'Enter' && cardNewResidentName.trim()) {
-                                          const newName = cardNewResidentName.trim();
-                                          // 同步保存到全局 residents 列表
-                                          if (!residents.includes(newName)) {
-                                            setResidents(prev => [newName, ...prev]);
+                              <>
+                                {/* 全屏透明遮罩 */}
+                                <div
+                                  style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    zIndex: 999998,
+                                    background: 'transparent',
+                                    touchAction: 'none'
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCardResidentDropdown(null);
+                                    setCardNewResidentName('');
+                                    setIsAddingNewCardResident(false);
+                                  }}
+                                  onTouchMove={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                />
+
+                                {/* 菜单内容 */}
+                                <div
+                                  data-card-resident-dropdown
+                                  style={{
+                                    position: 'fixed',
+                                    top: cardDropdownPosition.top,
+                                    left: 48,
+                                    right: 48,
+                                    width: 'auto',
+                                    background: '#fff',
+                                    borderRadius: 16,
+                                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                                    padding: '20px 24px',
+                                    maxHeight: 300,
+                                    overflowY: 'auto',
+                                    zIndex: 999999,
+                                    display: 'flex',
+                                    flexDirection: 'column'
+                                  }}
+                                  onClick={e => e.stopPropagation()}
+                                  onTouchMove={e => e.stopPropagation()}
+                                >
+                                  {/* 标题栏 */}
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    marginBottom: 12
+                                  }}>
+                                    <div style={{
+                                      fontSize: 12,
+                                      fontWeight: 400,
+                                      color: '#666',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.5
+                                    }}>
+                                      Resident
+                                    </div>
+                                    {!isAddingNewCardResident && (
+                                      <button
+                                        style={{
+                                          width: 24,
+                                          height: 24,
+                                          border: 'none',
+                                          background: 'transparent',
+                                          cursor: 'pointer',
+                                          padding: 0,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIsAddingNewCardResident(true);
+                                        }}
+                                      >
+                                        <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                          <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* 输入框 */}
+                                  {isAddingNewCardResident && (
+                                    <div style={{ marginBottom: 12 }}>
+                                      <input
+                                        style={{
+                                          width: '100%',
+                                          height: '44px',
+                                          padding: '0 16px',
+                                          border: '1px solid #00313c',
+                                          borderRadius: '12px',
+                                          fontSize: '16px',
+                                          fontWeight: '500',
+                                          outline: 'none',
+                                          boxSizing: 'border-box',
+                                          background: '#f5f9fa',
+                                          color: '#222'
+                                        }}
+                                        placeholder="Enter resident name"
+                                        value={cardNewResidentName}
+                                        onChange={e => setCardNewResidentName(e.target.value)}
+                                        onKeyDown={e => {
+                                          if (e.key === 'Enter' && cardNewResidentName.trim()) {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            const newName = cardNewResidentName.trim();
+                                            // Deduplicate logic
+                                            setResidents(prev => {
+                                              const filtered = prev.filter(r => r !== newName);
+                                              return [newName, ...filtered];
+                                            });
+
+                                            const newHistory = [...history];
+                                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                            if (histIdx !== -1) {
+                                              const currentResidents = newHistory[histIdx].residents || [];
+                                              const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
+                                              if (!residentNames.includes(newName)) {
+                                                newHistory[histIdx].residents = [newName, ...currentResidents];
+                                                setHistory(newHistory);
+                                              }
+                                            }
+                                            setCardNewResidentName('');
+                                            setIsAddingNewCardResident(false);
+                                          } else if (e.key === 'Escape') {
+                                            setCardNewResidentName('');
+                                            setIsAddingNewCardResident(false);
                                           }
-                                          // 添加到历史卡片
-                                          const newHistory = [...history];
-                                          const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                          if (histIdx !== -1) {
-                                            const currentResidents = newHistory[histIdx].residents || [];
-                                            const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
-                                            if (!residentNames.includes(newName)) {
-                                              newHistory[histIdx].residents = [newName, ...currentResidents];
+                                        }}
+                                        autoFocus
+                                        onClick={e => e.stopPropagation()}
+                                      />
+                                    </div>
+                                  )}
+
+                                  {/* List */}
+                                  <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 12
+                                  }}>
+                                    {residents.map(resident => {
+                                      const itemResidents = item.residents || [];
+                                      const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
+                                      return (
+                                        <button
+                                          key={resident}
+                                          style={{
+                                            background: isSelected ? '#00313c' : '#E9F2F4',
+                                            color: isSelected ? '#fff' : '#222',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-start',
+                                            gap: 4,
+                                            padding: '12px 16px',
+                                            borderRadius: 12,
+                                            border: '1px solid rgba(2, 48, 59, 0.04)',
+                                            cursor: 'pointer',
+                                            fontSize: 15,
+                                            fontWeight: 500,
+                                            textAlign: 'left',
+                                            width: '100%',
+                                            userSelect: 'none',
+                                            WebkitUserSelect: 'none'
+                                          }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newHistory = [...history];
+                                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                            if (histIdx !== -1) {
+                                              const currentResidents = newHistory[histIdx].residents || [];
+                                              if (isSelected) {
+                                                newHistory[histIdx].residents = currentResidents.filter((r: any) => {
+                                                  const name = typeof r === 'string' ? r : r.name;
+                                                  return name !== resident;
+                                                });
+                                              } else {
+                                                newHistory[histIdx].residents = [resident, ...currentResidents];
+                                              }
                                               setHistory(newHistory);
                                             }
-                                          }
-                                          setCardNewResidentName('');
-                                          setIsAddingNewCardResident(false);
-                                        } else if (e.key === 'Escape') {
-                                          setCardNewResidentName('');
-                                          setIsAddingNewCardResident(false);
-                                        }
-                                      }}
-                                      autoFocus
-                                    />
+                                          }}
+                                        >
+                                          <span style={{
+                                            boxSizing: 'border-box',
+                                            width: 16,
+                                            height: 16,
+                                            border: isSelected ? '2px solid #fff' : '1px solid rgba(2, 48, 59, 0.4)',
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                          }}>
+                                            {isSelected && (
+                                              <span style={{
+                                                width: 8,
+                                                height: 8,
+                                                background: '#fff',
+                                                borderRadius: '50%'
+                                              }} />
+                                            )}
+                                          </span>
+                                          {resident}
+                                        </button>
+                                      );
+                                    })}
                                   </div>
-                                ) : (
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      padding: '8px 12px',
-                                      cursor: 'pointer',
-                                      borderRadius: 20,
-                                      fontSize: 14,
-                                      border: '1px solid #ddd',
-                                      marginBottom: 8
-                                    }}
-                                    onClick={() => setIsAddingNewCardResident(true)}
-                                    onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
-                                    onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
-                                  >
-                                    <span style={{ marginRight: 8 }}>+</span>
-                                    <span>Add new name</span>
-                                  </div>
-                                )}
-
-                                {/* 已有 residents 列表 */}
-                                {residents.map(resident => {
-                                  const itemResidents = item.residents || [];
-                                  const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
-                                  return (
-                                    <div
-                                      key={resident}
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        padding: '8px 12px',
-                                        cursor: 'pointer',
-                                        borderRadius: 20,
-                                        fontSize: 14,
-                                        border: '1px solid #ddd',
-                                        marginBottom: 4,
-                                        background: isSelected ? '#E9F2F4' : 'transparent'
-                                      }}
-                                      onClick={() => {
-                                        const newHistory = [...history];
-                                        const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                        if (histIdx !== -1) {
-                                          const currentResidents = newHistory[histIdx].residents || [];
-                                          if (isSelected) {
-                                            // 取消选择
-                                            newHistory[histIdx].residents = currentResidents.filter((r: any) => {
-                                              const name = typeof r === 'string' ? r : r.name;
-                                              return name !== resident;
-                                            });
-                                          } else {
-                                            // 选择
-                                            newHistory[histIdx].residents = [resident, ...currentResidents];
-                                          }
-                                          setHistory(newHistory);
-                                        }
-                                      }}
-                                      onMouseEnter={e => {
-                                        if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
-                                      }}
-                                      onMouseLeave={e => {
-                                        if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
-                                      }}
-                                    >
-                                      <div style={{
-                                        width: 18,
-                                        height: 18,
-                                        borderRadius: '50%',
-                                        border: isSelected ? 'none' : '2px solid #ddd',
-                                        marginRight: 8,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        background: isSelected ? '#007bff' : 'transparent',
-                                        flexShrink: 0
-                                      }}>
-                                        {isSelected && (
-                                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                            <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                          </svg>
-                                        )}
-                                      </div>
-                                      <span>{resident}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>,
+                                </div>
+                              </>,
                               document.body
                             )}
 
@@ -3133,154 +3202,221 @@ function App() {
 
                               {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
                               {showCardResidentDropdown === `${date}-${idx}` && cardDropdownPosition && createPortal(
-                                <div
-                                  data-card-resident-dropdown
-                                  style={{
-                                    position: 'fixed',
-                                    top: cardDropdownPosition.top,
-                                    left: cardDropdownPosition.left,
-                                    background: '#fff',
-                                    borderRadius: 12,
-                                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                                    padding: 8,
-                                    minWidth: 200,
-                                    maxHeight: 300,
-                                    overflowY: 'auto',
-                                    zIndex: 999999
-                                  }}
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  {/* Add new name 选项 */}
-                                  {isAddingNewCardResident ? (
-                                    <div style={{ padding: '4px 8px' }}>
-                                      <input
-                                        style={{
-                                          width: '100%',
-                                          padding: '8px 12px',
-                                          border: '1px solid #ddd',
-                                          borderRadius: 20,
-                                          fontSize: 14,
-                                          boxSizing: 'border-box',
-                                          outline: 'none'
-                                        }}
-                                        placeholder="Enter new name..."
-                                        value={cardNewResidentName}
-                                        onChange={e => setCardNewResidentName(e.target.value)}
-                                        onKeyDown={e => {
-                                          if (e.key === 'Enter' && cardNewResidentName.trim()) {
-                                            const newName = cardNewResidentName.trim();
-                                            // 同步保存到全局 residents 列表
-                                            if (!residents.includes(newName)) {
-                                              setResidents(prev => [newName, ...prev]);
+                                <>
+                                  {/* 全屏透明遮罩 */}
+                                  <div
+                                    style={{
+                                      position: 'fixed',
+                                      inset: 0,
+                                      zIndex: 999998,
+                                      background: 'transparent',
+                                      touchAction: 'none'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowCardResidentDropdown(null);
+                                      setCardNewResidentName('');
+                                      setIsAddingNewCardResident(false);
+                                    }}
+                                    onTouchMove={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                  />
+
+                                  {/* 菜单内容 */}
+                                  <div
+                                    data-card-resident-dropdown
+                                    style={{
+                                      position: 'fixed',
+                                      top: cardDropdownPosition.top,
+                                      left: 48,
+                                      right: 48,
+                                      width: 'auto',
+                                      background: '#fff',
+                                      borderRadius: 16,
+                                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                                      padding: '20px 24px',
+                                      maxHeight: 300,
+                                      overflowY: 'auto',
+                                      zIndex: 999999,
+                                      display: 'flex',
+                                      flexDirection: 'column'
+                                    }}
+                                    onClick={e => e.stopPropagation()}
+                                    onTouchMove={e => e.stopPropagation()}
+                                  >
+                                    {/* 标题栏 */}
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      marginBottom: 12
+                                    }}>
+                                      <div style={{
+                                        fontSize: 12,
+                                        fontWeight: 400,
+                                        color: '#666',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 0.5
+                                      }}>
+                                        Resident
+                                      </div>
+                                      {!isAddingNewCardResident && (
+                                        <button
+                                          style={{
+                                            width: 24,
+                                            height: 24,
+                                            border: 'none',
+                                            background: 'transparent',
+                                            cursor: 'pointer',
+                                            padding: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                          }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsAddingNewCardResident(true);
+                                          }}
+                                        >
+                                          <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
+                                          </svg>
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {/* 输入框 */}
+                                    {isAddingNewCardResident && (
+                                      <div style={{ marginBottom: 12 }}>
+                                        <input
+                                          style={{
+                                            width: '100%',
+                                            height: '44px',
+                                            padding: '0 16px',
+                                            border: '1px solid #00313c',
+                                            borderRadius: '12px',
+                                            fontSize: '16px',
+                                            fontWeight: '500',
+                                            outline: 'none',
+                                            boxSizing: 'border-box',
+                                            background: '#f5f9fa',
+                                            color: '#222'
+                                          }}
+                                          placeholder="Enter resident name"
+                                          value={cardNewResidentName}
+                                          onChange={e => setCardNewResidentName(e.target.value)}
+                                          onKeyDown={e => {
+                                            if (e.key === 'Enter' && cardNewResidentName.trim()) {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              const newName = cardNewResidentName.trim();
+                                              // Deduplicate logic
+                                              setResidents(prev => {
+                                                const filtered = prev.filter(r => r !== newName);
+                                                return [newName, ...filtered];
+                                              });
+
+                                              // Update history item
+                                              const newHistory = [...history];
+                                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                              if (histIdx !== -1) {
+                                                const currentResidents = newHistory[histIdx].residents || [];
+                                                const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
+                                                if (!residentNames.includes(newName)) {
+                                                  newHistory[histIdx].residents = [newName, ...currentResidents];
+                                                  setHistory(newHistory);
+                                                }
+                                              }
+                                              setCardNewResidentName('');
+                                              setIsAddingNewCardResident(false);
+                                            } else if (e.key === 'Escape') {
+                                              setCardNewResidentName('');
+                                              setIsAddingNewCardResident(false);
                                             }
-                                            // 添加到历史卡片
-                                            const newHistory = [...history];
-                                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                            if (histIdx !== -1) {
-                                              const currentResidents = newHistory[histIdx].residents || [];
-                                              const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
-                                              if (!residentNames.includes(newName)) {
-                                                newHistory[histIdx].residents = [newName, ...currentResidents];
+                                          }}
+                                          autoFocus
+                                          onClick={e => e.stopPropagation()}
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* List */}
+                                    <div style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: 12
+                                    }}>
+                                      {residents.map(resident => {
+                                        const itemResidents = item.residents || [];
+                                        const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
+                                        return (
+                                          <button
+                                            key={resident}
+                                            style={{
+                                              background: isSelected ? '#00313c' : '#E9F2F4',
+                                              color: isSelected ? '#fff' : '#222',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'flex-start',
+                                              gap: 4,
+                                              padding: '12px 16px',
+                                              borderRadius: 12,
+                                              border: '1px solid rgba(2, 48, 59, 0.04)',
+                                              cursor: 'pointer',
+                                              fontSize: 15,
+                                              fontWeight: 500,
+                                              textAlign: 'left',
+                                              width: '100%',
+                                              userSelect: 'none',
+                                              WebkitUserSelect: 'none'
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const newHistory = [...history];
+                                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                              if (histIdx !== -1) {
+                                                const currentResidents = newHistory[histIdx].residents || [];
+                                                if (isSelected) {
+                                                  newHistory[histIdx].residents = currentResidents.filter((r: any) => {
+                                                    const name = typeof r === 'string' ? r : r.name;
+                                                    return name !== resident;
+                                                  });
+                                                } else {
+                                                  newHistory[histIdx].residents = [resident, ...currentResidents];
+                                                }
                                                 setHistory(newHistory);
                                               }
-                                            }
-                                            setCardNewResidentName('');
-                                            setIsAddingNewCardResident(false);
-                                          } else if (e.key === 'Escape') {
-                                            setCardNewResidentName('');
-                                            setIsAddingNewCardResident(false);
-                                          }
-                                        }}
-                                        autoFocus
-                                      />
+                                            }}
+                                          >
+                                            <span style={{
+                                              boxSizing: 'border-box',
+                                              width: 16,
+                                              height: 16,
+                                              border: isSelected ? '2px solid #fff' : '1px solid rgba(2, 48, 59, 0.4)',
+                                              borderRadius: '50%',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              flexShrink: 0
+                                            }}>
+                                              {isSelected && (
+                                                <span style={{
+                                                  width: 8,
+                                                  height: 8,
+                                                  background: '#fff',
+                                                  borderRadius: '50%'
+                                                }} />
+                                              )}
+                                            </span>
+                                            {resident}
+                                          </button>
+                                        );
+                                      })}
                                     </div>
-                                  ) : (
-                                    <div
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        padding: '8px 12px',
-                                        cursor: 'pointer',
-                                        borderRadius: 20,
-                                        fontSize: 14,
-                                        border: '1px solid #ddd',
-                                        marginBottom: 8
-                                      }}
-                                      onClick={() => setIsAddingNewCardResident(true)}
-                                      onMouseEnter={e => (e.target as HTMLElement).style.background = '#f5f5f5'}
-                                      onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
-                                    >
-                                      <span style={{ marginRight: 8 }}>+</span>
-                                      <span>Add new name</span>
-                                    </div>
-                                  )}
-
-                                  {/* 已有 residents 列表 */}
-                                  {residents.map(resident => {
-                                    const itemResidents = item.residents || [];
-                                    const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
-                                    return (
-                                      <div
-                                        key={resident}
-                                        style={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          padding: '8px 12px',
-                                          cursor: 'pointer',
-                                          borderRadius: 20,
-                                          fontSize: 14,
-                                          border: '1px solid #ddd',
-                                          marginBottom: 4,
-                                          background: isSelected ? '#E9F2F4' : 'transparent'
-                                        }}
-                                        onClick={() => {
-                                          const newHistory = [...history];
-                                          const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                          if (histIdx !== -1) {
-                                            const currentResidents = newHistory[histIdx].residents || [];
-                                            if (isSelected) {
-                                              // 取消选择
-                                              newHistory[histIdx].residents = currentResidents.filter((r: any) => {
-                                                const name = typeof r === 'string' ? r : r.name;
-                                                return name !== resident;
-                                              });
-                                            } else {
-                                              // 选择
-                                              newHistory[histIdx].residents = [resident, ...currentResidents];
-                                            }
-                                            setHistory(newHistory);
-                                          }
-                                        }}
-                                        onMouseEnter={e => {
-                                          if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
-                                        }}
-                                        onMouseLeave={e => {
-                                          if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
-                                        }}
-                                      >
-                                        <div style={{
-                                          width: 18,
-                                          height: 18,
-                                          borderRadius: '50%',
-                                          border: isSelected ? 'none' : '2px solid #ddd',
-                                          marginRight: 8,
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          background: isSelected ? '#007bff' : 'transparent',
-                                          flexShrink: 0
-                                        }}>
-                                          {isSelected && (
-                                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                              <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                          )}
-                                        </div>
-                                        <span>{resident}</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>,
+                                  </div>
+                                </>,
                                 document.body
                               )}
 
