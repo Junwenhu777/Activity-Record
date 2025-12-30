@@ -306,6 +306,13 @@ function App() {
   const [popupRendered, setPopupRendered] = useState(false); // 默认不渲染popup
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Resident Popup State (for Now Card resident actions)
+  const [residentPopupState, setResidentPopupState] = useState<{
+    isOpen: boolean;
+    residentName: string | null;
+    position: { top: number; left: number } | null;
+  }>({ isOpen: false, residentName: null, position: null });
+
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
   const colorPalette = [
@@ -2655,18 +2662,30 @@ function App() {
                         })
                         .map((resident: any) => {
                           const residentName = typeof resident === 'string' ? resident : resident.name;
+                          const residentStatus = typeof resident === 'string' ? 'active' : (resident.status || 'active');
+                          const isActive = residentStatus === 'active';
                           return (
                             <span
                               key={residentName}
                               style={{
-                                background: '#E9F2F4',
-                                color: '#00313c',
+                                background: isActive ? '#00313c' : '#888',
+                                color: '#fff',
                                 padding: '4px 12px',
                                 borderRadius: 12,
                                 fontSize: 12,
                                 fontWeight: 500,
                                 whiteSpace: 'nowrap',
-                                flexShrink: 0
+                                flexShrink: 0,
+                                cursor: 'pointer'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setResidentPopupState({
+                                  isOpen: true,
+                                  residentName,
+                                  position: { top: rect.bottom + 8, left: Math.max(48, rect.left - 100) }
+                                });
                               }}
                             >
                               {residentName}
@@ -2715,6 +2734,289 @@ function App() {
               </div>
             </div>
           )}
+
+          {/* Resident Action Popup Portal */}
+          {residentPopupState.isOpen && residentPopupState.residentName && residentPopupState.position && current && createPortal(
+            <>
+              {/* Overlay */}
+              <div
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 999998,
+                  background: 'transparent',
+                  touchAction: 'none'
+                }}
+                onClick={() => setResidentPopupState({ isOpen: false, residentName: null, position: null })}
+              />
+
+              {/* Popup Content */}
+              <div
+                style={{
+                  position: 'fixed',
+                  top: residentPopupState.position.top,
+                  left: 48,
+                  right: 48,
+                  background: '#fff',
+                  borderRadius: 16,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                  padding: '20px 24px',
+                  maxHeight: 400,
+                  overflowY: 'auto',
+                  zIndex: 999999,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                {(() => {
+                  const resident = current.residents?.find((r: any) => {
+                    const name = typeof r === 'string' ? r : r.name;
+                    return name === residentPopupState.residentName;
+                  });
+                  const residentName = typeof resident === 'string' ? resident : resident?.name;
+                  const residentStatus = typeof resident === 'string' ? 'active' : (resident?.status || 'active');
+                  const isActive = residentStatus === 'active';
+                  const records = typeof resident === 'string' ? [] : (resident?.records || []);
+
+                  return (
+                    <>
+                      {/* Header: Name + Status + Delete */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontSize: 18, fontWeight: 600, color: '#222' }}>{residentName}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{
+                            background: isActive ? '#E8F5E9' : '#f5f5f5',
+                            color: isActive ? '#2E7D32' : '#666',
+                            padding: '4px 12px',
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 500
+                          }}>
+                            {isActive ? 'Active' : 'Leaved'}
+                          </span>
+                          <button
+                            style={{
+                              width: 32,
+                              height: 32,
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              padding: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            onClick={() => {
+                              // Delete resident from current activity
+                              const newResidents = current.residents.filter((r: any) => {
+                                const name = typeof r === 'string' ? r : r.name;
+                                return name !== residentName;
+                              });
+                              setCurrent({ ...current, residents: newResidents });
+                              setResidentPopupState({ isOpen: false, residentName: null, position: null });
+                            }}
+                          >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cc3333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      {isActive ? (
+                        <>
+                          {/* Add extra activity - Green */}
+                          <button
+                            style={{
+                              width: '100%',
+                              padding: '14px 20px',
+                              borderRadius: 12,
+                              border: 'none',
+                              background: '#E8F5E9',
+                              color: '#2E7D32',
+                              fontSize: 15,
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 8
+                            }}
+                            onClick={() => {
+                              // TODO: Implement add extra activity
+                              setToastMessage('Add extra activity - coming soon');
+                              setTimeout(() => setToastMessage(null), 2000);
+                            }}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                            Add extra activity
+                          </button>
+
+                          {/* Leave main activity - Red/Pink */}
+                          <button
+                            style={{
+                              width: '100%',
+                              padding: '14px 20px',
+                              borderRadius: 12,
+                              border: 'none',
+                              background: '#FFEBEE',
+                              color: '#C62828',
+                              fontSize: 15,
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 8
+                            }}
+                            onClick={() => {
+                              // Update resident status to 'leaved' and add record
+                              const newResidents = current.residents.map((r: any) => {
+                                const name = typeof r === 'string' ? r : r.name;
+                                if (name === residentName) {
+                                  const existingRecords = typeof r === 'string' ? [] : (r.records || []);
+                                  const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
+                                  return {
+                                    name,
+                                    addedAt,
+                                    status: 'leaved',
+                                    records: [...existingRecords, { type: 'leaved', time: new Date() }]
+                                  };
+                                }
+                                return r;
+                              });
+                              setCurrent({ ...current, residents: newResidents });
+                            }}
+                          >
+                            <span style={{ width: 14, height: 14, background: '#C62828', borderRadius: 2 }}></span>
+                            Leave main activity
+                          </button>
+                        </>
+                      ) : (
+                        /* Back button - Blue */
+                        <button
+                          style={{
+                            width: '100%',
+                            padding: '14px 20px',
+                            borderRadius: 12,
+                            border: 'none',
+                            background: '#E3F2FD',
+                            color: '#1565C0',
+                            fontSize: 15,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8
+                          }}
+                          onClick={() => {
+                            // Update resident status to 'active' and add 'backed' record
+                            const newResidents = current.residents.map((r: any) => {
+                              const name = typeof r === 'string' ? r : r.name;
+                              if (name === residentName) {
+                                const existingRecords = typeof r === 'string' ? [] : (r.records || []);
+                                const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
+                                return {
+                                  name,
+                                  addedAt,
+                                  status: 'active',
+                                  records: [...existingRecords, { type: 'backed', time: new Date() }]
+                                };
+                              }
+                              return r;
+                            });
+                            setCurrent({ ...current, residents: newResidents });
+                          }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+                          Back
+                        </button>
+                      )}
+
+                      {/* Records Section */}
+                      {records.length > 0 && (
+                        <>
+                          <div style={{ borderTop: '1px solid #eee', marginTop: 8, paddingTop: 16 }}>
+                            <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
+                            {records.slice().reverse().map((record: any, idx: number) => {
+                              const recordTime = new Date(record.time);
+                              const isLeaved = record.type === 'leaved';
+                              const isBacked = record.type === 'backed';
+
+                              // Calculate duration for leaved records
+                              let duration = '';
+                              if (isLeaved) {
+                                // Find the previous start time (either addedAt or a backed record)
+                                const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                                let startTime = addedAt ? new Date(addedAt) : null;
+
+                                // Look for the most recent 'backed' record before this 'leaved'
+                                const recordsBeforeThis = records.slice(0, records.length - 1 - idx);
+                                for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                  if (recordsBeforeThis[i].type === 'backed') {
+                                    startTime = new Date(recordsBeforeThis[i].time);
+                                    break;
+                                  }
+                                }
+
+                                if (startTime) {
+                                  const durationMs = recordTime.getTime() - startTime.getTime();
+                                  duration = formatDuration(durationMs);
+                                }
+                              }
+
+                              return (
+                                <div key={idx} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    background: isBacked ? '#FFF3E0' : '#f5f5f5',
+                                    color: isBacked ? '#E65100' : '#666',
+                                    padding: '4px 10px',
+                                    borderRadius: 6,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    marginBottom: 8
+                                  }}>
+                                    {isBacked ? 'Backed' : 'Leaved'}
+                                  </span>
+                                  <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
+                                    {isBacked ? (
+                                      <div>Start At: {recordTime.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                    ) : (
+                                      <>
+                                        <div>Start At: {(() => {
+                                          const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                                          let startTime = addedAt ? new Date(addedAt) : null;
+                                          const recordsBeforeThis = records.slice(0, records.length - 1 - idx);
+                                          for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                            if (recordsBeforeThis[i].type === 'backed') {
+                                              startTime = new Date(recordsBeforeThis[i].time);
+                                              break;
+                                            }
+                                          }
+                                          return startTime ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
+                                        })()}</div>
+                                        <div>End At: {recordTime.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                        {duration && <div>Duration: {duration}</div>}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </>,
+            document.body
+          )}
+
           {/* 今天的活动卡片流 */}
           {todaysActivities.length > 0 && (
             <div style={{ marginBottom: 16 }}>
