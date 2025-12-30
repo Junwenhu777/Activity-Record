@@ -2945,7 +2945,7 @@ function App() {
 
                   const residentName = residentPopupState.residentName || (typeof resident === 'string' ? resident : resident?.name);
                   const residentStatus = typeof resident === 'string' ? 'active' : (resident?.status || 'active');
-                  const isActive = !isHistoryPopup && current.status === 'active' && residentStatus !== 'leaved';
+                  const isActive = !isHistoryPopup && residentStatus !== 'leaved';
                   const records = typeof resident === 'string' ? [] : (resident?.records || []);
                   const hasActiveExtra = typeof resident !== 'string' && resident?.extraActivity;
                   const isInputMode = extraActivityInputMode === residentName;
