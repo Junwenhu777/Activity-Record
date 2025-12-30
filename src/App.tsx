@@ -3247,17 +3247,24 @@ function App() {
                       {isActive && (
                         <>
                           {isInputMode ? (
-                            <div style={{
-                              width: '100%',
-                              marginBottom: 12,
-                              padding: '12px 16px',
-                              borderRadius: 12,
-                              background: '#D8EACE',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              boxSizing: 'border-box'
-                            }}>
+                            <form
+                              style={{
+                                width: '100%',
+                                marginBottom: 12,
+                                padding: '12px 16px',
+                                borderRadius: 12,
+                                background: '#D8EACE',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                boxSizing: 'border-box'
+                              }}
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                handleAddExtra();
+                                (document.activeElement as HTMLElement)?.blur();
+                              }}
+                            >
                               <input
                                 autoFocus
                                 placeholder="Enter extra activity description"
@@ -3271,16 +3278,9 @@ function App() {
                                 }}
                                 value={extraActivityInputValue}
                                 onChange={(e) => setExtraActivityInputValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === 'Done') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleAddExtra();
-                                    (e.target as HTMLInputElement).blur();
-                                  }
-                                }}
                               />
                               <button
+                                type="button"
                                 style={{
                                   width: 24,
                                   height: 24,
@@ -3303,9 +3303,9 @@ function App() {
                                 </svg>
                               </button>
 
-                              {/* Confirm Button */}
                               {extraActivityInputValue.trim().length > 0 && (
                                 <button
+                                  type="submit"
                                   style={{
                                     width: 24,
                                     height: 24,
@@ -3319,7 +3319,6 @@ function App() {
                                   }}
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    e.stopPropagation();
                                     handleAddExtra();
                                   }}
                                   onTouchEnd={(e) => {
@@ -3333,7 +3332,7 @@ function App() {
                                   </svg>
                                 </button>
                               )}
-                            </div>
+                            </form>
                           ) : hasActiveExtra ? (
                             <div style={{
                               width: '100%',
