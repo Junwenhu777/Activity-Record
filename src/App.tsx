@@ -3064,22 +3064,30 @@ function App() {
                                           }}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            if (isSelected) return; // Prevent removal
-
-                                            // Add Logic
                                             const newHistory = [...history];
                                             const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
                                             if (histIdx !== -1) {
                                               const currentResidents = newHistory[histIdx].residents || [];
-                                              newHistory[histIdx].residents = [resident, ...currentResidents];
+                                              if (isSelected) {
+                                                // Remove
+                                                newHistory[histIdx].residents = currentResidents.filter((r: any) => {
+                                                  const name = typeof r === 'string' ? r : r.name;
+                                                  return name !== resident;
+                                                });
+                                              } else {
+                                                // Add
+                                                newHistory[histIdx].residents = [resident, ...currentResidents];
+                                              }
                                               setHistory(newHistory);
                                             }
 
-                                            // Move to top logic
-                                            setResidents(prev => {
-                                              const filtered = prev.filter(r => r !== resident);
-                                              return [resident, ...filtered];
-                                            });
+                                            // Move to top logic (on add)
+                                            if (!isSelected) {
+                                              setResidents(prev => {
+                                                const filtered = prev.filter(r => r !== resident);
+                                                return [resident, ...filtered];
+                                              });
+                                            }
 
                                             // Search Exit Logic
                                             if (cardIsSearching) {
