@@ -3622,6 +3622,8 @@ function App() {
                                     }}
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      // Only show popup when there's an active current activity
+                                      if (!current) return;
                                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                       setResidentPopupState({
                                         isOpen: true,
@@ -4130,6 +4132,8 @@ function App() {
                                       }}
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        // Only show popup when there's an active current activity
+                                        if (!current) return;
                                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                         setResidentPopupState({
                                           isOpen: true,
