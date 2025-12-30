@@ -3544,21 +3544,19 @@ function App() {
                                           }}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            const newHistory = [...history];
-                                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                            if (histIdx !== -1) {
-                                              const currentResidents = newHistory[histIdx].residents || [];
-                                              if (isSelected) {
-                                                // Remove
-                                                newHistory[histIdx].residents = currentResidents.filter((r: any) => {
-                                                  const name = typeof r === 'string' ? r : r.name;
-                                                  return name !== resident;
-                                                });
-                                              } else {
+                                            if (isSelected) {
+                                              // Show toast hint instead of removing
+                                              setToastMessage('Click name on the card to do more.');
+                                              setTimeout(() => setToastMessage(null), 3000);
+                                            } else {
+                                              const newHistory = [...history];
+                                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                              if (histIdx !== -1) {
+                                                const currentResidents = newHistory[histIdx].residents || [];
                                                 // Add
                                                 newHistory[histIdx].residents = [resident, ...currentResidents];
+                                                setHistory(newHistory);
                                               }
-                                              setHistory(newHistory);
                                             }
 
                                             // Search Exit Logic
@@ -4055,19 +4053,18 @@ function App() {
                                             }}
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              const newHistory = [...history];
-                                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                              if (histIdx !== -1) {
-                                                const currentResidents = newHistory[histIdx].residents || [];
-                                                if (isSelected) {
-                                                  newHistory[histIdx].residents = currentResidents.filter((r: any) => {
-                                                    const name = typeof r === 'string' ? r : r.name;
-                                                    return name !== resident;
-                                                  });
-                                                } else {
+                                              if (isSelected) {
+                                                // Show toast hint instead of removing
+                                                setToastMessage('Click name on the card to do more.');
+                                                setTimeout(() => setToastMessage(null), 3000);
+                                              } else {
+                                                const newHistory = [...history];
+                                                const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                                if (histIdx !== -1) {
+                                                  const currentResidents = newHistory[histIdx].residents || [];
                                                   newHistory[histIdx].residents = [resident, ...currentResidents];
+                                                  setHistory(newHistory);
                                                 }
-                                                setHistory(newHistory);
                                               }
 
                                               // Search Exit Logic
