@@ -3087,7 +3087,7 @@ function App() {
                             <form
                               style={{
                                 width: '100%',
-                                marginBottom: 12,
+                                marginBottom: 0,
                                 padding: '12px 16px',
                                 borderRadius: 12,
                                 background: '#D8EACE',
@@ -3305,7 +3305,7 @@ function App() {
                       {/* Records */}
                       {records.length > 0 && (
                         <>
-                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Records</div>
+                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 10, marginBottom: 10 }}>Records</div>
                           {records.slice().reverse().map((record: any, idx: number) => {
                             const originalIdx = records.length - 1 - idx;
                             const recordTime = record.time ? new Date(record.time) : null;
