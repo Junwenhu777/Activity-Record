@@ -2569,6 +2569,11 @@ function App() {
                                         const newResidentEntry = { name: resident, addedAt: new Date() };
                                         setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
                                       }
+                                      // Search Exit Logic
+                                      if (cardIsSearching) {
+                                        setCardIsSearching(false);
+                                        setCardSearchQuery('');
+                                      }
                                     }}
                                   >
                                     <span style={{
@@ -3075,6 +3080,12 @@ function App() {
                                               const filtered = prev.filter(r => r !== resident);
                                               return [resident, ...filtered];
                                             });
+
+                                            // Search Exit Logic
+                                            if (cardIsSearching) {
+                                              setCardIsSearching(false);
+                                              setCardSearchQuery('');
+                                            }
                                           }}
                                         >
                                           <span style={{
@@ -3564,6 +3575,12 @@ function App() {
                                                 }
                                                 setHistory(newHistory);
                                               }
+
+                                              // Search Exit Logic
+                                              if (cardIsSearching) {
+                                                setCardIsSearching(false);
+                                                setCardSearchQuery('');
+                                              }
                                             }}
                                           >
                                             <span style={{
@@ -3984,81 +4001,90 @@ function App() {
                     }}>
                       {residents.filter(r => !isResidentSearching || r.toLowerCase().includes(residentSearchQuery.toLowerCase())).map(resident => (
                         editingResident === resident ? (
-                          <input
-                            key={resident}
-                            style={{
-                              height: '44px',
-                              padding: '0 16px',
-                              border: '1px solid #00313c',
-                              borderRadius: 12,
-                              fontSize: 16, // 防止iOS缩放
-                              fontWeight: 500,
-                              outline: 'none',
-                              boxSizing: 'border-box',
-                              background: '#f5f9fa',
-                              color: '#222', // 确保深色文字
-                              // 自动宽度，根据内容长度，最小120px
-                              width: Math.max(120, editingResidentName.length * 10 + 32) + 'px',
-                              maxWidth: '200px'
-                            }}
-
-                            enterKeyHint="done"
-                            autoComplete="off"
-                            value={editingResidentName}
-                            autoFocus
-                            onClick={e => e.stopPropagation()}
-                            onFocus={e => e.stopPropagation()}
-                            onChange={e => setEditingResidentName(e.target.value)}
-                            onBlur={(e) => {
-                              e.stopPropagation(); // 阻止冒泡防止关闭popup
-                              const newName = editingResidentName.trim();
-
-                              if (newName === '') {
-                                // 空值恢复原名
-                                setEditingResident(null);
-                              } else if (newName !== resident) {
-                                // 查重逻辑：如果新名字已存在，先删除旧的那个，再把当前这个改名
-                                // 这样就保留了“最新的这个”（即当前编辑的这个）
-                                setResidents(prev => {
-                                  // 1. 过滤掉所有等于 newName 的项 (删除旧的同名tag)
-                                  const filtered = prev.filter(r => r !== newName);
-                                  // 2. 把当前的 resident 改为 newName
-                                  return filtered.map(r => r === resident ? newName : r);
-                                });
-
-                                setSelectedResidents(prev => {
-                                  // 选中状态也需要同步处理
-                                  // 如果改名后的 tag 原本被选中，或者旧 tag 被选中，都需要处理
-                                  // 这里简单点：如果 resident 被选中，则新名字也被选中
-                                  const wasSelected = prev.includes(resident);
-                                  // 如果新名字本身也被选中（作为另一个tag），也应该保持选中
-                                  const newNameWasSelected = prev.includes(newName);
-
-                                  let newSelected = prev.filter(r => r !== resident && r !== newName);
-                                  if (wasSelected || newNameWasSelected) {
-                                    newSelected.push(newName);
-                                  }
-                                  return newSelected;
-                                });
-
-                                setEditingResident(null);
-                              } else {
-                                setEditingResident(null);
-                              }
-                            }}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
+                          <div key={resident} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <input
+                              style={{
+                                height: '44px',
+                                padding: '0 16px',
+                                border: '1px solid #00313c',
+                                borderRadius: 12,
+                                fontSize: 16,
+                                fontWeight: 500,
+                                outline: 'none',
+                                boxSizing: 'border-box',
+                                background: '#f5f9fa',
+                                color: '#222',
+                                width: Math.max(100, editingResidentName.length * 10 + 32) + 'px',
+                                maxWidth: '160px',
+                                flex: '0 0 auto'
+                              }}
+                              enterKeyHint="done"
+                              autoComplete="off"
+                              value={editingResidentName}
+                              autoFocus
+                              onClick={e => e.stopPropagation()}
+                              onFocus={e => e.stopPropagation()}
+                              onChange={e => setEditingResidentName(e.target.value)}
+                              onBlur={(e) => {
                                 e.stopPropagation();
-                                e.currentTarget.blur(); // 触发 onBlur
-                              } else if (e.key === 'Escape') {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setEditingResidentName(resident);
+                                const newName = editingResidentName.trim();
+                                if (newName === '') {
+                                  setEditingResident(null);
+                                } else if (newName !== resident) {
+                                  setResidents(prev => {
+                                    const filtered = prev.filter(r => r !== newName);
+                                    return filtered.map(r => r === resident ? newName : r);
+                                  });
+                                  setSelectedResidents(prev => {
+                                    const wasSelected = prev.includes(resident);
+                                    const newNameWasSelected = prev.includes(newName);
+                                    let newSelected = prev.filter(r => r !== resident && r !== newName);
+                                    if (wasSelected || newNameWasSelected) {
+                                      newSelected.push(newName);
+                                    }
+                                    return newSelected;
+                                  });
+                                  setEditingResident(null);
+                                } else {
+                                  setEditingResident(null);
+                                }
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  e.currentTarget.blur();
+                                } else if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setEditingResidentName(resident);
+                                  setEditingResident(null);
+                                }
+                              }}
+                            />
+                            <button
+                              style={{
+                                width: 28,
+                                height: 28,
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                padding: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                              onMouseDown={e => e.preventDefault()}
+                              onClick={() => {
+                                setResidents(prev => prev.filter(r => r !== resident));
+                                setSelectedResidents(prev => prev.filter(r => r !== resident));
                                 setEditingResident(null);
-                              }
-                            }}
-                          />
+                              }}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cc3333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                          </div>
                         ) : (
                           <button
                             key={resident}
@@ -4126,6 +4152,12 @@ function App() {
                                     ? prev.filter(r => r !== resident)
                                     : [...prev, resident]
                                 );
+
+                                // Search Exit Logic
+                                if (isResidentSearching) {
+                                  setIsResidentSearching(false);
+                                  setResidentSearchQuery('');
+                                }
                               }
                             }}
                             onMouseDown={() => {
@@ -4159,6 +4191,12 @@ function App() {
                                     ? prev.filter(r => r !== resident)
                                     : [...prev, resident]
                                 );
+
+                                // Search Exit Logic
+                                if (isResidentSearching) {
+                                  setIsResidentSearching(false);
+                                  setResidentSearchQuery('');
+                                }
                               }
                             }}
                           >
@@ -4248,46 +4286,30 @@ function App() {
                       {recentActivities.map(activity => (
                         <Grid.Item key={activity}>
                           {editingRecentActivity === activity ? (
-                            <input
-                              style={{
-                                width: '100%',
-                                height: '48px',
-                                padding: '0 16px',
-                                border: '1px solid #ddd',
-                                borderRadius: '12px',
-                                fontSize: 16,
-                                fontWeight: 500,
-                                outline: 'none',
-                                // enterKeyHint removed from style
-                                boxSizing: 'border-box',
-                                background: '#f8f8f8', // 统一浅色背景
-                                color: '#222' // 确保深色文字
-                              }}
-                              enterKeyHint="done"
-                              value={editingRecentName}
-                              autoFocus
-                              onChange={e => setEditingRecentName(e.target.value)}
-                              onBlur={() => {
-                                if (editingRecentName.trim() === '') {
-                                  setEditingRecentName(activity); // 恢复原标题
-                                  setEditingRecentActivity(null);
-                                } else {
-                                  // 更新recent activities
-                                  setRecentActivities(prev =>
-                                    prev.map(item =>
-                                      item === activity ? editingRecentName : item
-                                    )
-                                  );
-                                  setEditingRecentActivity(null);
-                                }
-                              }}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <input
+                                style={{
+                                  flex: 1,
+                                  height: '48px',
+                                  padding: '0 16px',
+                                  border: '1px solid #ddd',
+                                  borderRadius: '12px',
+                                  fontSize: 16,
+                                  fontWeight: 500,
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                  background: '#f8f8f8',
+                                  color: '#222'
+                                }}
+                                enterKeyHint="done"
+                                value={editingRecentName}
+                                autoFocus
+                                onChange={e => setEditingRecentName(e.target.value)}
+                                onBlur={() => {
                                   if (editingRecentName.trim() === '') {
-                                    setEditingRecentName(activity); // 恢复原标题
+                                    setEditingRecentName(activity);
                                     setEditingRecentActivity(null);
                                   } else {
-                                    // 更新recent activities
                                     setRecentActivities(prev =>
                                       prev.map(item =>
                                         item === activity ? editingRecentName : item
@@ -4295,12 +4317,48 @@ function App() {
                                     );
                                     setEditingRecentActivity(null);
                                   }
-                                } else if (e.key === 'Escape') {
-                                  setEditingRecentName(activity); // 恢复原标题
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    if (editingRecentName.trim() === '') {
+                                      setEditingRecentName(activity);
+                                      setEditingRecentActivity(null);
+                                    } else {
+                                      setRecentActivities(prev =>
+                                        prev.map(item =>
+                                          item === activity ? editingRecentName : item
+                                        )
+                                      );
+                                      setEditingRecentActivity(null);
+                                    }
+                                  } else if (e.key === 'Escape') {
+                                    setEditingRecentName(activity);
+                                    setEditingRecentActivity(null);
+                                  }
+                                }}
+                              />
+                              <button
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  border: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}
+                                onMouseDown={e => e.preventDefault()}
+                                onClick={() => {
+                                  setRecentActivities(prev => prev.filter(item => item !== activity));
                                   setEditingRecentActivity(null);
-                                }
-                              }}
-                            />
+                                }}
+                              >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cc3333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                              </button>
+                            </div>
                           ) : (
                             <div
                               onTouchStart={e => {
