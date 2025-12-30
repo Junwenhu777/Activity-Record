@@ -2876,38 +2876,42 @@ function App() {
           {/* Resident Action Popup Portal */}
           {residentPopupState.isOpen && residentPopupState.residentName && residentPopupState.position && createPortal(
             <>
-              {/* Overlay */}
+              {/* Overlay - block all scroll/touch on background */}
               <div
                 style={{
                   position: 'fixed',
                   inset: 0,
                   zIndex: 999998,
                   background: 'transparent',
-                  touchAction: 'none'
+                  touchAction: 'none',
+                  overscrollBehavior: 'contain'
                 }}
                 onClick={() => setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' })}
+                onTouchMove={(e) => e.preventDefault()}
               />
 
               {/* Popup Content */}
               <div
                 style={{
                   position: 'fixed',
-                  top: residentPopupState.position.top,
-                  bottom: residentPopupState.position.bottom,
+                  top: Math.max(10, residentPopupState.position.top ?? 10),
+                  bottom: residentPopupState.position.bottom != null ? Math.max(10, residentPopupState.position.bottom) : undefined,
                   left: 48,
                   right: 48,
+                  maxHeight: `calc(100vh - 20px)`,
                   background: '#fff',
                   borderRadius: 16,
                   boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                   padding: '20px 24px',
-                  maxHeight: 400,
                   overflowY: 'auto',
+                  overscrollBehavior: 'contain',
                   zIndex: 999999,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 12
                 }}
                 onClick={e => e.stopPropagation()}
+                onTouchMove={e => e.stopPropagation()}
               >
                 {(() => {
                   // For Now Card, find resident in current.residents
@@ -3019,6 +3023,22 @@ function App() {
                                         height: '100%'
                                       }}
                                       onClick={() => {
+                                        // Toggle deleted state
+                                        const newResidents = current.residents.map((r: any) => {
+                                          const name = typeof r === 'string' ? r : r.name;
+                                          if (name === residentName) {
+                                            const newRecords = [...(r.records || [])];
+                                            newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
+                                            return { ...r, records: newRecords };
+                                          }
+                                          return r;
+                                        });
+                                        setCurrent({ ...current, residents: newResidents });
+                                        setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+                                      }}
+                                      onTouchEnd={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
                                         // Toggle deleted state
                                         const newResidents = current.residents.map((r: any) => {
                                           const name = typeof r === 'string' ? r : r.name;
@@ -3183,7 +3203,8 @@ function App() {
                                   background: '#D8EACE',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: 8
+                                  gap: 8,
+                                  boxSizing: 'border-box'
                                 }}>
                                   <input
                                     autoFocus
@@ -3277,6 +3298,32 @@ function App() {
                             if (hasActiveExtra) {
                               const extraStart = new Date(resident.extraActivity.startAt);
                               const extraDuration = Math.floor((now.getTime() - extraStart.getTime()) / 1000);
+
+                              const handleEndExtra = () => {
+                                const endTime = new Date();
+                                const newResidents = current.residents.map((r: any) => {
+                                  const name = typeof r === 'string' ? r : r.name;
+                                  if (name === residentName && r.extraActivity) {
+                                    const records = r.records || [];
+                                    return {
+                                      ...r,
+                                      extraActivity: null,
+                                      records: [
+                                        ...records,
+                                        {
+                                          type: 'extra',
+                                          name: r.extraActivity.name,
+                                          startAt: r.extraActivity.startAt,
+                                          endAt: endTime
+                                        }
+                                      ]
+                                    };
+                                  }
+                                  return r;
+                                });
+                                setCurrent({ ...current, residents: newResidents });
+                              };
+
                               return (
                                 <div style={{
                                   width: '100%',
@@ -3311,32 +3358,13 @@ function App() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        flexShrink: 0
+                                        flexShrink: 0,
+                                        WebkitTapHighlightColor: 'transparent'
                                       }}
-                                      onClick={() => {
-                                        // End extra activity and add record
-                                        const endTime = new Date();
-                                        const newResidents = current.residents.map((r: any) => {
-                                          const name = typeof r === 'string' ? r : r.name;
-                                          if (name === residentName && r.extraActivity) {
-                                            const records = r.records || [];
-                                            return {
-                                              ...r,
-                                              extraActivity: null,
-                                              records: [
-                                                ...records,
-                                                {
-                                                  type: 'extra',
-                                                  name: r.extraActivity.name,
-                                                  startAt: r.extraActivity.startAt,
-                                                  endAt: endTime
-                                                }
-                                              ]
-                                            };
-                                          }
-                                          return r;
-                                        });
-                                        setCurrent({ ...current, residents: newResidents });
+                                      onClick={handleEndExtra}
+                                      onTouchEnd={(e) => {
+                                        e.preventDefault();
+                                        handleEndExtra();
                                       }}
                                     >
                                       <svg width="12" height="12" viewBox="0 0 24 24" fill="#C62828">
