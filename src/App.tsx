@@ -310,7 +310,7 @@ function App() {
   const [residentPopupState, setResidentPopupState] = useState<{
     isOpen: boolean;
     residentName: string | null;
-    position: { top: number; left: number } | null;
+    position: { top?: number; bottom?: number; left: number } | null;
     popupType: 'now' | 'history';
     residentData?: any; // The full resident object for history cards
   }>({ isOpen: false, residentName: null, position: null, popupType: 'now' });
@@ -2728,12 +2728,24 @@ function App() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                setResidentPopupState({
-                                  isOpen: true,
-                                  residentName,
-                                  position: { top: rect.bottom + 8, left: Math.max(48, rect.left - 100) },
-                                  popupType: 'now'
-                                });
+                                const MENU_HEIGHT = 400;
+                                const viewportHeight = window.innerHeight;
+                                // Smart positioning: place above if would overflow bottom
+                                if (rect.bottom + MENU_HEIGHT > viewportHeight) {
+                                  setResidentPopupState({
+                                    isOpen: true,
+                                    residentName,
+                                    position: { bottom: viewportHeight - rect.top + 8, left: 48 },
+                                    popupType: 'now'
+                                  });
+                                } else {
+                                  setResidentPopupState({
+                                    isOpen: true,
+                                    residentName,
+                                    position: { top: rect.bottom + 8, left: 48 },
+                                    popupType: 'now'
+                                  });
+                                }
                               }}
                             >
                               {residentName}
@@ -2784,9 +2796,7 @@ function App() {
           )}
 
           {/* Resident Action Popup Portal */}
-          {residentPopupState.isOpen && residentPopupState.residentName && residentPopupState.position && (
-            residentPopupState.popupType === 'now' ? current : residentPopupState.residentData
-          ) && createPortal(
+          {residentPopupState.isOpen && residentPopupState.residentName && residentPopupState.position && createPortal(
             <>
               {/* Overlay */}
               <div
@@ -2805,6 +2815,7 @@ function App() {
                 style={{
                   position: 'fixed',
                   top: residentPopupState.position.top,
+                  bottom: residentPopupState.position.bottom,
                   left: 48,
                   right: 48,
                   background: '#fff',
@@ -3624,16 +3635,27 @@ function App() {
                                     }}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      // Only show popup when there's an active current activity
-                                      if (!current) return;
                                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                      setResidentPopupState({
-                                        isOpen: true,
-                                        residentName,
-                                        position: { top: rect.bottom + 8, left: Math.max(48, rect.left - 100) },
-                                        popupType: 'history',
-                                        residentData: resident
-                                      });
+                                      const MENU_HEIGHT = 300;
+                                      const viewportHeight = window.innerHeight;
+                                      // Smart positioning: place above if would overflow bottom
+                                      if (rect.bottom + MENU_HEIGHT > viewportHeight) {
+                                        setResidentPopupState({
+                                          isOpen: true,
+                                          residentName,
+                                          position: { bottom: viewportHeight - rect.top + 8, left: 48 },
+                                          popupType: 'history',
+                                          residentData: resident
+                                        });
+                                      } else {
+                                        setResidentPopupState({
+                                          isOpen: true,
+                                          residentName,
+                                          position: { top: rect.bottom + 8, left: 48 },
+                                          popupType: 'history',
+                                          residentData: resident
+                                        });
+                                      }
                                     }}
                                   >
                                     {residentName}
@@ -4134,16 +4156,27 @@ function App() {
                                       }}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        // Only show popup when there's an active current activity
-                                        if (!current) return;
                                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                        setResidentPopupState({
-                                          isOpen: true,
-                                          residentName,
-                                          position: { top: rect.bottom + 8, left: Math.max(48, rect.left - 100) },
-                                          popupType: 'history',
-                                          residentData: resident
-                                        });
+                                        const MENU_HEIGHT = 300;
+                                        const viewportHeight = window.innerHeight;
+                                        // Smart positioning: place above if would overflow bottom
+                                        if (rect.bottom + MENU_HEIGHT > viewportHeight) {
+                                          setResidentPopupState({
+                                            isOpen: true,
+                                            residentName,
+                                            position: { bottom: viewportHeight - rect.top + 8, left: 48 },
+                                            popupType: 'history',
+                                            residentData: resident
+                                          });
+                                        } else {
+                                          setResidentPopupState({
+                                            isOpen: true,
+                                            residentName,
+                                            position: { top: rect.bottom + 8, left: 48 },
+                                            popupType: 'history',
+                                            residentData: resident
+                                          });
+                                        }
                                       }}
                                     >
                                       {residentName}
