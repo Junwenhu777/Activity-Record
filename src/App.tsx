@@ -2965,8 +2965,7 @@ function App() {
                     : (residentPopupState.position.bottom != null
                       ? `calc(100vh - ${Math.max(10, residentPopupState.position.bottom)}px - 10px)`
                       : `calc(100vh - 20px)`),
-                  // Force overflow to enable bounce/overscroll-behavior
-                  minHeight: 'calc(100% + 1px)',
+                  // Force overflow to enable bounce/overscroll-behavior: REVERTED.
                   background: '#fff',
                   borderRadius: 16,
                   boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
@@ -2981,7 +2980,6 @@ function App() {
                   zIndex: 999999
                 }}
                 onClick={e => e.stopPropagation()}
-                onTouchStart={e => e.stopPropagation()}
                 onWheel={e => e.stopPropagation()}
               >
                 {(() => {
