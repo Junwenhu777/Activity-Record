@@ -3011,16 +3011,18 @@ function App() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                         <div style={{ fontSize: 18, fontWeight: 700, color: '#000' }}>{residentName}</div>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <div style={{
-                            padding: '4px 10px',
-                            background: isActive ? '#CEE6EA' : '#E1E1E1',
-                            color: isActive ? '#02303B' : '#666666',
-                            borderRadius: 6,
-                            fontSize: 14,
-                            fontWeight: 600
-                          }}>
-                            {isActive ? 'Active' : (isHistoryPopup ? 'Record' : 'Leaved')}
-                          </div>
+                          {!isHistoryPopup && (
+                            <div style={{
+                              padding: '4px 10px',
+                              background: isActive ? '#CEE6EA' : '#E1E1E1',
+                              color: isActive ? '#02303B' : '#666666',
+                              borderRadius: 6,
+                              fontSize: 14,
+                              fontWeight: 600
+                            }}>
+                              {isActive ? 'Active' : 'Leaved'}
+                            </div>
+                          )}
                           {/* Close/Trash Button */}
                           <button
                             style={{
