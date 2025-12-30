@@ -2882,288 +2882,153 @@ function App() {
                   position: 'fixed',
                   inset: 0,
                   zIndex: 999998,
-                  background: 'transparent',
-                  touchAction: 'none',
-                  overscrollBehavior: 'contain'
+                  background: 'transparent'
                 }}
                 onClick={() => setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' })}
+                onTouchStart={(e) => e.preventDefault()}
                 onTouchMove={(e) => e.preventDefault()}
+                onWheel={(e) => e.preventDefault()}
               />
 
               {/* Popup Content */}
               <div
                 style={{
                   position: 'fixed',
-                  top: Math.max(10, residentPopupState.position.top ?? 10),
-                  bottom: residentPopupState.position.bottom != null ? Math.max(10, residentPopupState.position.bottom) : undefined,
+                  top: residentPopupState.position.top != null
+                    ? Math.max(10, Math.min(residentPopupState.position.top, window.innerHeight - 200))
+                    : undefined,
+                  bottom: residentPopupState.position.bottom != null
+                    ? Math.max(10, residentPopupState.position.bottom)
+                    : undefined,
                   left: 48,
                   right: 48,
-                  maxHeight: `calc(100vh - 20px)`,
+                  // Dynamic max height based on available space
+                  maxHeight: residentPopupState.position.top != null
+                    ? `calc(100vh - ${Math.max(10, residentPopupState.position.top)}px - 10px)`
+                    : (residentPopupState.position.bottom != null
+                      ? `calc(100vh - ${Math.max(10, residentPopupState.position.bottom)}px - 10px)`
+                      : `calc(100vh - 20px)`),
                   background: '#fff',
                   borderRadius: 16,
                   boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                   padding: '20px 24px',
                   overflowY: 'auto',
+                  overflowX: 'hidden',
                   overscrollBehavior: 'contain',
                   zIndex: 999999,
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 12
+                  gap: 12,
+                  boxSizing: 'border-box'
                 }}
                 onClick={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
                 onTouchMove={e => e.stopPropagation()}
+                onWheel={e => e.stopPropagation()}
               >
                 {(() => {
                   // For Now Card, find resident in current.residents
                   // For History Card, use residentData directly
                   const isHistoryPopup = residentPopupState.popupType === 'history';
-                  const resident = isHistoryPopup
-                    ? residentPopupState.residentData
-                    : current.residents?.find((r: any) => {
+                  let resident: any;
+
+                  if (isHistoryPopup) {
+                    resident = residentPopupState.residentData;
+                  } else {
+                    resident = current.residents?.find((r: any) => {
                       const name = typeof r === 'string' ? r : r.name;
                       return name === residentPopupState.residentName;
                     });
-                  const residentName = typeof resident === 'string' ? resident : resident?.name;
-                  const residentStatus = typeof resident === 'string' ? 'active' : (resident?.status || 'active');
-                  const isActive = residentStatus === 'active';
-                  const records = typeof resident === 'string' ? [] : (resident?.records || []);
-
-                  // History cards show only records section
-                  if (isHistoryPopup) {
-                    return (
-                      <>
-                        {/* Header: Name only */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                          <div style={{ fontSize: 18, fontWeight: 600, color: '#222' }}>{residentName}</div>
-                        </div>
-
-                        {/* Records Section */}
-                        {records.length > 0 ? (
-                          <>
-                            <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
-                            {records.slice().reverse().map((record: any, idx: number) => {
-                              const originalIdx = records.length - 1 - idx;
-                              const recordTime = record.time ? new Date(record.time) : null;
-                              const isLeaved = record.type === 'leaved';
-                              const isBacked = record.type === 'backed';
-                              const isExtra = record.type === 'extra';
-                              const isDeleted = record.deleted === true;
-
-                              // Swipe state for this record
-                              const isSwipeActive = recordSwipeState.residentName === residentName && recordSwipeState.recordIdx === originalIdx;
-                              const currentOffset = isSwipeActive ? recordSwipeState.offset : 0;
-
-                              // Calculate duration for leaved records
-                              let duration = '';
-                              if (isLeaved && recordTime) {
-                                const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
-                                let startTime = addedAt ? new Date(addedAt) : null;
-                                const recordsBeforeThis = records.slice(0, originalIdx);
-                                for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
-                                  if (recordsBeforeThis[i].type === 'backed') {
-                                    startTime = new Date(recordsBeforeThis[i].time);
-                                    break;
-                                  }
-                                }
-                                if (startTime) {
-                                  const durationMs = recordTime.getTime() - startTime.getTime();
-                                  duration = formatDuration(durationMs);
-                                }
-                              }
-
-                              // Extra duration
-                              if (isExtra && record.startAt && record.endAt) {
-                                const startAt = new Date(record.startAt);
-                                const endAt = new Date(record.endAt);
-                                const durationMs = endAt.getTime() - startAt.getTime();
-                                duration = formatDuration(durationMs);
-                              }
-
-                              // Tag colors
-                              const tagBg = isExtra ? '#D8EACE' : (isBacked ? '#CEE6EA' : '#E1E1E1');
-                              const tagColor = isExtra ? '#006D49' : (isBacked ? '#02303B' : '#333333');
-                              const tagText = isExtra ? `Extra: ${record.name}` : (isBacked ? 'Backed' : 'Leaved');
-
-                              return (
-                                <div
-                                  key={idx}
-                                  style={{
-                                    position: 'relative',
-                                    marginBottom: 4,
-                                    borderRadius: 8
-                                  }}
-                                >
-                                  {/* Delete/Restore button behind */}
-                                  <div style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    width: 80,
-                                    background: isDeleted ? '#4CAF50' : '#E53935',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#fff',
-                                    fontWeight: 600,
-                                    fontSize: 14,
-                                    borderRadius: 8,
-                                    opacity: Math.min(1, Math.abs(currentOffset) / 40),
-                                    visibility: currentOffset === 0 ? 'hidden' : 'visible'
-                                  }}>
-                                    <button
-                                      style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#fff',
-                                        fontWeight: 600,
-                                        fontSize: 14,
-                                        cursor: 'pointer',
-                                        width: '100%',
-                                        height: '100%'
-                                      }}
-                                      onClick={() => {
-                                        // Toggle deleted state
-                                        const newResidents = current.residents.map((r: any) => {
-                                          const name = typeof r === 'string' ? r : r.name;
-                                          if (name === residentName) {
-                                            const newRecords = [...(r.records || [])];
-                                            newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
-                                            return { ...r, records: newRecords };
-                                          }
-                                          return r;
-                                        });
-                                        setCurrent({ ...current, residents: newResidents });
-                                        setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
-                                      }}
-                                      onTouchEnd={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        // Toggle deleted state
-                                        const newResidents = current.residents.map((r: any) => {
-                                          const name = typeof r === 'string' ? r : r.name;
-                                          if (name === residentName) {
-                                            const newRecords = [...(r.records || [])];
-                                            newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
-                                            return { ...r, records: newRecords };
-                                          }
-                                          return r;
-                                        });
-                                        setCurrent({ ...current, residents: newResidents });
-                                        setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
-                                      }}
-                                    >
-                                      {isDeleted ? 'Restore' : 'Delete'}
-                                    </button>
-                                  </div>
-
-                                  {/* Record content */}
-                                  <div
-                                    style={{
-                                      transform: `translateX(${currentOffset}px)`,
-                                      transition: recordSwipeState.isDragging ? 'none' : 'transform 0.2s ease',
-                                      background: '#fff',
-                                      padding: '12px 0',
-                                      borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none',
-                                      textDecoration: isDeleted ? 'line-through' : 'none',
-                                      opacity: isDeleted ? 0.5 : 1
-                                    }}
-                                    onTouchStart={(e) => {
-                                      const touch = e.touches[0];
-                                      setRecordSwipeState({ residentName, recordIdx: originalIdx, offset: 0, startX: touch.clientX, isDragging: true });
-                                    }}
-                                    onTouchMove={(e) => {
-                                      if (!recordSwipeState.isDragging || recordSwipeState.recordIdx !== originalIdx) return;
-                                      const touch = e.touches[0];
-                                      const diff = touch.clientX - recordSwipeState.startX;
-                                      // Only allow swipe left
-                                      setRecordSwipeState(prev => ({ ...prev, offset: Math.min(0, Math.max(-80, diff)) }));
-                                    }}
-                                    onTouchEnd={() => {
-                                      if (recordSwipeState.recordIdx !== originalIdx) return;
-                                      // Snap to open or closed
-                                      if (recordSwipeState.offset < -40) {
-                                        setRecordSwipeState(prev => ({ ...prev, offset: -80, isDragging: false }));
-                                      } else {
-                                        setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
-                                      }
-                                    }}
-                                  >
-                                    <span style={{
-                                      display: 'inline-block',
-                                      background: tagBg,
-                                      color: tagColor,
-                                      padding: '4px 10px',
-                                      borderRadius: 6,
-                                      fontSize: 12,
-                                      fontWeight: 500,
-                                      marginBottom: 8
-                                    }}>
-                                      {tagText}
-                                    </span>
-                                    <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
-                                      {isExtra ? (
-                                        <>
-                                          <div>Start At: {new Date(record.startAt).toLocaleTimeString('en-US', { hour12: false })}</div>
-                                          <div>End At: {new Date(record.endAt).toLocaleTimeString('en-US', { hour12: false })}</div>
-                                          {duration && <div>Duration: {duration}</div>}
-                                        </>
-                                      ) : isBacked ? (
-                                        <div>Start At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
-                                      ) : (
-                                        <>
-                                          <div>Start At: {(() => {
-                                            const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
-                                            let startTime = addedAt ? new Date(addedAt) : null;
-                                            const recordsBeforeThis = records.slice(0, originalIdx);
-                                            for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
-                                              if (recordsBeforeThis[i].type === 'backed') {
-                                                startTime = new Date(recordsBeforeThis[i].time);
-                                                break;
-                                              }
-                                            }
-                                            return startTime ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
-                                          })()}</div>
-                                          <div>End At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
-                                          {duration && <div>Duration: {duration}</div>}
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </>
-                        ) : (
-                          <div style={{ fontSize: 14, color: '#999', textAlign: 'center', padding: '20px 0' }}>No records</div>
-                        )}
-                      </>
-                    );
                   }
 
-                  // Now Card shows full content
+                  if (!resident && !residentPopupState.residentName) return null;
+
+                  const residentName = residentPopupState.residentName || (typeof resident === 'string' ? resident : resident?.name);
+                  const residentStatus = typeof resident === 'string' ? 'active' : (resident?.status || 'active');
+                  const isActive = !isHistoryPopup && current.status === 'active' && residentStatus !== 'leaved';
+                  const records = typeof resident === 'string' ? [] : (resident?.records || []);
+                  const hasActiveExtra = typeof resident !== 'string' && resident?.extraActivity;
+                  const isInputMode = extraActivityInputMode === residentName;
+
+                  const handleEndExtra = () => {
+                    const endTime = new Date();
+                    const newResidents = current.residents.map((r: any) => {
+                      const name = typeof r === 'string' ? r : r.name;
+                      if (name === residentName && r.extraActivity) {
+                        const records = r.records || [];
+                        return {
+                          ...r,
+                          extraActivity: null,
+                          records: [
+                            ...records,
+                            {
+                              type: 'extra',
+                              name: r.extraActivity.name,
+                              startAt: r.extraActivity.startAt,
+                              endAt: endTime
+                            }
+                          ]
+                        };
+                      }
+                      return r;
+                    });
+                    setCurrent({ ...current, residents: newResidents });
+                  };
+
+                  const handleLeaveMain = () => {
+                    const newResidents = current.residents.map((r: any) => {
+                      const name = typeof r === 'string' ? r : r.name;
+                      if (name === residentName) {
+                        const existingRecords = typeof r === 'string' ? [] : (r.records || []);
+                        const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
+                        let newRecords = [...existingRecords];
+                        if (r.extraActivity) {
+                          newRecords.push({
+                            type: 'extra',
+                            name: r.extraActivity.name,
+                            startAt: r.extraActivity.startAt,
+                            endAt: new Date()
+                          });
+                        }
+                        newRecords.push({ type: 'leaved', time: new Date() });
+                        return {
+                          name,
+                          addedAt,
+                          status: 'leaved',
+                          extraActivity: null,
+                          records: newRecords
+                        };
+                      }
+                      return r;
+                    });
+                    setCurrent({ ...current, residents: newResidents });
+                    setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' });
+                  };
+
                   return (
                     <>
-                      {/* Header: Name + Status + Delete */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ fontSize: 18, fontWeight: 600, color: '#222' }}>{residentName}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{
+                      {/* Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#000' }}>{residentName}</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <div style={{
+                            padding: '4px 10px',
                             background: isActive ? '#CEE6EA' : '#E1E1E1',
-                            color: isActive ? '#02303B' : '#333333',
-                            padding: '4px 12px',
+                            color: isActive ? '#02303B' : '#666666',
                             borderRadius: 6,
-                            fontSize: 12,
-                            fontWeight: 500
+                            fontSize: 14,
+                            fontWeight: 600
                           }}>
-                            {isActive ? 'Active' : 'Leaved'}
-                          </span>
+                            {isActive ? 'Active' : (isHistoryPopup ? 'Record' : 'Leaved')}
+                          </div>
+                          {/* Close/Trash Button */}
                           <button
                             style={{
-                              width: 32,
-                              height: 32,
+                              width: 28,
+                              height: 28,
                               border: 'none',
-                              background: 'transparent',
+                              background: '#FFE0E0',
+                              borderRadius: 6,
                               cursor: 'pointer',
                               padding: 0,
                               display: 'flex',
@@ -3171,7 +3036,6 @@ function App() {
                               justifyContent: 'center'
                             }}
                             onClick={() => {
-                              // Delete resident from current activity
                               const newResidents = current.residents.filter((r: any) => {
                                 const name = typeof r === 'string' ? r : r.name;
                                 return name !== residentName;
@@ -3185,227 +3049,360 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
-                      {isActive ? (
+                      {/* Records */}
+                      {records.length > 0 && (
                         <>
-                          {/* Add extra activity - Green */}
-                          {(() => {
-                            const hasActiveExtra = resident?.extraActivity != null;
-                            const isInputMode = extraActivityInputMode === residentName;
+                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
+                          {records.slice().reverse().map((record: any, idx: number) => {
+                            const originalIdx = records.length - 1 - idx;
+                            const recordTime = record.time ? new Date(record.time) : null;
+                            const isLeaved = record.type === 'leaved';
+                            const isBacked = record.type === 'backed';
+                            const isExtra = record.type === 'extra';
+                            const isDeleted = record.deleted === true;
 
-                            // Input mode
-                            if (isInputMode) {
-                              return (
+                            const isSwipeActive = recordSwipeState.residentName === residentName && recordSwipeState.recordIdx === originalIdx;
+                            const currentOffset = isSwipeActive ? recordSwipeState.offset : 0;
+
+                            let duration = '';
+                            if (isLeaved && recordTime && !isNaN(recordTime.getTime())) {
+                              const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                              let startTime = addedAt ? new Date(addedAt) : null;
+                              const recordsBeforeThis = records.slice(0, originalIdx);
+                              for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                if (recordsBeforeThis[i].type === 'backed') {
+                                  startTime = new Date(recordsBeforeThis[i].time);
+                                  break;
+                                }
+                              }
+                              if (startTime && !isNaN(startTime.getTime())) {
+                                const durationMs = recordTime.getTime() - startTime.getTime();
+                                duration = formatDuration(durationMs);
+                              }
+                            }
+
+                            if (isExtra && record.startAt && record.endAt) {
+                              const startAt = new Date(record.startAt);
+                              const endAt = new Date(record.endAt);
+                              if (!isNaN(startAt.getTime()) && !isNaN(endAt.getTime())) {
+                                const durationMs = endAt.getTime() - startAt.getTime();
+                                duration = formatDuration(durationMs);
+                              }
+                            }
+
+                            const tagBg = isExtra ? '#D8EACE' : (isBacked ? '#CEE6EA' : '#E1E1E1');
+                            const tagColor = isExtra ? '#006D49' : (isBacked ? '#02303B' : '#333333');
+                            const tagText = isExtra ? `Extra: ${record.name}` : (isBacked ? 'Backed' : 'Leaved');
+
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  position: 'relative',
+                                  marginBottom: 4,
+                                  borderRadius: 8
+                                }}
+                              >
                                 <div style={{
-                                  width: '100%',
-                                  padding: '12px 16px',
-                                  borderRadius: 12,
-                                  background: '#D8EACE',
+                                  position: 'absolute',
+                                  top: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  width: 80,
+                                  background: isDeleted ? '#4CAF50' : '#E53935',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: 8,
-                                  boxSizing: 'border-box'
+                                  justifyContent: 'center',
+                                  color: '#fff',
+                                  fontWeight: 600,
+                                  fontSize: 14,
+                                  borderRadius: 8,
+                                  opacity: Math.min(1, Math.abs(currentOffset) / 40),
+                                  visibility: currentOffset === 0 ? 'hidden' : 'visible'
                                 }}>
-                                  <input
-                                    autoFocus
-                                    placeholder="Enter extra activity description"
-                                    style={{
-                                      flex: 1,
-                                      border: 'none',
-                                      background: 'transparent',
-                                      outline: 'none',
-                                      fontSize: 14,
-                                      color: '#006D49'
-                                    }}
-                                    value={extraActivityInputValue}
-                                    onChange={(e) => setExtraActivityInputValue(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' || e.key === 'Done') {
-                                        if (extraActivityInputValue.trim()) {
-                                          // Start extra activity
-                                          const newResidents = current.residents.map((r: any) => {
-                                            const name = typeof r === 'string' ? r : r.name;
-                                            if (name === residentName) {
-                                              return {
-                                                ...r,
-                                                extraActivity: {
-                                                  name: extraActivityInputValue.trim(),
-                                                  startAt: new Date()
-                                                }
-                                              };
-                                            }
-                                            return r;
-                                          });
-                                          setCurrent({ ...current, residents: newResidents });
-                                          setExtraActivityInputMode(null);
-                                          setExtraActivityInputValue('');
-                                        } else {
-                                          // Cancel if empty
-                                          setExtraActivityInputMode(null);
-                                          setExtraActivityInputValue('');
-                                        }
-                                      }
-                                    }}
-                                    onBlur={() => {
-                                      if (extraActivityInputValue.trim()) {
-                                        // Start extra activity on blur with content
-                                        const newResidents = current.residents.map((r: any) => {
-                                          const name = typeof r === 'string' ? r : r.name;
-                                          if (name === residentName) {
-                                            return {
-                                              ...r,
-                                              extraActivity: {
-                                                name: extraActivityInputValue.trim(),
-                                                startAt: new Date()
-                                              }
-                                            };
-                                          }
-                                          return r;
-                                        });
-                                        setCurrent({ ...current, residents: newResidents });
-                                      }
-                                      setExtraActivityInputMode(null);
-                                      setExtraActivityInputValue('');
-                                    }}
-                                  />
                                   <button
                                     style={{
-                                      width: 24,
-                                      height: 24,
-                                      border: 'none',
                                       background: 'transparent',
+                                      border: 'none',
+                                      color: '#fff',
+                                      fontWeight: 600,
+                                      fontSize: 14,
                                       cursor: 'pointer',
-                                      padding: 0,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center'
+                                      width: '100%',
+                                      height: '100%'
                                     }}
-                                    onClick={() => {
-                                      setExtraActivityInputMode(null);
-                                      setExtraActivityInputValue('');
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const newResidents = current.residents.map((r: any) => {
+                                        const name = typeof r === 'string' ? r : r.name;
+                                        if (name === residentName) {
+                                          const newRecords = [...(r.records || [])];
+                                          newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
+                                          return { ...r, records: newRecords };
+                                        }
+                                        return r;
+                                      });
+                                      setCurrent({ ...current, residents: newResidents });
+                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+                                    }}
+                                    onTouchEnd={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      const newResidents = current.residents.map((r: any) => {
+                                        const name = typeof r === 'string' ? r : r.name;
+                                        if (name === residentName) {
+                                          const newRecords = [...(r.records || [])];
+                                          newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
+                                          return { ...r, records: newRecords };
+                                        }
+                                        return r;
+                                      });
+                                      setCurrent({ ...current, residents: newResidents });
+                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
                                     }}
                                   >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006D49" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg>
+                                    {isDeleted ? 'Restore' : 'Delete'}
                                   </button>
                                 </div>
-                              );
-                            }
 
-                            // Active extra activity card
-                            if (hasActiveExtra) {
-                              const extraStart = new Date(resident.extraActivity.startAt);
-                              const extraDuration = Math.floor((now.getTime() - extraStart.getTime()) / 1000);
-
-                              const handleEndExtra = () => {
-                                const endTime = new Date();
-                                const newResidents = current.residents.map((r: any) => {
-                                  const name = typeof r === 'string' ? r : r.name;
-                                  if (name === residentName && r.extraActivity) {
-                                    const records = r.records || [];
-                                    return {
-                                      ...r,
-                                      extraActivity: null,
-                                      records: [
-                                        ...records,
-                                        {
-                                          type: 'extra',
-                                          name: r.extraActivity.name,
-                                          startAt: r.extraActivity.startAt,
-                                          endAt: endTime
-                                        }
-                                      ]
-                                    };
-                                  }
-                                  return r;
-                                });
-                                setCurrent({ ...current, residents: newResidents });
-                              };
-
-                              return (
-                                <div style={{
-                                  width: '100%',
-                                  padding: '12px 16px',
-                                  borderRadius: 12,
-                                  background: '#D8EACE',
-                                  boxSizing: 'border-box'
-                                }}>
-                                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                                    <div style={{ flex: 1 }}>
-                                      <div style={{ fontSize: 12, fontWeight: 600, color: '#006D49', marginBottom: 4 }}>
-                                        Extra: {resident.extraActivity.name}
-                                      </div>
-                                      <div style={{ fontSize: 12, color: '#006D49' }}>
-                                        Start At: {extraStart.toLocaleTimeString('en-US', { hour12: false })}
-                                      </div>
-                                      <div style={{ fontSize: 12, color: '#006D49' }}>
-                                        Duration: {formatHMS(extraDuration)}
-                                      </div>
-                                      <div style={{ fontSize: 12, color: '#006D49' }}>
-                                        End At: -
-                                      </div>
-                                    </div>
-                                    <button
-                                      style={{
-                                        width: 30,
-                                        height: 30,
-                                        borderRadius: '50%',
-                                        border: '1px solid #E0E0E0',
-                                        background: '#fff',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0,
-                                        WebkitTapHighlightColor: 'transparent'
-                                      }}
-                                      onClick={handleEndExtra}
-                                      onTouchEnd={(e) => {
-                                        e.preventDefault();
-                                        handleEndExtra();
-                                      }}
-                                    >
-                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#C62828">
-                                        <rect x="4" y="4" width="16" height="16" rx="2" />
-                                      </svg>
-                                    </button>
+                                <div
+                                  style={{
+                                    transform: `translateX(${currentOffset}px)`,
+                                    transition: recordSwipeState.isDragging ? 'none' : 'transform 0.2s ease',
+                                    background: '#fff',
+                                    padding: '12px 0',
+                                    borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none',
+                                    textDecoration: isDeleted ? 'line-through' : 'none',
+                                    opacity: isDeleted ? 0.5 : 1
+                                  }}
+                                  onTouchStart={(e) => {
+                                    const touch = e.touches[0];
+                                    setRecordSwipeState({ residentName, recordIdx: originalIdx, offset: 0, startX: touch.clientX, isDragging: true });
+                                  }}
+                                  onTouchMove={(e) => {
+                                    if (!recordSwipeState.isDragging || recordSwipeState.recordIdx !== originalIdx) return;
+                                    const touch = e.touches[0];
+                                    const diff = touch.clientX - recordSwipeState.startX;
+                                    setRecordSwipeState(prev => ({ ...prev, offset: Math.min(0, Math.max(-80, diff)) }));
+                                  }}
+                                  onTouchEnd={() => {
+                                    if (recordSwipeState.recordIdx !== originalIdx) return;
+                                    if (recordSwipeState.offset < -40) {
+                                      setRecordSwipeState(prev => ({ ...prev, offset: -80, isDragging: false }));
+                                    } else {
+                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+                                    }
+                                  }}
+                                >
+                                  <span style={{
+                                    display: 'inline-block',
+                                    background: tagBg,
+                                    color: tagColor,
+                                    padding: '4px 10px',
+                                    borderRadius: 6,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    marginBottom: 8
+                                  }}>
+                                    {tagText}
+                                  </span>
+                                  <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
+                                    {isExtra ? (
+                                      <>
+                                        <div>Start At: {new Date(record.startAt).toLocaleTimeString('en-US', { hour12: false })}</div>
+                                        <div>End At: {new Date(record.endAt).toLocaleTimeString('en-US', { hour12: false })}</div>
+                                        {duration && <div>Duration: {duration}</div>}
+                                      </>
+                                    ) : isBacked ? (
+                                      <div>Start At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                    ) : (
+                                      <>
+                                        <div>Start At: {(() => {
+                                          const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                                          let startTime = addedAt ? new Date(addedAt) : null;
+                                          const recordsBeforeThis = records.slice(0, originalIdx);
+                                          for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                            if (recordsBeforeThis[i].type === 'backed') {
+                                              startTime = new Date(recordsBeforeThis[i].time);
+                                              break;
+                                            }
+                                          }
+                                          return startTime && !isNaN(startTime.getTime()) ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
+                                        })()}</div>
+                                        <div>End At: {recordTime && !isNaN(recordTime.getTime()) ? recordTime.toLocaleTimeString('en-US', { hour12: false }) : '-'}</div>
+                                        {duration && <div>Duration: {duration}</div>}
+                                      </>
+                                    )}
                                   </div>
                                 </div>
-                              );
-                            }
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
 
-                            // Normal button
-                            return (
+                      {/* Action Buttons (Only for active residents) */}
+                      {isActive && (
+                        <>
+                          {isInputMode ? (
+                            <div style={{
+                              width: '100%',
+                              padding: '12px 16px',
+                              borderRadius: 12,
+                              background: '#D8EACE',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              boxSizing: 'border-box'
+                            }}>
+                              <input
+                                autoFocus
+                                placeholder="Enter extra activity description"
+                                style={{
+                                  flex: 1,
+                                  border: 'none',
+                                  background: 'transparent',
+                                  outline: 'none',
+                                  fontSize: 14,
+                                  color: '#006D49'
+                                }}
+                                value={extraActivityInputValue}
+                                onChange={(e) => setExtraActivityInputValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === 'Done') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (extraActivityInputValue.trim()) {
+                                      const newResidents = current.residents.map((r: any) => {
+                                        const name = typeof r === 'string' ? r : r.name;
+                                        if (name === residentName) {
+                                          return {
+                                            ...r,
+                                            extraActivity: {
+                                              name: extraActivityInputValue.trim(),
+                                              startAt: new Date()
+                                            }
+                                          };
+                                        }
+                                        return r;
+                                      });
+                                      setCurrent({ ...current, residents: newResidents });
+                                      setExtraActivityInputMode(null);
+                                      setExtraActivityInputValue('');
+                                      (e.target as HTMLInputElement).blur();
+                                    }
+                                  }
+                                }}
+                              />
                               <button
                                 style={{
-                                  width: '100%',
-                                  padding: '14px 20px',
-                                  borderRadius: 12,
+                                  width: 24,
+                                  height: 24,
                                   border: 'none',
-                                  background: '#D8EACE',
-                                  color: '#006D49',
-                                  fontSize: 15,
-                                  fontWeight: 500,
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                onClick={() => {
+                                  setExtraActivityInputMode(null);
+                                  setExtraActivityInputValue('');
+                                }}
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006D49" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                              </button>
+                            </div>
+                          ) : hasActiveExtra ? (
+                            <div style={{
+                              width: '100%',
+                              padding: '12px 16px',
+                              borderRadius: 12,
+                              background: '#D8EACE',
+                              boxSizing: 'border-box',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 12
+                            }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: '#006D49', marginBottom: 4 }}>
+                                  Extra: {resident.extraActivity.name}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#006D49' }}>
+                                  Start At: {new Date(resident.extraActivity.startAt).toLocaleTimeString('en-US', { hour12: false })}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#006D49' }}>
+                                  Duration: {formatHMS(Math.floor((now.getTime() - new Date(resident.extraActivity.startAt).getTime()) / 1000))}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#006D49' }}>
+                                  End At: -
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                style={{
+                                  width: 50,
+                                  height: 50,
+                                  borderRadius: '50%',
+                                  border: '1px solid #E0E0E0',
+                                  background: '#fff',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  gap: 8
+                                  flexShrink: 0,
+                                  WebkitTapHighlightColor: 'transparent',
+                                  padding: 0
                                 }}
-                                onClick={() => {
-                                  setExtraActivityInputMode(residentName);
-                                  setExtraActivityInputValue('');
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleEndExtra();
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleEndExtra();
                                 }}
                               >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                                Add extra activity
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="#C62828">
+                                  <rect x="4" y="4" width="16" height="16" rx="3" />
+                                </svg>
                               </button>
-                            );
-                          })()}
+                            </div>
+                          ) : (
+                            <button
+                              style={{
+                                width: '100%',
+                                padding: '14px 20px',
+                                borderRadius: 12,
+                                border: 'none',
+                                background: '#D8EACE',
+                                color: '#006D49',
+                                fontSize: 15,
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 8
+                              }}
+                              onClick={() => {
+                                setExtraActivityInputMode(residentName);
+                                setExtraActivityInputValue('');
+                              }}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                              Add extra activity
+                            </button>
+                          )}
 
-                          {/* Leave main activity - Red/Pink */}
+                          {/* Leave main activity */}
                           <button
                             style={{
                               width: '100%',
@@ -3422,156 +3419,16 @@ function App() {
                               justifyContent: 'center',
                               gap: 8
                             }}
-                            onClick={() => {
-                              // Update resident status to 'leaved' and add record
-                              const newResidents = current.residents.map((r: any) => {
-                                const name = typeof r === 'string' ? r : r.name;
-                                if (name === residentName) {
-                                  const existingRecords = typeof r === 'string' ? [] : (r.records || []);
-                                  const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
-                                  // Auto-end extra activity if exists
-                                  let newRecords = [...existingRecords];
-                                  if (r.extraActivity) {
-                                    newRecords.push({
-                                      type: 'extra',
-                                      name: r.extraActivity.name,
-                                      startAt: r.extraActivity.startAt,
-                                      endAt: new Date()
-                                    });
-                                  }
-                                  // Add leave record
-                                  newRecords.push({ type: 'leaved', time: new Date() });
-                                  return {
-                                    name,
-                                    addedAt,
-                                    status: 'leaved',
-                                    extraActivity: null,
-                                    records: newRecords
-                                  };
-                                }
-                                return r;
-                              });
-                              setCurrent({ ...current, residents: newResidents });
+                            onClick={handleLeaveMain}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleLeaveMain();
                             }}
                           >
                             <span style={{ width: 14, height: 14, background: '#C62828', borderRadius: 2 }}></span>
                             Leave main activity
                           </button>
-                        </>
-                      ) : (
-                        /* Back button - Blue */
-                        <button
-                          style={{
-                            width: '100%',
-                            padding: '14px 20px',
-                            borderRadius: 12,
-                            border: 'none',
-                            background: '#E3F2FD',
-                            color: '#1565C0',
-                            fontSize: 15,
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8
-                          }}
-                          onClick={() => {
-                            // Update resident status to 'active' and add 'backed' record
-                            const newResidents = current.residents.map((r: any) => {
-                              const name = typeof r === 'string' ? r : r.name;
-                              if (name === residentName) {
-                                const existingRecords = typeof r === 'string' ? [] : (r.records || []);
-                                const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
-                                return {
-                                  name,
-                                  addedAt,
-                                  status: 'active',
-                                  records: [...existingRecords, { type: 'backed', time: new Date() }]
-                                };
-                              }
-                              return r;
-                            });
-                            setCurrent({ ...current, residents: newResidents });
-                          }}
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
-                          Back
-                        </button>
-                      )}
-
-                      {/* Records Section */}
-                      {records.length > 0 && (
-                        <>
-                          <div style={{ borderTop: '1px solid #eee', marginTop: 8, paddingTop: 16 }}>
-                            <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
-                            {records.slice().reverse().map((record: any, idx: number) => {
-                              const recordTime = new Date(record.time);
-                              const isLeaved = record.type === 'leaved';
-                              const isBacked = record.type === 'backed';
-
-                              // Calculate duration for leaved records
-                              let duration = '';
-                              if (isLeaved) {
-                                // Find the previous start time (either addedAt or a backed record)
-                                const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
-                                let startTime = addedAt ? new Date(addedAt) : null;
-
-                                // Look for the most recent 'backed' record before this 'leaved'
-                                const recordsBeforeThis = records.slice(0, records.length - 1 - idx);
-                                for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
-                                  if (recordsBeforeThis[i].type === 'backed') {
-                                    startTime = new Date(recordsBeforeThis[i].time);
-                                    break;
-                                  }
-                                }
-
-                                if (startTime) {
-                                  const durationMs = recordTime.getTime() - startTime.getTime();
-                                  duration = formatDuration(durationMs);
-                                }
-                              }
-
-                              return (
-                                <div key={idx} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
-                                  <span style={{
-                                    display: 'inline-block',
-                                    background: isBacked ? '#CEE6EA' : '#E1E1E1',
-                                    color: isBacked ? '#02303B' : '#333333',
-                                    padding: '4px 10px',
-                                    borderRadius: 6,
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    marginBottom: 8
-                                  }}>
-                                    {isBacked ? 'Backed' : 'Leaved'}
-                                  </span>
-                                  <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
-                                    {isBacked ? (
-                                      <div>Start At: {recordTime.toLocaleTimeString('en-US', { hour12: false })}</div>
-                                    ) : (
-                                      <>
-                                        <div>Start At: {(() => {
-                                          const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
-                                          let startTime = addedAt ? new Date(addedAt) : null;
-                                          const recordsBeforeThis = records.slice(0, records.length - 1 - idx);
-                                          for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
-                                            if (recordsBeforeThis[i].type === 'backed') {
-                                              startTime = new Date(recordsBeforeThis[i].time);
-                                              break;
-                                            }
-                                          }
-                                          return startTime ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
-                                        })()}</div>
-                                        <div>End At: {recordTime.toLocaleTimeString('en-US', { hour12: false })}</div>
-                                        {duration && <div>Duration: {duration}</div>}
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
                         </>
                       )}
                     </>
@@ -3581,109 +3438,95 @@ function App() {
             </>,
             document.body
           )}
-
           {/* 今天的活动卡片流 */}
-          {todaysActivities.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              {todaysActivities.map((item, idx) => {
-                const cardId = `today-${idx}`;
-                const currentOffset = swipeState.cardId === cardId ? swipeState.offset : 0;
-                const isDeleted = item.deleted;
-                return (
-                  <div
-                    key={item.startAt.getTime()}
-                    style={{
-                      position: 'relative',
-                      overflow: 'hidden',
-                      marginBottom: 12,
-                      borderRadius: 16
-                    }}
-                  >
-                    {/* 背景操作按钮区域 - 固定在右侧，与卡片10px间距 */}
-                    <div style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: SWIPE_ACTION_WIDTH - 10,
-                      marginRight: 0,
-                      display: 'flex',
-                      alignItems: 'stretch',
-                      justifyContent: 'center',
-                      background: isDeleted ? '#00b96b' : '#d70015',
-                      borderRadius: 16,
-                      opacity: Math.min(1, Math.abs(currentOffset) / 20),
-                      visibility: currentOffset === 0 ? 'hidden' : 'visible',
-                      transition: swipeState.isDragging ? 'none' : 'opacity 0.2s ease'
-                    }}>
-                      <button
-                        style={{
-                          background: 'transparent',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '8px 16px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          fontSize: 14,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '100%',
-                          opacity: Math.min(1, Math.abs(currentOffset) / 40)
-                        }}
-                        onClick={() => {
-                          const newHistory = [...history];
-                          const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                          if (todayIdx !== -1) {
-                            newHistory[todayIdx].deleted = !isDeleted;
-                            setHistory(newHistory);
-                          }
-                          closeSwipe();
-                        }}
-                      >
-                        {isDeleted ? 'Recover' : 'Delete'}
-                      </button>
-                    </div>
-
-                    {/* 可滑动的卡片内容 */}
+          {
+            todaysActivities.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                {todaysActivities.map((item, idx) => {
+                  const cardId = `today-${idx}`;
+                  const currentOffset = swipeState.cardId === cardId ? swipeState.offset : 0;
+                  const isDeleted = item.deleted;
+                  return (
                     <div
-                      className="activity-card-history"
+                      key={item.startAt.getTime()}
                       style={{
                         position: 'relative',
-                        opacity: isDeleted ? 0.6 : 1,
-                        userSelect: 'none',
-                        touchAction: 'pan-y',
-                        transform: `translateX(${currentOffset}px)`,
-                        transition: swipeState.isDragging ? 'none' : 'transform 0.3s ease',
-                        willChange: 'transform',
-                        marginBottom: 0 // 覆盖CSS的margin，让按钮高度与卡片一致
+                        overflow: 'hidden',
+                        marginBottom: 12,
+                        borderRadius: 16
                       }}
-                      onTouchStart={(e) => handleSwipeTouchStart(e, cardId)}
-                      onTouchMove={(e) => handleSwipeTouchMove(e, cardId)}
-                      onTouchEnd={() => handleSwipeTouchEnd(cardId)}
                     >
-                      {editingHistory && editingHistory.idx === idx && editingHistory.date === 'today' ? (
-                        <input
-                          style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6, border: 'none', background: 'transparent', outline: 'none' }}
-                          value={editingName}
-                          autoFocus
-                          onChange={e => setEditingName(e.target.value)}
-                          onBlur={() => {
+                      {/* 背景操作按钮区域 - 固定在右侧，与卡片10px间距 */}
+                      <div style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: SWIPE_ACTION_WIDTH - 10,
+                        marginRight: 0,
+                        display: 'flex',
+                        alignItems: 'stretch',
+                        justifyContent: 'center',
+                        background: isDeleted ? '#00b96b' : '#d70015',
+                        borderRadius: 16,
+                        opacity: Math.min(1, Math.abs(currentOffset) / 20),
+                        visibility: currentOffset === 0 ? 'hidden' : 'visible',
+                        transition: swipeState.isDragging ? 'none' : 'opacity 0.2s ease'
+                      }}>
+                        <button
+                          style={{
+                            background: 'transparent',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '8px 16px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100%',
+                            height: '100%',
+                            opacity: Math.min(1, Math.abs(currentOffset) / 40)
+                          }}
+                          onClick={() => {
                             const newHistory = [...history];
                             const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
                             if (todayIdx !== -1) {
-                              if (editingName.trim() === '') {
-                                setEditingName(history[todayIdx].name); // 恢复原标题
-                              } else {
-                                newHistory[todayIdx].name = editingName;
-                                setHistory(newHistory);
-                              }
+                              newHistory[todayIdx].deleted = !isDeleted;
+                              setHistory(newHistory);
                             }
-                            setEditingHistory(null);
+                            closeSwipe();
                           }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') {
+                        >
+                          {isDeleted ? 'Recover' : 'Delete'}
+                        </button>
+                      </div>
+
+                      {/* 可滑动的卡片内容 */}
+                      <div
+                        className="activity-card-history"
+                        style={{
+                          position: 'relative',
+                          opacity: isDeleted ? 0.6 : 1,
+                          userSelect: 'none',
+                          touchAction: 'pan-y',
+                          transform: `translateX(${currentOffset}px)`,
+                          transition: swipeState.isDragging ? 'none' : 'transform 0.3s ease',
+                          willChange: 'transform',
+                          marginBottom: 0 // 覆盖CSS的margin，让按钮高度与卡片一致
+                        }}
+                        onTouchStart={(e) => handleSwipeTouchStart(e, cardId)}
+                        onTouchMove={(e) => handleSwipeTouchMove(e, cardId)}
+                        onTouchEnd={() => handleSwipeTouchEnd(cardId)}
+                      >
+                        {editingHistory && editingHistory.idx === idx && editingHistory.date === 'today' ? (
+                          <input
+                            style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6, border: 'none', background: 'transparent', outline: 'none' }}
+                            value={editingName}
+                            autoFocus
+                            onChange={e => setEditingName(e.target.value)}
+                            onBlur={() => {
                               const newHistory = [...history];
                               const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
                               if (todayIdx !== -1) {
@@ -3695,412 +3538,427 @@ function App() {
                                 }
                               }
                               setEditingHistory(null);
-                            }
-                          }}
-                        />
-                      ) : (
-                        <>
-                          {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            marginBottom: 4,
-                            overflowX: 'auto',
-                            scrollbarWidth: 'none',
-                            msOverflowStyle: 'none'
-                          }}>
-                            {/* Add resident 按钮 */}
-                            <button
-                              style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: '50%',
-                                border: '1px dashed #ccc',
-                                background: '#fff',
-                                cursor: 'pointer',
-                                padding: 0,
-                                flexShrink: 0,
-                                position: 'relative'
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (showCardResidentDropdown === `today-${idx}`) {
-                                  setShowCardResidentDropdown(null);
-                                  setCardDropdownPosition(null);
-                                } else {
-                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                  const MENU_HEIGHT = 320;
-                                  const viewportHeight = window.innerHeight;
-                                  if (rect.bottom + MENU_HEIGHT > viewportHeight) {
-                                    // Place above
-                                    setCardDropdownPosition({ bottom: viewportHeight - rect.top + 4, left: rect.left });
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                const newHistory = [...history];
+                                const todayIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                if (todayIdx !== -1) {
+                                  if (editingName.trim() === '') {
+                                    setEditingName(history[todayIdx].name); // 恢复原标题
                                   } else {
-                                    // Place below
-                                    setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                    newHistory[todayIdx].name = editingName;
+                                    setHistory(newHistory);
                                   }
-                                  setShowCardResidentDropdown(`today-${idx}`);
                                 }
-                                setIsAddingNewCardResident(false);
-                                setCardNewResidentName('');
-                              }}
-                            >
-                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                                <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
-                              </svg>
-                            </button>
-
-                            {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
-                            {showCardResidentDropdown === `today-${idx}` && cardDropdownPosition && createPortal(
-                              <>
-                                {/* 全屏透明遮罩 */}
-                                <div
-                                  style={{
-                                    position: 'fixed',
-                                    inset: 0,
-                                    zIndex: 999998,
-                                    background: 'transparent',
-                                    touchAction: 'none'
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
+                                setEditingHistory(null);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <>
+                            {/* Residents 横向滚动显示 - 在 title 上方，带 add 按钮 */}
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              marginBottom: 4,
+                              overflowX: 'auto',
+                              scrollbarWidth: 'none',
+                              msOverflowStyle: 'none'
+                            }}>
+                              {/* Add resident 按钮 */}
+                              <button
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  border: '1px dashed #ccc',
+                                  background: '#fff',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  flexShrink: 0,
+                                  position: 'relative'
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (showCardResidentDropdown === `today-${idx}`) {
                                     setShowCardResidentDropdown(null);
-                                    setCardNewResidentName('');
-                                    setIsAddingNewCardResident(false);
-                                    setCardIsSearching(false);
-                                    setCardSearchQuery('');
-                                  }}
-                                  onTouchMove={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }}
-                                />
+                                    setCardDropdownPosition(null);
+                                  } else {
+                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                    const MENU_HEIGHT = 320;
+                                    const viewportHeight = window.innerHeight;
+                                    if (rect.bottom + MENU_HEIGHT > viewportHeight) {
+                                      // Place above
+                                      setCardDropdownPosition({ bottom: viewportHeight - rect.top + 4, left: rect.left });
+                                    } else {
+                                      // Place below
+                                      setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                    }
+                                    setShowCardResidentDropdown(`today-${idx}`);
+                                  }
+                                  setIsAddingNewCardResident(false);
+                                  setCardNewResidentName('');
+                                }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                                  <path d="M7 1V13M1 7H13" stroke="#666" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                              </button>
 
-                                {/* 菜单内容 */}
-                                <div
-                                  data-card-resident-dropdown
-                                  style={{
-                                    position: 'fixed',
-                                    top: cardDropdownPosition.top,
-                                    bottom: cardDropdownPosition.bottom,
-                                    left: 48,
-                                    right: 48,
-                                    width: 'auto',
-                                    background: '#fff',
-                                    borderRadius: 16,
-                                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                                    padding: '20px 24px',
-                                    maxHeight: 300,
-                                    overflowY: 'auto',
-                                    zIndex: 999999,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    overscrollBehavior: 'contain'
-                                  }}
-                                  onClick={e => e.stopPropagation()}
-                                  onTouchMove={e => e.stopPropagation()}
-                                >
-                                  {/* 标题栏 */}
-                                  {/* 标题栏 */}
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    marginBottom: 12
-                                  }}>
-                                    <div style={{
-                                      fontSize: 12,
-                                      fontWeight: 400,
-                                      color: '#666',
-                                      textTransform: 'uppercase',
-                                      letterSpacing: 0.5
-                                    }}>
-                                      Resident
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                      {/* Search Button */}
-                                      {!isAddingNewCardResident && !cardIsSearching && (
-                                        <button
-                                          style={{
-                                            width: 24,
-                                            height: 24,
-                                            border: 'none',
-                                            background: 'transparent',
-                                            cursor: 'pointer',
-                                            padding: 0,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                          }}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setCardIsSearching(true);
-                                            setIsAddingNewCardResident(false);
-                                          }}
-                                        >
-                                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(2, 48, 59, 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                        </button>
-                                      )}
-                                      {/* Add Button */}
-                                      {!cardIsSearching && !isAddingNewCardResident && (
-                                        <button
-                                          style={{
-                                            width: 24,
-                                            height: 24,
-                                            border: 'none',
-                                            background: 'transparent',
-                                            cursor: 'pointer',
-                                            padding: 0,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                          }}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsAddingNewCardResident(true);
-                                            setCardIsSearching(false);
-                                          }}
-                                        >
-                                          <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
-                                          </svg>
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Shared Input Area */}
-                                  {(cardIsSearching || isAddingNewCardResident) && (
-                                    <div style={{ marginBottom: 12 }}>
-                                      <input
-                                        style={{
-                                          width: '100%',
-                                          height: '44px',
-                                          padding: '0 16px',
-                                          border: '1px solid #00313c',
-                                          borderRadius: '12px',
-                                          fontSize: '16px',
-                                          fontWeight: '500',
-                                          outline: 'none',
-                                          boxSizing: 'border-box',
-                                          background: '#f5f9fa',
-                                          color: '#222'
-                                        }}
-                                        placeholder={cardIsSearching ? "Search resident..." : "Enter resident name"}
-                                        value={cardIsSearching ? cardSearchQuery : cardNewResidentName}
-                                        autoFocus
-                                        onChange={e => {
-                                          if (cardIsSearching) {
-                                            setCardSearchQuery(e.target.value);
-                                          } else {
-                                            setCardNewResidentName(e.target.value);
-                                          }
-                                        }}
-                                        onBlur={() => {
-                                          if (cardIsSearching && !cardSearchQuery) setCardIsSearching(false);
-                                          if (isAddingNewCardResident && !cardNewResidentName) setIsAddingNewCardResident(false);
-                                        }}
-                                        onKeyDown={e => {
-                                          if (e.key === 'Escape') {
-                                            if (cardIsSearching) {
-                                              setCardSearchQuery('');
-                                              setCardIsSearching(false);
-                                            } else {
-                                              setCardNewResidentName('');
-                                              setIsAddingNewCardResident(false);
-                                            }
-                                          } else if (e.key === 'Enter') {
-                                            if (isAddingNewCardResident && cardNewResidentName.trim()) {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                              const newName = cardNewResidentName.trim();
-                                              // Deduplicate logic
-                                              setResidents(prev => {
-                                                const filtered = prev.filter(r => r !== newName);
-                                                return [newName, ...filtered];
-                                              });
-
-                                              const newHistory = [...history];
-                                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                              if (histIdx !== -1) {
-                                                const currentResidents = newHistory[histIdx].residents || [];
-                                                const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
-                                                if (!residentNames.includes(newName)) {
-                                                  newHistory[histIdx].residents = [newName, ...currentResidents];
-                                                  setHistory(newHistory);
-                                                }
-                                              }
-                                              setCardNewResidentName('');
-                                              setIsAddingNewCardResident(false);
-                                            }
-                                          }
-                                        }}
-                                        onClick={e => e.stopPropagation()}
-                                      />
-                                    </div>
-                                  )}
-
-                                  {/* List */}
-                                  <div style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 12
-                                  }}>
-                                    {residents.filter(r => !cardIsSearching || r.toLowerCase().includes(cardSearchQuery.toLowerCase())).map(resident => {
-                                      const itemResidents = item.residents || [];
-                                      const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
-                                      return (
-                                        <button
-                                          key={resident}
-                                          style={{
-                                            background: isSelected ? '#00313c' : '#E9F2F4',
-                                            color: isSelected ? '#fff' : '#222',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'flex-start',
-                                            gap: 4,
-                                            padding: '12px 16px',
-                                            borderRadius: 12,
-                                            border: '1px solid rgba(2, 48, 59, 0.04)',
-                                            cursor: 'pointer',
-                                            fontSize: 15,
-                                            fontWeight: 500,
-                                            textAlign: 'left',
-                                            width: '100%',
-                                            userSelect: 'none',
-                                            WebkitUserSelect: 'none'
-                                          }}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (isSelected) {
-                                              // Show toast hint instead of removing
-                                              setToastMessage('Click name on the card to do more.');
-                                              setTimeout(() => setToastMessage(null), 3000);
-                                            } else {
-                                              const newHistory = [...history];
-                                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                              if (histIdx !== -1) {
-                                                const currentResidents = newHistory[histIdx].residents || [];
-                                                // Add
-                                                newHistory[histIdx].residents = [resident, ...currentResidents];
-                                                setHistory(newHistory);
-                                              }
-                                            }
-
-                                            // Search Exit Logic
-                                            if (cardIsSearching) {
-                                              setCardIsSearching(false);
-                                              setCardSearchQuery('');
-                                            }
-                                          }}
-                                        >
-                                          <span style={{
-                                            boxSizing: 'border-box',
-                                            width: 16,
-                                            height: 16,
-                                            border: isSelected ? '2px solid #fff' : '1px solid rgba(2, 48, 59, 0.4)',
-                                            borderRadius: '50%',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            flexShrink: 0
-                                          }}>
-                                            {isSelected && (
-                                              <span style={{
-                                                width: 8,
-                                                height: 8,
-                                                background: '#fff',
-                                                borderRadius: '50%'
-                                              }} />
-                                            )}
-                                          </span>
-                                          {resident}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </>,
-                              document.body
-                            )}
-
-                            {/* Residents tags */}
-                            {item.residents && item.residents.length > 0 && item.residents
-                              .filter((resident: any) => {
-                                const residentName = typeof resident === 'string' ? resident : resident.name;
-                                return residentName && residentName.trim() !== '';
-                              })
-                              .map((resident: any) => {
-                                const residentName = typeof resident === 'string' ? resident : resident.name;
-                                const residentStatus = typeof resident === 'string' ? 'active' : (resident.status || 'active');
-                                const isActive = residentStatus === 'active';
-                                return (
-                                  <span
-                                    key={residentName}
+                              {/* Dropdown menu - 使用 Portal 渲染到顶层 */}
+                              {showCardResidentDropdown === `today-${idx}` && cardDropdownPosition && createPortal(
+                                <>
+                                  {/* 全屏透明遮罩 */}
+                                  <div
                                     style={{
-                                      background: isActive ? '#CEE6EA' : '#E1E1E1',
-                                      color: isActive ? '#02303B' : '#333333',
-                                      padding: '4px 12px',
-                                      borderRadius: 12,
-                                      fontSize: 12,
-                                      fontWeight: 500,
-                                      whiteSpace: 'nowrap',
-                                      flexShrink: 0,
-                                      cursor: 'pointer'
+                                      position: 'fixed',
+                                      inset: 0,
+                                      zIndex: 999998,
+                                      background: 'transparent',
+                                      touchAction: 'none'
                                     }}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                      const MENU_HEIGHT = 300;
-                                      const viewportHeight = window.innerHeight;
-                                      // Smart positioning: place above if would overflow bottom
-                                      if (rect.bottom + MENU_HEIGHT > viewportHeight) {
-                                        setResidentPopupState({
-                                          isOpen: true,
-                                          residentName,
-                                          position: { bottom: viewportHeight - rect.top + 8, left: 48 },
-                                          popupType: 'history',
-                                          residentData: resident
-                                        });
-                                      } else {
-                                        setResidentPopupState({
-                                          isOpen: true,
-                                          residentName,
-                                          position: { top: rect.bottom + 8, left: 48 },
-                                          popupType: 'history',
-                                          residentData: resident
-                                        });
-                                      }
+                                      setShowCardResidentDropdown(null);
+                                      setCardNewResidentName('');
+                                      setIsAddingNewCardResident(false);
+                                      setCardIsSearching(false);
+                                      setCardSearchQuery('');
                                     }}
+                                    onTouchMove={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                  />
+
+                                  {/* 菜单内容 */}
+                                  <div
+                                    data-card-resident-dropdown
+                                    style={{
+                                      position: 'fixed',
+                                      top: cardDropdownPosition.top,
+                                      bottom: cardDropdownPosition.bottom,
+                                      left: 48,
+                                      right: 48,
+                                      width: 'auto',
+                                      background: '#fff',
+                                      borderRadius: 16,
+                                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                                      padding: '20px 24px',
+                                      maxHeight: 300,
+                                      overflowY: 'auto',
+                                      zIndex: 999999,
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      overscrollBehavior: 'contain'
+                                    }}
+                                    onClick={e => e.stopPropagation()}
+                                    onTouchMove={e => e.stopPropagation()}
                                   >
-                                    {residentName}
-                                  </span>
-                                );
-                              })}
-                          </div>
-                          <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
-                        </>
-                      )}
-                      <div className="activity-card-row">
-                        <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Start At:</span>
-                        <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatStartAt(item.startAt, item.endAt)}</span>
-                      </div>
-                      <div className="activity-card-row">
-                        <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>End At:</span>
-                        <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatTime(item.endAt)}</span>
-                      </div>
-                      <div className="activity-card-row">
-                        <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Duration:</span>
-                        <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatDuration(item.duration)}</span>
+                                    {/* 标题栏 */}
+                                    {/* 标题栏 */}
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      marginBottom: 12
+                                    }}>
+                                      <div style={{
+                                        fontSize: 12,
+                                        fontWeight: 400,
+                                        color: '#666',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 0.5
+                                      }}>
+                                        Resident
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        {/* Search Button */}
+                                        {!isAddingNewCardResident && !cardIsSearching && (
+                                          <button
+                                            style={{
+                                              width: 24,
+                                              height: 24,
+                                              border: 'none',
+                                              background: 'transparent',
+                                              cursor: 'pointer',
+                                              padding: 0,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center'
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setCardIsSearching(true);
+                                              setIsAddingNewCardResident(false);
+                                            }}
+                                          >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(2, 48, 59, 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                          </button>
+                                        )}
+                                        {/* Add Button */}
+                                        {!cardIsSearching && !isAddingNewCardResident && (
+                                          <button
+                                            style={{
+                                              width: 24,
+                                              height: 24,
+                                              border: 'none',
+                                              background: 'transparent',
+                                              cursor: 'pointer',
+                                              padding: 0,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center'
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setIsAddingNewCardResident(true);
+                                              setCardIsSearching(false);
+                                            }}
+                                          >
+                                            <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                              <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
+                                            </svg>
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Shared Input Area */}
+                                    {(cardIsSearching || isAddingNewCardResident) && (
+                                      <div style={{ marginBottom: 12 }}>
+                                        <input
+                                          style={{
+                                            width: '100%',
+                                            height: '44px',
+                                            padding: '0 16px',
+                                            border: '1px solid #00313c',
+                                            borderRadius: '12px',
+                                            fontSize: '16px',
+                                            fontWeight: '500',
+                                            outline: 'none',
+                                            boxSizing: 'border-box',
+                                            background: '#f5f9fa',
+                                            color: '#222'
+                                          }}
+                                          placeholder={cardIsSearching ? "Search resident..." : "Enter resident name"}
+                                          value={cardIsSearching ? cardSearchQuery : cardNewResidentName}
+                                          autoFocus
+                                          onChange={e => {
+                                            if (cardIsSearching) {
+                                              setCardSearchQuery(e.target.value);
+                                            } else {
+                                              setCardNewResidentName(e.target.value);
+                                            }
+                                          }}
+                                          onBlur={() => {
+                                            if (cardIsSearching && !cardSearchQuery) setCardIsSearching(false);
+                                            if (isAddingNewCardResident && !cardNewResidentName) setIsAddingNewCardResident(false);
+                                          }}
+                                          onKeyDown={e => {
+                                            if (e.key === 'Escape') {
+                                              if (cardIsSearching) {
+                                                setCardSearchQuery('');
+                                                setCardIsSearching(false);
+                                              } else {
+                                                setCardNewResidentName('');
+                                                setIsAddingNewCardResident(false);
+                                              }
+                                            } else if (e.key === 'Enter') {
+                                              if (isAddingNewCardResident && cardNewResidentName.trim()) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                const newName = cardNewResidentName.trim();
+                                                // Deduplicate logic
+                                                setResidents(prev => {
+                                                  const filtered = prev.filter(r => r !== newName);
+                                                  return [newName, ...filtered];
+                                                });
+
+                                                const newHistory = [...history];
+                                                const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                                if (histIdx !== -1) {
+                                                  const currentResidents = newHistory[histIdx].residents || [];
+                                                  const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
+                                                  if (!residentNames.includes(newName)) {
+                                                    newHistory[histIdx].residents = [newName, ...currentResidents];
+                                                    setHistory(newHistory);
+                                                  }
+                                                }
+                                                setCardNewResidentName('');
+                                                setIsAddingNewCardResident(false);
+                                              }
+                                            }
+                                          }}
+                                          onClick={e => e.stopPropagation()}
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* List */}
+                                    <div style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: 12
+                                    }}>
+                                      {residents.filter(r => !cardIsSearching || r.toLowerCase().includes(cardSearchQuery.toLowerCase())).map(resident => {
+                                        const itemResidents = item.residents || [];
+                                        const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
+                                        return (
+                                          <button
+                                            key={resident}
+                                            style={{
+                                              background: isSelected ? '#00313c' : '#E9F2F4',
+                                              color: isSelected ? '#fff' : '#222',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'flex-start',
+                                              gap: 4,
+                                              padding: '12px 16px',
+                                              borderRadius: 12,
+                                              border: '1px solid rgba(2, 48, 59, 0.04)',
+                                              cursor: 'pointer',
+                                              fontSize: 15,
+                                              fontWeight: 500,
+                                              textAlign: 'left',
+                                              width: '100%',
+                                              userSelect: 'none',
+                                              WebkitUserSelect: 'none'
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (isSelected) {
+                                                // Show toast hint instead of removing
+                                                setToastMessage('Click name on the card to do more.');
+                                                setTimeout(() => setToastMessage(null), 3000);
+                                              } else {
+                                                const newHistory = [...history];
+                                                const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                                if (histIdx !== -1) {
+                                                  const currentResidents = newHistory[histIdx].residents || [];
+                                                  // Add
+                                                  newHistory[histIdx].residents = [resident, ...currentResidents];
+                                                  setHistory(newHistory);
+                                                }
+                                              }
+
+                                              // Search Exit Logic
+                                              if (cardIsSearching) {
+                                                setCardIsSearching(false);
+                                                setCardSearchQuery('');
+                                              }
+                                            }}
+                                          >
+                                            <span style={{
+                                              boxSizing: 'border-box',
+                                              width: 16,
+                                              height: 16,
+                                              border: isSelected ? '2px solid #fff' : '1px solid rgba(2, 48, 59, 0.4)',
+                                              borderRadius: '50%',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              flexShrink: 0
+                                            }}>
+                                              {isSelected && (
+                                                <span style={{
+                                                  width: 8,
+                                                  height: 8,
+                                                  background: '#fff',
+                                                  borderRadius: '50%'
+                                                }} />
+                                              )}
+                                            </span>
+                                            {resident}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </>,
+                                document.body
+                              )}
+
+                              {/* Residents tags */}
+                              {item.residents && item.residents.length > 0 && item.residents
+                                .filter((resident: any) => {
+                                  const residentName = typeof resident === 'string' ? resident : resident.name;
+                                  return residentName && residentName.trim() !== '';
+                                })
+                                .map((resident: any) => {
+                                  const residentName = typeof resident === 'string' ? resident : resident.name;
+                                  const residentStatus = typeof resident === 'string' ? 'active' : (resident.status || 'active');
+                                  const isActive = residentStatus === 'active';
+                                  return (
+                                    <span
+                                      key={residentName}
+                                      style={{
+                                        background: isActive ? '#CEE6EA' : '#E1E1E1',
+                                        color: isActive ? '#02303B' : '#333333',
+                                        padding: '4px 12px',
+                                        borderRadius: 12,
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0,
+                                        cursor: 'pointer'
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                        const MENU_HEIGHT = 300;
+                                        const viewportHeight = window.innerHeight;
+                                        // Smart positioning: place above if would overflow bottom
+                                        if (rect.bottom + MENU_HEIGHT > viewportHeight) {
+                                          setResidentPopupState({
+                                            isOpen: true,
+                                            residentName,
+                                            position: { bottom: viewportHeight - rect.top + 8, left: 48 },
+                                            popupType: 'history',
+                                            residentData: resident
+                                          });
+                                        } else {
+                                          setResidentPopupState({
+                                            isOpen: true,
+                                            residentName,
+                                            position: { top: rect.bottom + 8, left: 48 },
+                                            popupType: 'history',
+                                            residentData: resident
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {residentName}
+                                    </span>
+                                  );
+                                })}
+                            </div>
+                            <div className="activity-card-title" style={{ cursor: 'pointer', textDecoration: isDeleted ? 'line-through' : undefined }} onClick={() => { setEditingHistory({ date: 'today', idx }); setEditingName(item.name); }}>{item.name}</div>
+                          </>
+                        )}
+                        <div className="activity-card-row">
+                          <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Start At:</span>
+                          <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatStartAt(item.startAt, item.endAt)}</span>
+                        </div>
+                        <div className="activity-card-row">
+                          <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>End At:</span>
+                          <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatTime(item.endAt)}</span>
+                        </div>
+                        <div className="activity-card-row">
+                          <span className="activity-card-label" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>Duration:</span>
+                          <span className="activity-card-value" style={{ textDecoration: isDeleted ? 'line-through' : undefined }}>{formatDuration(item.duration)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )
+          }
           {/* 历史活动分组卡片 */}
-          <div style={{ marginBottom: 16 }}>
+          < div style={{ marginBottom: 16 }}>
             {displayHistory.map(([date, items]: [string, any[]]) => (
               <div key={date}>
                 <div style={{ fontWeight: 700, fontSize: 16, margin: '18px 0 8px 0' }}>{formatHeaderDateStr(date)}</div>
@@ -4621,7 +4479,7 @@ function App() {
               </div>
             ))}
           </div>
-        </div>
+        </div >
       </div>
       {/* 底部固定活动选择与输入区 */}
       {popupRendered && (
@@ -5503,7 +5361,7 @@ function App() {
           </div>
         )
       }
-    </div>
+    </div >
   );
 }
 
