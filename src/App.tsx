@@ -297,9 +297,6 @@ function App() {
   const [cardIsSearching, setCardIsSearching] = useState(false);
   const [cardSearchQuery, setCardSearchQuery] = useState('');
 
-  // 新增 Summary popup 相关状态
-  const [showSummaryPopup, setShowSummaryPopup] = useState(false);
-
 
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [isDownloadOptionsClosing, setIsDownloadOptionsClosing] = useState(false);
