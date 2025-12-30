@@ -298,6 +298,9 @@ function App() {
   const [cardSearchQuery, setCardSearchQuery] = useState('');
 
   // 新增 Summary popup 相关状态
+  const [showSummaryPopup, setShowSummaryPopup] = useState(false);
+
+
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [isDownloadOptionsClosing, setIsDownloadOptionsClosing] = useState(false);
   const [timeGranularity, setTimeGranularity] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Day');
@@ -332,6 +335,39 @@ function App() {
     startX: number;
     isDragging: boolean;
   }>({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+
+  // Body Scroll Lock & Non-passive Touch Listener for Resident Popup
+  const popupContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (residentPopupState.isOpen) {
+      // 1. Lock Body Scroll
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+
+      // 2. Attach Non-passive Touch Listener
+      const node = popupContentRef.current;
+      const handleTouchMove = (e: TouchEvent) => {
+        e.stopPropagation();
+        const target = e.currentTarget as HTMLElement;
+        // If content is not scrollable (no overflow), prevent background scroll
+        if (target.scrollHeight <= target.clientHeight) {
+          if (e.cancelable) e.preventDefault();
+        }
+      };
+
+      if (node) {
+        node.addEventListener('touchmove', handleTouchMove, { passive: false });
+      }
+
+      return () => {
+        document.body.style.overflow = originalStyle;
+        if (node) {
+          node.removeEventListener('touchmove', handleTouchMove);
+        }
+      };
+    }
+  }, [residentPopupState.isOpen]);
 
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
@@ -2883,6 +2919,7 @@ function App() {
 
               {/* Popup Content */}
               <div
+                ref={popupContentRef}
                 style={{
                   position: 'fixed',
                   top: residentPopupState.position.top != null
@@ -2893,7 +2930,6 @@ function App() {
                     : undefined,
                   left: 48,
                   right: 48,
-                  // Dynamic max height based on available space
                   maxHeight: residentPopupState.position.top != null
                     ? `calc(100vh - ${Math.max(10, residentPopupState.position.top)}px - 10px)`
                     : (residentPopupState.position.bottom != null
@@ -2906,21 +2942,14 @@ function App() {
                   overflowY: 'auto',
                   overflowX: 'hidden',
                   overscrollBehavior: 'contain',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  zIndex: 999999
                 }}
                 onClick={e => e.stopPropagation()}
                 onTouchStart={e => e.stopPropagation()}
-                onTouchMove={(e) => {
-                  e.stopPropagation();
-                  const target = e.currentTarget;
-                  // If content is not scrollable (no overflow), prevent background scroll
-                  if (target.scrollHeight <= target.clientHeight) {
-                    e.preventDefault();
-                  } else {
-                    // If scrollable, allow normal scroll behavior (don't prevent default)
-                    // But we must stopPropagation (done above) to keep it inside
-                  }
-                }}
                 onWheel={e => e.stopPropagation()}
               >
                 {(() => {
@@ -3555,7 +3584,7 @@ function App() {
                     </>
                   );
                 })()}
-              </div>
+              </div >
             </>,
             document.body
           )}
@@ -4609,602 +4638,150 @@ function App() {
         </div >
       </div>
       {/* 底部固定活动选择与输入区 */}
-      {popupRendered && (
-        <>
-          {/* iOS风格半透明遮罩层 - 全局覆盖包括标题区域 */}
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 999, // 高于header的200，覆盖整个页面
-              background: showBottomSheet ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0)',
-              transition: 'background 0.3s ease',
-              touchAction: 'none',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (!isBottomSheetClosing) {
-                setIsBottomSheetClosing(true);
-                setShowStartButton(false);
-                setTimeout(() => {
-                  setShowBottomSheet(false);
-                  setEditingRecentActivity(null);
-                  setEditingRecentName('');
-                  setIsBottomSheetClosing(false);
-                  setPopupRendered(false);
-                  setIsResidentSearching(false);
-                  setResidentSearchQuery('');
-                  setIsAddingResident(false);
-                  setNewResidentName('');
-                  setTimeout(() => {
-                    setShowStartButton(true);
-                  }, 100);
-                }, 450);
-              }
-            }}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-            }}
-            onTouchMove={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          />
-          <div
-            className="activity-bottom-sheet-fixed"
-            style={{
-              zIndex: 1000,
-              position: 'fixed',
-              left: '50%',
-              bottom: 0,
-              transform: 'translateX(-50%)',
-              maxHeight: 'calc(100vh - 120px)',
-              height: 'auto',
-              animation: isBottomSheetClosing
-                ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-                : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-              overscrollBehavior: 'contain',
-              touchAction: 'pan-y'
-            }}
-            onClick={(e) => {
-              // 阻止点击事件冒泡到遮罩层，防止意外关闭
-              e.stopPropagation();
-            }}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-            }}
-            onTouchMove={(e) => {
-              e.stopPropagation();
-            }}
-            onTouchEnd={(e) => {
-              e.stopPropagation();
-            }}
-          >
-            {/* 半屏标题栏 - 匹配Summary样式 */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '24px 24px 16px 24px',
-              boxSizing: 'border-box',
-              background: '#fff',
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
-              position: 'sticky',
-              top: 0,
-              zIndex: 10
-            }}>
-              <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Start Activity</div>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (!isBottomSheetClosing) {
-                    setIsBottomSheetClosing(true);
-                    setShowStartButton(false);
-                    setTimeout(() => {
-                      setShowBottomSheet(false);
-                      setEditingRecentActivity(null);
-                      setEditingRecentName('');
-                      setIsBottomSheetClosing(false);
-                      setPopupRendered(false);
-                      setIsResidentSearching(false);
-                      setResidentSearchQuery('');
-                      setIsAddingResident(false);
-                      setNewResidentName('');
-                      setTimeout(() => {
-                        setShowStartButton(true);
-                      }, 100);
-                    }, 450);
-                  }
-                }}
-                style={{
-                  width: 38,
-                  height: 38,
-                  background: '#E9F2F4',
-                  border: 'none',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 0
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M14.158 5.27173L9.98804 9.44165L14.158 13.6116L13.3103 14.4592L9.14038 10.2893L4.97046 14.4592L4.1228 13.6116L8.29272 9.44165L4.1228 5.27173L4.97046 4.42407L9.14038 8.59399L13.3103 4.42407L14.158 5.27173Z" fill="black" fillOpacity="0.85" />
-                </svg>
-              </button>
-            </div>
+      {
+        popupRendered && (
+          <>
+            {/* iOS风格半透明遮罩层 - 全局覆盖包括标题区域 */}
             <div
-              className="activity-popup-inner"
               style={{
-                padding: '0 24px',
-                paddingTop: 0, // 标题区已有padding，无需额外间距
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                overflowY: 'auto',
-                overscrollBehavior: 'contain'
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 999, // 高于header的200，覆盖整个页面
+                background: showBottomSheet ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0)',
+                transition: 'background 0.3s ease',
+                touchAction: 'none',
+                WebkitTapHighlightColor: 'transparent',
               }}
-              onScroll={(e) => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isBottomSheetClosing) {
+                  setIsBottomSheetClosing(true);
+                  setShowStartButton(false);
+                  setTimeout(() => {
+                    setShowBottomSheet(false);
+                    setEditingRecentActivity(null);
+                    setEditingRecentName('');
+                    setIsBottomSheetClosing(false);
+                    setPopupRendered(false);
+                    setIsResidentSearching(false);
+                    setResidentSearchQuery('');
+                    setIsAddingResident(false);
+                    setNewResidentName('');
+                    setTimeout(() => {
+                      setShowStartButton(true);
+                    }, 100);
+                  }, 450);
+                }
+              }}
+              onTouchStart={(e) => {
                 e.stopPropagation();
               }}
               onTouchMove={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            />
+            <div
+              className="activity-bottom-sheet-fixed"
+              style={{
+                zIndex: 1000,
+                position: 'fixed',
+                left: '50%',
+                bottom: 0,
+                transform: 'translateX(-50%)',
+                maxHeight: 'calc(100vh - 120px)',
+                height: 'auto',
+                animation: isBottomSheetClosing
+                  ? 'slideDownToBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                  : 'slideUpFromBottom 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                overscrollBehavior: 'contain',
+                touchAction: 'pan-y'
+              }}
+              onClick={(e) => {
+                // 阻止点击事件冒泡到遮罩层，防止意外关闭
                 e.stopPropagation();
               }}
               onTouchStart={(e) => {
                 e.stopPropagation();
               }}
+              onTouchMove={(e) => {
+                e.stopPropagation();
+              }}
               onTouchEnd={(e) => {
                 e.stopPropagation();
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              onFocus={(e) => {
-                e.stopPropagation();
-              }}
-              onBlur={(e) => {
-                e.stopPropagation();
-              }}
             >
-              {/* RESIDENT Section */}
-              <div style={{ marginBottom: 28, marginTop: 28 }}>
-                {/* 标题栏 - 包含 Resident 标题和添加按钮 */}
-                {/* 标题栏 - 包含 Resident 标题和操作按钮 */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 12
-                }}>
-                  <div style={{
-                    fontSize: 12,
-                    fontWeight: 400,
-                    color: '#666',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5
-                  }}>
-                    Resident
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {/* 搜索按钮 - 仅在有 residents 且未添加/搜索时显示 */}
-                    {residents.length > 0 && !isAddingResident && !isResidentSearching && (
-                      <button
-                        style={{
-                          width: 24,
-                          height: 24,
-                          border: 'none',
-                          background: 'transparent',
-                          cursor: 'pointer',
-                          padding: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsResidentSearching(true);
-                          setIsAddingResident(false);
-                        }}
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(2, 48, 59, 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                      </button>
-                    )}
-                    {/* Add button */}
-                    {residents.length > 0 && !isAddingResident && !isResidentSearching && (
-                      <button
-                        style={{
-                          width: 24,
-                          height: 24,
-                          border: 'none',
-                          background: 'transparent',
-                          cursor: 'pointer',
-                          padding: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
-                          if (popupContainer) {
-                            popupContainer.setAttribute('data-recent-interaction', 'true');
-                            setTimeout(() => {
-                              popupContainer.removeAttribute('data-recent-interaction');
-                            }, 1000);
-                          }
-                          setIsAddingResident(true);
-                          setIsResidentSearching(false);
-                        }}
-                      >
-                        <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Shared Search/Add Input */}
-                {(isResidentSearching || isAddingResident) && (
-                  <input
-                    style={{
-                      width: '100%',
-                      height: '44px',
-                      padding: '0 16px',
-                      border: '1px solid #00313c',
-                      borderRadius: '12px',
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      background: '#f5f9fa',
-                      marginBottom: 12,
-                      color: '#222'
-                    }}
-                    placeholder={isResidentSearching ? "Search resident..." : "Enter resident name"}
-                    value={isResidentSearching ? residentSearchQuery : newResidentName}
-                    enterKeyHint="done"
-                    autoComplete="off"
-                    autoFocus
-                    onChange={e => {
-                      if (isResidentSearching) {
-                        setResidentSearchQuery(e.target.value);
-                      } else {
-                        setNewResidentName(e.target.value);
-                      }
-                    }}
-                    onFocus={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onBlur={(e) => {
-                      e.stopPropagation();
-                      if (isResidentSearching && !residentSearchQuery) {
+              {/* 半屏标题栏 - 匹配Summary样式 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                padding: '24px 24px 16px 24px',
+                boxSizing: 'border-box',
+                background: '#fff',
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
+                position: 'sticky',
+                top: 0,
+                zIndex: 10
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 20, color: '#222' }}>Start Activity</div>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!isBottomSheetClosing) {
+                      setIsBottomSheetClosing(true);
+                      setShowStartButton(false);
+                      setTimeout(() => {
+                        setShowBottomSheet(false);
+                        setEditingRecentActivity(null);
+                        setEditingRecentName('');
+                        setIsBottomSheetClosing(false);
+                        setPopupRendered(false);
                         setIsResidentSearching(false);
-                      }
-                      if (isAddingResident) {
-                        if (newResidentName.trim()) {
-                          setResidents(prev => {
-                            const name = newResidentName.trim();
-                            const filtered = prev.filter(r => r !== name);
-                            return [name, ...filtered];
-                          });
-                        }
-                        setNewResidentName('');
+                        setResidentSearchQuery('');
                         setIsAddingResident(false);
-                      }
-                    }}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        e.currentTarget.blur();
-                      } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (isResidentSearching) {
-                          setResidentSearchQuery('');
-                          setIsResidentSearching(false);
-                        } else {
-                          setNewResidentName('');
-                          setIsAddingResident(false);
-                        }
-                      }
-                    }}
-                  />
-                )}
-
-                {/* Resident 名字区域 - 横向滚动，最多2行 */}
-                {residents.length > 0 ? (
-                  <div style={{
-                    overflowX: 'auto',
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                    WebkitOverflowScrolling: 'touch'
-                  }}>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateRows: 'repeat(2, 1fr)',
-                      gridAutoFlow: 'column',
-                      gridAutoColumns: 'max-content',
-                      columnGap: 12,
-                      rowGap: 12,
-                      padding: 4, // 防止input被截断
-                      paddingBottom: 4
-                    }}>
-                      {residents.filter(r => !isResidentSearching || r.toLowerCase().includes(residentSearchQuery.toLowerCase())).map(resident => (
-                        editingResident === resident ? (
-                          <div key={resident} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <input
-                              style={{
-                                height: '44px',
-                                padding: '0 16px',
-                                border: '1px solid #00313c',
-                                borderRadius: 12,
-                                fontSize: 16,
-                                fontWeight: 500,
-                                outline: 'none',
-                                boxSizing: 'border-box',
-                                background: '#f5f9fa',
-                                color: '#222',
-                                width: Math.max(100, editingResidentName.length * 10 + 32) + 'px',
-                                maxWidth: '160px',
-                                flex: '0 0 auto'
-                              }}
-                              enterKeyHint="done"
-                              autoComplete="off"
-                              value={editingResidentName}
-                              autoFocus
-                              onClick={e => e.stopPropagation()}
-                              onFocus={e => e.stopPropagation()}
-                              onChange={e => setEditingResidentName(e.target.value)}
-                              onBlur={(e) => {
-                                e.stopPropagation();
-                                const newName = editingResidentName.trim();
-                                if (newName === '') {
-                                  setEditingResident(null);
-                                } else if (newName !== resident) {
-                                  setResidents(prev => {
-                                    const filtered = prev.filter(r => r !== newName);
-                                    return filtered.map(r => r === resident ? newName : r);
-                                  });
-                                  setSelectedResidents(prev => {
-                                    const wasSelected = prev.includes(resident);
-                                    const newNameWasSelected = prev.includes(newName);
-                                    let newSelected = prev.filter(r => r !== resident && r !== newName);
-                                    if (wasSelected || newNameWasSelected) {
-                                      newSelected.push(newName);
-                                    }
-                                    return newSelected;
-                                  });
-                                  setEditingResident(null);
-                                } else {
-                                  setEditingResident(null);
-                                }
-                              }}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  e.currentTarget.blur();
-                                } else if (e.key === 'Escape') {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setEditingResidentName(resident);
-                                  setEditingResident(null);
-                                }
-                              }}
-                            />
-                            <button
-                              style={{
-                                width: 28,
-                                height: 28,
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                padding: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                              }}
-                              onMouseDown={e => e.preventDefault()}
-                              onClick={() => {
-                                setResidents(prev => prev.filter(r => r !== resident));
-                                setSelectedResidents(prev => prev.filter(r => r !== resident));
-                                setEditingResident(null);
-                              }}
-                            >
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cc3333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            key={resident}
-                            style={{
-                              background: selectedResidents.includes(resident) ? '#00313c' : '#E9F2F4',
-                              color: selectedResidents.includes(resident) ? '#fff' : '#222',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'flex-start',
-                              gap: 4,
-                              padding: '12px 16px',
-                              borderRadius: 12,
-                              border: '1px solid rgba(2, 48, 59, 0.04)',
-                              cursor: 'pointer',
-                              fontSize: 15,
-                              fontWeight: 500,
-                              whiteSpace: 'nowrap',
-                              minWidth: 'fit-content',
-                              // 禁止文本选中，优化长按体验
-                              userSelect: 'none',
-                              WebkitUserSelect: 'none',
-                              touchAction: 'manipulation'
-                            }}
-                            onTouchStart={(e) => {
-                              const touch = e.touches[0];
-                              (window as any).__residentTouchStartX = touch.clientX;
-                              (window as any).__residentTouchStartY = touch.clientY;
-                              (window as any).__residentTouchStartTime = Date.now();
-                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                              (window as any).__residentLongPressFired = false;
-                              (window as any).__residentTouchHandled = false;
-                              (window as any).__residentIsSwiping = false;
-                              (window as any).__residentLongPressTimer = setTimeout(() => {
-                                (window as any).__residentLongPressFired = true;
-                                (window as any).__residentTouchHandled = true;
-                                setEditingResident(resident);
-                                setEditingResidentName(resident);
-                                // 震动反馈
-                                if (navigator.vibrate) navigator.vibrate(50);
-                              }, 300); // 缩短到300ms提高灵敏度
-                            }}
-                            onTouchMove={(e) => {
-                              const touch = e.touches[0];
-                              const startX = (window as any).__residentTouchStartX || 0;
-                              const startY = (window as any).__residentTouchStartY || 0;
-                              const moveX = Math.abs(touch.clientX - startX);
-                              const moveY = Math.abs(touch.clientY - startY);
-                              // 移动超过10px视为滑动
-                              if (moveX > 10 || moveY > 10) {
-                                (window as any).__residentIsSwiping = true;
-                                if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                              }
-                            }}
-                            onTouchEnd={() => {
-                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                              const elapsed = Date.now() - ((window as any).__residentTouchStartTime || 0);
-                              // 只有在非滑动且非长按且时间<300ms时才视为点击
-                              if (!(window as any).__residentLongPressFired &&
-                                !(window as any).__residentTouchHandled &&
-                                !(window as any).__residentIsSwiping &&
-                                elapsed < 300) {
-                                (window as any).__residentTouchHandled = true;
-                                setSelectedResidents(prev =>
-                                  prev.includes(resident)
-                                    ? prev.filter(r => r !== resident)
-                                    : [...prev, resident]
-                                );
-
-                                // Search Exit Logic
-                                if (isResidentSearching) {
-                                  setIsResidentSearching(false);
-                                  setResidentSearchQuery('');
-                                }
-                              }
-                            }}
-                            onMouseDown={() => {
-                              // 只在非触摸设备上处理
-                              if ((window as any).__residentTouchHandled) return;
-                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                              (window as any).__residentLongPressFired = false;
-                              (window as any).__residentLongPressTimer = setTimeout(() => {
-                                (window as any).__residentLongPressFired = true;
-                                setEditingResident(resident);
-                                setEditingResidentName(resident);
-                              }, 800);
-                            }}
-                            onMouseUp={() => {
-                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                            }}
-                            onMouseLeave={() => {
-                              if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
-                            }}
-                            onClick={e => {
-                              // 如果是触摸设备且已处理，跳过 click 事件
-                              if ((window as any).__residentTouchHandled) {
-                                (window as any).__residentTouchHandled = false;
-                                return;
-                              }
-                              // 桌面端：只有在没有触发长按的情况下才执行点击操作
-                              if (!(window as any).__residentLongPressFired) {
-                                e.stopPropagation();
-                                setSelectedResidents(prev =>
-                                  prev.includes(resident)
-                                    ? prev.filter(r => r !== resident)
-                                    : [...prev, resident]
-                                );
-
-                                // Search Exit Logic
-                                if (isResidentSearching) {
-                                  setIsResidentSearching(false);
-                                  setResidentSearchQuery('');
-                                }
-                              }
-                            }}
-                          >
-                            <span style={{
-                              boxSizing: 'border-box',
-                              width: 16,
-                              height: 16,
-                              border: selectedResidents.includes(resident) ? '2px solid #fff' : '1px solid rgba(2, 48, 59, 0.4)',
-                              borderRadius: '50%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0
-                            }}>
-                              {selectedResidents.includes(resident) && (
-                                <span style={{
-                                  width: 8,
-                                  height: 8,
-                                  background: '#fff',
-                                  borderRadius: '50%'
-                                }} />
-                              )}
-                            </span>
-                            {resident}
-                          </button>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                ) : !isAddingResident && (
-                  /* 没有 residents 时显示 Add Name 按钮 */
-                  <Button
-                    block
-                    className="activity-btn"
-                    shape="rounded"
-                    size="large"
-                    style={{
-                      border: '1px dashed #ccc',
-                      background: '#fff'
-                    }}
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      // 设置交互标记，防止popup被关闭
-                      const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
-                      if (popupContainer) {
-                        popupContainer.setAttribute('data-recent-interaction', 'true');
+                        setNewResidentName('');
                         setTimeout(() => {
-                          popupContainer.removeAttribute('data-recent-interaction');
-                        }, 1000);
-                      }
-                      setIsAddingResident(true);
-                    }}
-                  >
-                    + Add Name
-                  </Button>
-                )}
+                          setShowStartButton(true);
+                        }, 100);
+                      }, 450);
+                    }
+                  }}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    background: '#E9F2F4',
+                    border: 'none',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14.158 5.27173L9.98804 9.44165L14.158 13.6116L13.3103 14.4592L9.14038 10.2893L4.97046 14.4592L4.1228 13.6116L8.29272 9.44165L4.1228 5.27173L4.97046 4.42407L9.14038 8.59399L13.3103 4.42407L14.158 5.27173Z" fill="black" fillOpacity="0.85" />
+                  </svg>
+                </button>
               </div>
-
-              {/* 可滚动的tag区域 */}
               <div
+                className="activity-popup-inner"
                 style={{
+                  padding: '0 24px',
+                  paddingTop: 0, // 标题区已有padding，无需额外间距
                   flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
                   overflowY: 'auto',
-                  paddingRight: '8px'
+                  overscrollBehavior: 'contain'
                 }}
                 onScroll={(e) => {
                   e.stopPropagation();
@@ -5212,73 +4789,250 @@ function App() {
                 onTouchMove={(e) => {
                   e.stopPropagation();
                 }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onFocus={(e) => {
+                  e.stopPropagation();
+                }}
+                onBlur={(e) => {
+                  e.stopPropagation();
+                }}
               >
-                {/* Recent Activities */}
-                {recentActivities.length > 0 && (
-                  <div style={{ marginBottom: 28 }}>
+                {/* RESIDENT Section */}
+                <div style={{ marginBottom: 28, marginTop: 28 }}>
+                  {/* 标题栏 - 包含 Resident 标题和添加按钮 */}
+                  {/* 标题栏 - 包含 Resident 标题和操作按钮 */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 12
+                  }}>
                     <div style={{
                       fontSize: 12,
                       fontWeight: 400,
                       color: '#666',
-                      marginBottom: 12,
                       textTransform: 'uppercase',
                       letterSpacing: 0.5
                     }}>
-                      Recent
+                      Resident
                     </div>
-                    <Grid columns={2} gap={12} className="activity-btn-grid">
-                      {recentActivities.map(activity => (
-                        <Grid.Item key={activity}>
-                          {editingRecentActivity === activity ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {/* 搜索按钮 - 仅在有 residents 且未添加/搜索时显示 */}
+                      {residents.length > 0 && !isAddingResident && !isResidentSearching && (
+                        <button
+                          style={{
+                            width: 24,
+                            height: 24,
+                            border: 'none',
+                            background: 'transparent',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsResidentSearching(true);
+                            setIsAddingResident(false);
+                          }}
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(2, 48, 59, 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </button>
+                      )}
+                      {/* Add button */}
+                      {residents.length > 0 && !isAddingResident && !isResidentSearching && (
+                        <button
+                          style={{
+                            width: 24,
+                            height: 24,
+                            border: 'none',
+                            background: 'transparent',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                            if (popupContainer) {
+                              popupContainer.setAttribute('data-recent-interaction', 'true');
+                              setTimeout(() => {
+                                popupContainer.removeAttribute('data-recent-interaction');
+                              }, 1000);
+                            }
+                            setIsAddingResident(true);
+                            setIsResidentSearching(false);
+                          }}
+                        >
+                          <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Shared Search/Add Input */}
+                  {(isResidentSearching || isAddingResident) && (
+                    <input
+                      style={{
+                        width: '100%',
+                        height: '44px',
+                        padding: '0 16px',
+                        border: '1px solid #00313c',
+                        borderRadius: '12px',
+                        fontSize: '16px',
+                        fontWeight: '500',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        background: '#f5f9fa',
+                        marginBottom: 12,
+                        color: '#222'
+                      }}
+                      placeholder={isResidentSearching ? "Search resident..." : "Enter resident name"}
+                      value={isResidentSearching ? residentSearchQuery : newResidentName}
+                      enterKeyHint="done"
+                      autoComplete="off"
+                      autoFocus
+                      onChange={e => {
+                        if (isResidentSearching) {
+                          setResidentSearchQuery(e.target.value);
+                        } else {
+                          setNewResidentName(e.target.value);
+                        }
+                      }}
+                      onFocus={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onBlur={(e) => {
+                        e.stopPropagation();
+                        if (isResidentSearching && !residentSearchQuery) {
+                          setIsResidentSearching(false);
+                        }
+                        if (isAddingResident) {
+                          if (newResidentName.trim()) {
+                            setResidents(prev => {
+                              const name = newResidentName.trim();
+                              const filtered = prev.filter(r => r !== name);
+                              return [name, ...filtered];
+                            });
+                          }
+                          setNewResidentName('');
+                          setIsAddingResident(false);
+                        }
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.currentTarget.blur();
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (isResidentSearching) {
+                            setResidentSearchQuery('');
+                            setIsResidentSearching(false);
+                          } else {
+                            setNewResidentName('');
+                            setIsAddingResident(false);
+                          }
+                        }
+                      }}
+                    />
+                  )}
+
+                  {/* Resident 名字区域 - 横向滚动，最多2行 */}
+                  {residents.length > 0 ? (
+                    <div style={{
+                      overflowX: 'auto',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      WebkitOverflowScrolling: 'touch'
+                    }}>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateRows: 'repeat(2, 1fr)',
+                        gridAutoFlow: 'column',
+                        gridAutoColumns: 'max-content',
+                        columnGap: 12,
+                        rowGap: 12,
+                        padding: 4, // 防止input被截断
+                        paddingBottom: 4
+                      }}>
+                        {residents.filter(r => !isResidentSearching || r.toLowerCase().includes(residentSearchQuery.toLowerCase())).map(resident => (
+                          editingResident === resident ? (
+                            <div key={resident} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <input
                                 style={{
-                                  flex: 1,
-                                  minWidth: 0,
-                                  height: '48px',
-                                  padding: '0 12px',
+                                  height: '44px',
+                                  padding: '0 16px',
                                   border: '1px solid #00313c',
-                                  borderRadius: '12px',
+                                  borderRadius: 12,
                                   fontSize: 16,
                                   fontWeight: 500,
                                   outline: 'none',
                                   boxSizing: 'border-box',
                                   background: '#f5f9fa',
-                                  color: '#222'
+                                  color: '#222',
+                                  width: Math.max(100, editingResidentName.length * 10 + 32) + 'px',
+                                  maxWidth: '160px',
+                                  flex: '0 0 auto'
                                 }}
                                 enterKeyHint="done"
-                                value={editingRecentName}
+                                autoComplete="off"
+                                value={editingResidentName}
                                 autoFocus
-                                onChange={e => setEditingRecentName(e.target.value)}
-                                onBlur={() => {
-                                  if (editingRecentName.trim() === '') {
-                                    setEditingRecentName(activity);
-                                    setEditingRecentActivity(null);
+                                onClick={e => e.stopPropagation()}
+                                onFocus={e => e.stopPropagation()}
+                                onChange={e => setEditingResidentName(e.target.value)}
+                                onBlur={(e) => {
+                                  e.stopPropagation();
+                                  const newName = editingResidentName.trim();
+                                  if (newName === '') {
+                                    setEditingResident(null);
+                                  } else if (newName !== resident) {
+                                    setResidents(prev => {
+                                      const filtered = prev.filter(r => r !== newName);
+                                      return filtered.map(r => r === resident ? newName : r);
+                                    });
+                                    setSelectedResidents(prev => {
+                                      const wasSelected = prev.includes(resident);
+                                      const newNameWasSelected = prev.includes(newName);
+                                      let newSelected = prev.filter(r => r !== resident && r !== newName);
+                                      if (wasSelected || newNameWasSelected) {
+                                        newSelected.push(newName);
+                                      }
+                                      return newSelected;
+                                    });
+                                    setEditingResident(null);
                                   } else {
-                                    setRecentActivities(prev =>
-                                      prev.map(item =>
-                                        item === activity ? editingRecentName : item
-                                      )
-                                    );
-                                    setEditingRecentActivity(null);
+                                    setEditingResident(null);
                                   }
                                 }}
                                 onKeyDown={e => {
                                   if (e.key === 'Enter') {
-                                    if (editingRecentName.trim() === '') {
-                                      setEditingRecentName(activity);
-                                      setEditingRecentActivity(null);
-                                    } else {
-                                      setRecentActivities(prev =>
-                                        prev.map(item =>
-                                          item === activity ? editingRecentName : item
-                                        )
-                                      );
-                                      setEditingRecentActivity(null);
-                                    }
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.currentTarget.blur();
                                   } else if (e.key === 'Escape') {
-                                    setEditingRecentName(activity);
-                                    setEditingRecentActivity(null);
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setEditingResidentName(resident);
+                                    setEditingResident(null);
                                   }
                                 }}
                               />
@@ -5297,151 +5051,428 @@ function App() {
                                 }}
                                 onMouseDown={e => e.preventDefault()}
                                 onClick={() => {
-                                  setRecentActivities(prev => prev.filter(item => item !== activity));
-                                  setEditingRecentActivity(null);
+                                  setResidents(prev => prev.filter(r => r !== resident));
+                                  setSelectedResidents(prev => prev.filter(r => r !== resident));
+                                  setEditingResident(null);
                                 }}
                               >
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cc3333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                               </button>
                             </div>
                           ) : (
-                            <div
-                              onTouchStart={e => {
-                                e.preventDefault();
-                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
-                                (window as any).__recentRecentLongPressFired = false;
-                                (window as any).__recentLongPressTimer = setTimeout(() => {
-                                  (window as any).__recentRecentLongPressFired = true;
-                                  setEditingRecentActivity(activity);
-                                  setEditingRecentName(activity);
-                                }, 1000);
+                            <button
+                              key={resident}
+                              style={{
+                                background: selectedResidents.includes(resident) ? '#00313c' : '#E9F2F4',
+                                color: selectedResidents.includes(resident) ? '#fff' : '#222',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'flex-start',
+                                gap: 4,
+                                padding: '12px 16px',
+                                borderRadius: 12,
+                                border: '1px solid rgba(2, 48, 59, 0.04)',
+                                cursor: 'pointer',
+                                fontSize: 15,
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                minWidth: 'fit-content',
+                                // 禁止文本选中，优化长按体验
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none',
+                                touchAction: 'manipulation'
+                              }}
+                              onTouchStart={(e) => {
+                                const touch = e.touches[0];
+                                (window as any).__residentTouchStartX = touch.clientX;
+                                (window as any).__residentTouchStartY = touch.clientY;
+                                (window as any).__residentTouchStartTime = Date.now();
+                                if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                                (window as any).__residentLongPressFired = false;
+                                (window as any).__residentTouchHandled = false;
+                                (window as any).__residentIsSwiping = false;
+                                (window as any).__residentLongPressTimer = setTimeout(() => {
+                                  (window as any).__residentLongPressFired = true;
+                                  (window as any).__residentTouchHandled = true;
+                                  setEditingResident(resident);
+                                  setEditingResidentName(resident);
+                                  // 震动反馈
+                                  if (navigator.vibrate) navigator.vibrate(50);
+                                }, 300); // 缩短到300ms提高灵敏度
+                              }}
+                              onTouchMove={(e) => {
+                                const touch = e.touches[0];
+                                const startX = (window as any).__residentTouchStartX || 0;
+                                const startY = (window as any).__residentTouchStartY || 0;
+                                const moveX = Math.abs(touch.clientX - startX);
+                                const moveY = Math.abs(touch.clientY - startY);
+                                // 移动超过10px视为滑动
+                                if (moveX > 10 || moveY > 10) {
+                                  (window as any).__residentIsSwiping = true;
+                                  if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                                }
                               }}
                               onTouchEnd={() => {
-                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
-                              }}
-                              onTouchMove={() => {
-                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                                const elapsed = Date.now() - ((window as any).__residentTouchStartTime || 0);
+                                // 只有在非滑动且非长按且时间<300ms时才视为点击
+                                if (!(window as any).__residentLongPressFired &&
+                                  !(window as any).__residentTouchHandled &&
+                                  !(window as any).__residentIsSwiping &&
+                                  elapsed < 300) {
+                                  (window as any).__residentTouchHandled = true;
+                                  setSelectedResidents(prev =>
+                                    prev.includes(resident)
+                                      ? prev.filter(r => r !== resident)
+                                      : [...prev, resident]
+                                  );
+
+                                  // Search Exit Logic
+                                  if (isResidentSearching) {
+                                    setIsResidentSearching(false);
+                                    setResidentSearchQuery('');
+                                  }
+                                }
                               }}
                               onMouseDown={() => {
-                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
-                                (window as any).__recentRecentLongPressFired = false;
-                                (window as any).__recentLongPressTimer = setTimeout(() => {
-                                  (window as any).__recentRecentLongPressFired = true;
-                                  setEditingRecentActivity(activity);
-                                  setEditingRecentName(activity);
-                                }, 1000);
+                                // 只在非触摸设备上处理
+                                if ((window as any).__residentTouchHandled) return;
+                                if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
+                                (window as any).__residentLongPressFired = false;
+                                (window as any).__residentLongPressTimer = setTimeout(() => {
+                                  (window as any).__residentLongPressFired = true;
+                                  setEditingResident(resident);
+                                  setEditingResidentName(resident);
+                                }, 800);
                               }}
                               onMouseUp={() => {
-                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                               }}
                               onMouseLeave={() => {
-                                if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                if ((window as any).__residentLongPressTimer) clearTimeout((window as any).__residentLongPressTimer);
                               }}
-                              onClick={() => {
-                                if ((window as any).__recentRecentLongPressFired) {
-                                  // 长按已触发编辑，不再触发点击
-                                  (window as any).__recentRecentLongPressFired = false;
+                              onClick={e => {
+                                // 如果是触摸设备且已处理，跳过 click 事件
+                                if ((window as any).__residentTouchHandled) {
+                                  (window as any).__residentTouchHandled = false;
                                   return;
                                 }
-                                startActivity(activity);
+                                // 桌面端：只有在没有触发长按的情况下才执行点击操作
+                                if (!(window as any).__residentLongPressFired) {
+                                  e.stopPropagation();
+                                  setSelectedResidents(prev =>
+                                    prev.includes(resident)
+                                      ? prev.filter(r => r !== resident)
+                                      : [...prev, resident]
+                                  );
+
+                                  // Search Exit Logic
+                                  if (isResidentSearching) {
+                                    setIsResidentSearching(false);
+                                    setResidentSearchQuery('');
+                                  }
+                                }
                               }}
-                              onContextMenu={e => e.preventDefault()}
                             >
-                              <Button
-                                block
-                                className="activity-btn"
-                                shape="rounded"
-                                size="large"
+                              <span style={{
+                                boxSizing: 'border-box',
+                                width: 16,
+                                height: 16,
+                                border: selectedResidents.includes(resident) ? '2px solid #fff' : '1px solid rgba(2, 48, 59, 0.4)',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}>
+                                {selectedResidents.includes(resident) && (
+                                  <span style={{
+                                    width: 8,
+                                    height: 8,
+                                    background: '#fff',
+                                    borderRadius: '50%'
+                                  }} />
+                                )}
+                              </span>
+                              {resident}
+                            </button>
+                          )
+                        ))}
+                      </div>
+                    </div>
+                  ) : !isAddingResident && (
+                    /* 没有 residents 时显示 Add Name 按钮 */
+                    <Button
+                      block
+                      className="activity-btn"
+                      shape="rounded"
+                      size="large"
+                      style={{
+                        border: '1px dashed #ccc',
+                        background: '#fff'
+                      }}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        // 设置交互标记，防止popup被关闭
+                        const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                        if (popupContainer) {
+                          popupContainer.setAttribute('data-recent-interaction', 'true');
+                          setTimeout(() => {
+                            popupContainer.removeAttribute('data-recent-interaction');
+                          }, 1000);
+                        }
+                        setIsAddingResident(true);
+                      }}
+                    >
+                      + Add Name
+                    </Button>
+                  )}
+                </div>
+
+                {/* 可滚动的tag区域 */}
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    paddingRight: '8px'
+                  }}
+                  onScroll={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onTouchMove={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  {/* Recent Activities */}
+                  {recentActivities.length > 0 && (
+                    <div style={{ marginBottom: 28 }}>
+                      <div style={{
+                        fontSize: 12,
+                        fontWeight: 400,
+                        color: '#666',
+                        marginBottom: 12,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5
+                      }}>
+                        Recent
+                      </div>
+                      <Grid columns={2} gap={12} className="activity-btn-grid">
+                        {recentActivities.map(activity => (
+                          <Grid.Item key={activity}>
+                            {editingRecentActivity === activity ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                                <input
+                                  style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    height: '48px',
+                                    padding: '0 12px',
+                                    border: '1px solid #00313c',
+                                    borderRadius: '12px',
+                                    fontSize: 16,
+                                    fontWeight: 500,
+                                    outline: 'none',
+                                    boxSizing: 'border-box',
+                                    background: '#f5f9fa',
+                                    color: '#222'
+                                  }}
+                                  enterKeyHint="done"
+                                  value={editingRecentName}
+                                  autoFocus
+                                  onChange={e => setEditingRecentName(e.target.value)}
+                                  onBlur={() => {
+                                    if (editingRecentName.trim() === '') {
+                                      setEditingRecentName(activity);
+                                      setEditingRecentActivity(null);
+                                    } else {
+                                      setRecentActivities(prev =>
+                                        prev.map(item =>
+                                          item === activity ? editingRecentName : item
+                                        )
+                                      );
+                                      setEditingRecentActivity(null);
+                                    }
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      if (editingRecentName.trim() === '') {
+                                        setEditingRecentName(activity);
+                                        setEditingRecentActivity(null);
+                                      } else {
+                                        setRecentActivities(prev =>
+                                          prev.map(item =>
+                                            item === activity ? editingRecentName : item
+                                          )
+                                        );
+                                        setEditingRecentActivity(null);
+                                      }
+                                    } else if (e.key === 'Escape') {
+                                      setEditingRecentName(activity);
+                                      setEditingRecentActivity(null);
+                                    }
+                                  }}
+                                />
+                                <button
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                  }}
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => {
+                                    setRecentActivities(prev => prev.filter(item => item !== activity));
+                                    setEditingRecentActivity(null);
+                                  }}
+                                >
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cc3333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                </button>
+                              </div>
+                            ) : (
+                              <div
+                                onTouchStart={e => {
+                                  e.preventDefault();
+                                  if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                  (window as any).__recentRecentLongPressFired = false;
+                                  (window as any).__recentLongPressTimer = setTimeout(() => {
+                                    (window as any).__recentRecentLongPressFired = true;
+                                    setEditingRecentActivity(activity);
+                                    setEditingRecentName(activity);
+                                  }, 1000);
+                                }}
+                                onTouchEnd={() => {
+                                  if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                }}
+                                onTouchMove={() => {
+                                  if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                }}
+                                onMouseDown={() => {
+                                  if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                  (window as any).__recentRecentLongPressFired = false;
+                                  (window as any).__recentLongPressTimer = setTimeout(() => {
+                                    (window as any).__recentRecentLongPressFired = true;
+                                    setEditingRecentActivity(activity);
+                                    setEditingRecentName(activity);
+                                  }, 1000);
+                                }}
+                                onMouseUp={() => {
+                                  if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                }}
+                                onMouseLeave={() => {
+                                  if ((window as any).__recentLongPressTimer) clearTimeout((window as any).__recentLongPressTimer);
+                                }}
+                                onClick={() => {
+                                  if ((window as any).__recentRecentLongPressFired) {
+                                    // 长按已触发编辑，不再触发点击
+                                    (window as any).__recentRecentLongPressFired = false;
+                                    return;
+                                  }
+                                  startActivity(activity);
+                                }}
+                                onContextMenu={e => e.preventDefault()}
                               >
-                                {activity}
-                              </Button>
-                            </div>
-                          )}
+                                <Button
+                                  block
+                                  className="activity-btn"
+                                  shape="rounded"
+                                  size="large"
+                                >
+                                  {activity}
+                                </Button>
+                              </div>
+                            )}
+                          </Grid.Item>
+                        ))}
+                      </Grid>
+                    </div>
+                  )}
+
+                  {/* ADLs Activities */}
+                  <div style={{ marginBottom: 28 }}>
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 400,
+                      color: '#666',
+                      marginBottom: 12,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5
+                    }}>
+                      ADLs
+                    </div>
+                    <Grid columns={2} gap={12} className="activity-btn-grid">
+                      {activityTypes.map(type => (
+                        <Grid.Item key={type}>
+                          <Button block className="activity-btn" shape="rounded" size="large" onClick={() => startActivity(type)}>{type}</Button>
                         </Grid.Item>
                       ))}
                     </Grid>
                   </div>
-                )}
+                </div>
 
-                {/* ADLs Activities */}
-                <div style={{ marginBottom: 28 }}>
-                  <div style={{
-                    fontSize: 12,
-                    fontWeight: 400,
-                    color: '#666',
-                    marginBottom: 12,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5
-                  }}>
-                    ADLs
-                  </div>
-                  <Grid columns={2} gap={12} className="activity-btn-grid">
-                    {activityTypes.map(type => (
-                      <Grid.Item key={type}>
-                        <Button block className="activity-btn" shape="rounded" size="large" onClick={() => startActivity(type)}>{type}</Button>
-                      </Grid.Item>
-                    ))}
-                  </Grid>
+                {/* 固定在底部的输入框 */}
+                <div className="activity-input-row-inner" style={{
+                  marginTop: 16,
+                  flexShrink: 0,
+                  paddingTop: 16,
+                  paddingBottom: 10,
+                  borderTop: '1px solid #f0f0f0',
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'center'
+                }}>
+                  <input
+                    ref={(el) => {
+                      // 保存引用到 window 以便在 blur() 时使用
+                      (window as any).__activityNameInput = el;
+                    }}
+                    className="activity-input"
+                    placeholder="Write Activity Name"
+                    value={activityName}
+                    onChange={(e) => setActivityName(e.target.value)}
+                    style={{
+                      flex: 1,
+                      height: '44px',
+                      padding: '0 16px',
+                      border: '1px solid #ddd',
+                      borderRadius: '12px',
+                      fontSize: '16px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: '#f8f8f8',
+                      color: '#222' // 确保深色文字
+                    }}
+                    onFocus={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onBlur={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    enterKeyHint="done"
+                    autoComplete="off"
+                  />
+                  <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName} style={{ height: '44px' }}>Start</Button>
                 </div>
               </div>
-
-              {/* 固定在底部的输入框 */}
-              <div className="activity-input-row-inner" style={{
-                marginTop: 16,
-                flexShrink: 0,
-                paddingTop: 16,
-                paddingBottom: 10,
-                borderTop: '1px solid #f0f0f0',
-                display: 'flex',
-                gap: 10,
-                alignItems: 'center'
-              }}>
-                <input
-                  ref={(el) => {
-                    // 保存引用到 window 以便在 blur() 时使用
-                    (window as any).__activityNameInput = el;
-                  }}
-                  className="activity-input"
-                  placeholder="Write Activity Name"
-                  value={activityName}
-                  onChange={(e) => setActivityName(e.target.value)}
-                  style={{
-                    flex: 1,
-                    height: '44px',
-                    padding: '0 16px',
-                    border: '1px solid #ddd',
-                    borderRadius: '12px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    background: '#f8f8f8',
-                    color: '#222' // 确保深色文字
-                  }}
-                  onFocus={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onBlur={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  enterKeyHint="done"
-                  autoComplete="off"
-                />
-                <Button className="activity-btn ant-btn-primary" shape="rounded" onClick={() => startActivity(activityName)} disabled={!activityName} style={{ height: '44px' }}>Start</Button>
-              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )
+      }
       {/* ✨ Start Activity 按钮 - popup关闭时显示 */}
       {
         !showBottomSheet && !isBottomSheetClosing && showStartButton && !showStatsModal && !isStatsModalClosing && (
