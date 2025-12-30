@@ -2715,8 +2715,8 @@ function App() {
                             <span
                               key={residentName}
                               style={{
-                                background: isActive ? '#00313c' : '#888',
-                                color: '#fff',
+                                background: isActive ? '#CEE6EA' : '#E1E1E1',
+                                color: isActive ? '#02303B' : '#333333',
                                 padding: '4px 12px',
                                 borderRadius: 12,
                                 fontSize: 12,
@@ -2886,8 +2886,8 @@ function App() {
                                 <div key={idx} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
                                   <span style={{
                                     display: 'inline-block',
-                                    background: isBacked ? '#FFF3E0' : '#f5f5f5',
-                                    color: isBacked ? '#E65100' : '#666',
+                                    background: isBacked ? '#CEE6EA' : '#E1E1E1',
+                                    color: isBacked ? '#02303B' : '#333333',
                                     padding: '4px 10px',
                                     borderRadius: 6,
                                     fontSize: 12,
@@ -2937,8 +2937,8 @@ function App() {
                         <div style={{ fontSize: 18, fontWeight: 600, color: '#222' }}>{residentName}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{
-                            background: isActive ? '#E8F5E9' : '#f5f5f5',
-                            color: isActive ? '#2E7D32' : '#666',
+                            background: isActive ? '#CEE6EA' : '#E1E1E1',
+                            color: isActive ? '#02303B' : '#333333',
                             padding: '4px 12px',
                             borderRadius: 6,
                             fontSize: 12,
@@ -3121,8 +3121,8 @@ function App() {
                                 <div key={idx} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
                                   <span style={{
                                     display: 'inline-block',
-                                    background: isBacked ? '#FFF3E0' : '#f5f5f5',
-                                    color: isBacked ? '#E65100' : '#666',
+                                    background: isBacked ? '#CEE6EA' : '#E1E1E1',
+                                    color: isBacked ? '#02303B' : '#333333',
                                     padding: '4px 10px',
                                     borderRadius: 6,
                                     fontSize: 12,
@@ -3623,8 +3623,8 @@ function App() {
                                   <span
                                     key={residentName}
                                     style={{
-                                      background: isActive ? '#00313c' : '#888',
-                                      color: '#fff',
+                                      background: isActive ? '#CEE6EA' : '#E1E1E1',
+                                      color: isActive ? '#02303B' : '#333333',
                                       padding: '4px 12px',
                                       borderRadius: 12,
                                       fontSize: 12,
@@ -4144,8 +4144,8 @@ function App() {
                                     <span
                                       key={residentName}
                                       style={{
-                                        background: isActive ? '#00313c' : '#888',
-                                        color: '#fff',
+                                        background: isActive ? '#CEE6EA' : '#E1E1E1',
+                                        color: isActive ? '#02303B' : '#333333',
                                         padding: '4px 12px',
                                         borderRadius: 12,
                                         fontSize: 12,
