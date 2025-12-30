@@ -946,7 +946,9 @@ function App() {
           fontWeight: 500,
           zIndex: 999999,
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          animation: 'fadeIn 0.2s ease-out'
+          animation: 'toastSlideIn 0.25s ease-out forwards',
+          whiteSpace: 'nowrap',
+          textAlign: 'center'
         }}>
           {toastMessage}
         </div>
@@ -3098,14 +3100,6 @@ function App() {
                                                 newHistory[histIdx].residents = [resident, ...currentResidents];
                                               }
                                               setHistory(newHistory);
-                                            }
-
-                                            // Move to top logic (on add)
-                                            if (!isSelected) {
-                                              setResidents(prev => {
-                                                const filtered = prev.filter(r => r !== resident);
-                                                return [resident, ...filtered];
-                                              });
                                             }
 
                                             // Search Exit Logic
