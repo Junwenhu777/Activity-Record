@@ -311,7 +311,9 @@ function App() {
     isOpen: boolean;
     residentName: string | null;
     position: { top: number; left: number } | null;
-  }>({ isOpen: false, residentName: null, position: null });
+    popupType: 'now' | 'history';
+    residentData?: any; // The full resident object for history cards
+  }>({ isOpen: false, residentName: null, position: null, popupType: 'now' });
 
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
@@ -2684,7 +2686,8 @@ function App() {
                                 setResidentPopupState({
                                   isOpen: true,
                                   residentName,
-                                  position: { top: rect.bottom + 8, left: Math.max(48, rect.left - 100) }
+                                  position: { top: rect.bottom + 8, left: Math.max(48, rect.left - 100) },
+                                  popupType: 'now'
                                 });
                               }}
                             >
@@ -2747,7 +2750,7 @@ function App() {
                   background: 'transparent',
                   touchAction: 'none'
                 }}
-                onClick={() => setResidentPopupState({ isOpen: false, residentName: null, position: null })}
+                onClick={() => setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' })}
               />
 
               {/* Popup Content */}
@@ -2771,15 +2774,104 @@ function App() {
                 onClick={e => e.stopPropagation()}
               >
                 {(() => {
-                  const resident = current.residents?.find((r: any) => {
-                    const name = typeof r === 'string' ? r : r.name;
-                    return name === residentPopupState.residentName;
-                  });
+                  // For Now Card, find resident in current.residents
+                  // For History Card, use residentData directly
+                  const isHistoryPopup = residentPopupState.popupType === 'history';
+                  const resident = isHistoryPopup
+                    ? residentPopupState.residentData
+                    : current.residents?.find((r: any) => {
+                      const name = typeof r === 'string' ? r : r.name;
+                      return name === residentPopupState.residentName;
+                    });
                   const residentName = typeof resident === 'string' ? resident : resident?.name;
                   const residentStatus = typeof resident === 'string' ? 'active' : (resident?.status || 'active');
                   const isActive = residentStatus === 'active';
                   const records = typeof resident === 'string' ? [] : (resident?.records || []);
 
+                  // History cards show only records section
+                  if (isHistoryPopup) {
+                    return (
+                      <>
+                        {/* Header: Name only */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <div style={{ fontSize: 18, fontWeight: 600, color: '#222' }}>{residentName}</div>
+                        </div>
+
+                        {/* Records Section */}
+                        {records.length > 0 ? (
+                          <>
+                            <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
+                            {records.slice().reverse().map((record: any, idx: number) => {
+                              const recordTime = new Date(record.time);
+                              const isLeaved = record.type === 'leaved';
+                              const isBacked = record.type === 'backed';
+
+                              // Calculate duration for leaved records
+                              let duration = '';
+                              if (isLeaved) {
+                                const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                                let startTime = addedAt ? new Date(addedAt) : null;
+                                const recordsBeforeThis = records.slice(0, records.length - 1 - idx);
+                                for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                  if (recordsBeforeThis[i].type === 'backed') {
+                                    startTime = new Date(recordsBeforeThis[i].time);
+                                    break;
+                                  }
+                                }
+                                if (startTime) {
+                                  const durationMs = recordTime.getTime() - startTime.getTime();
+                                  duration = formatDuration(durationMs);
+                                }
+                              }
+
+                              return (
+                                <div key={idx} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    background: isBacked ? '#FFF3E0' : '#f5f5f5',
+                                    color: isBacked ? '#E65100' : '#666',
+                                    padding: '4px 10px',
+                                    borderRadius: 6,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    marginBottom: 8
+                                  }}>
+                                    {isBacked ? 'Backed' : 'Leaved'}
+                                  </span>
+                                  <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
+                                    {isBacked ? (
+                                      <div>Start At: {recordTime.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                    ) : (
+                                      <>
+                                        <div>Start At: {(() => {
+                                          const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                                          let startTime = addedAt ? new Date(addedAt) : null;
+                                          const recordsBeforeThis = records.slice(0, records.length - 1 - idx);
+                                          for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                            if (recordsBeforeThis[i].type === 'backed') {
+                                              startTime = new Date(recordsBeforeThis[i].time);
+                                              break;
+                                            }
+                                          }
+                                          return startTime ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
+                                        })()}</div>
+                                        <div>End At: {recordTime.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                        {duration && <div>Duration: {duration}</div>}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </>
+                        ) : (
+                          <div style={{ fontSize: 14, color: '#999', textAlign: 'center', padding: '20px 0' }}>No records</div>
+                        )}
+                      </>
+                    );
+                  }
+
+                  // Now Card shows full content
                   return (
                     <>
                       {/* Header: Name + Status + Delete */}
@@ -2815,7 +2907,7 @@ function App() {
                                 return name !== residentName;
                               });
                               setCurrent({ ...current, residents: newResidents });
-                              setResidentPopupState({ isOpen: false, residentName: null, position: null });
+                              setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' });
                             }}
                           >
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cc3333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -3469,18 +3561,32 @@ function App() {
                               })
                               .map((resident: any) => {
                                 const residentName = typeof resident === 'string' ? resident : resident.name;
+                                const residentStatus = typeof resident === 'string' ? 'active' : (resident.status || 'active');
+                                const isActive = residentStatus === 'active';
                                 return (
                                   <span
                                     key={residentName}
                                     style={{
-                                      background: '#E9F2F4',
-                                      color: '#00313c',
+                                      background: isActive ? '#00313c' : '#888',
+                                      color: '#fff',
                                       padding: '4px 12px',
                                       borderRadius: 12,
                                       fontSize: 12,
                                       fontWeight: 500,
                                       whiteSpace: 'nowrap',
-                                      flexShrink: 0
+                                      flexShrink: 0,
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                      setResidentPopupState({
+                                        isOpen: true,
+                                        residentName,
+                                        position: { top: rect.bottom + 8, left: Math.max(48, rect.left - 100) },
+                                        popupType: 'history',
+                                        residentData: resident
+                                      });
                                     }}
                                   >
                                     {residentName}
@@ -3964,18 +4070,32 @@ function App() {
                                 })
                                 .map((resident: any) => {
                                   const residentName = typeof resident === 'string' ? resident : resident.name;
+                                  const residentStatus = typeof resident === 'string' ? 'active' : (resident.status || 'active');
+                                  const isActive = residentStatus === 'active';
                                   return (
                                     <span
                                       key={residentName}
                                       style={{
-                                        background: '#E9F2F4',
-                                        color: '#00313c',
+                                        background: isActive ? '#00313c' : '#888',
+                                        color: '#fff',
                                         padding: '4px 12px',
                                         borderRadius: 12,
                                         fontSize: 12,
                                         fontWeight: 500,
                                         whiteSpace: 'nowrap',
-                                        flexShrink: 0
+                                        flexShrink: 0,
+                                        cursor: 'pointer'
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                        setResidentPopupState({
+                                          isOpen: true,
+                                          residentName,
+                                          position: { top: rect.bottom + 8, left: Math.max(48, rect.left - 100) },
+                                          popupType: 'history',
+                                          residentData: resident
+                                        });
                                       }}
                                     >
                                       {residentName}
