@@ -335,6 +335,7 @@ function App() {
 
   // Body Scroll Lock & Non-passive Touch Listener for Resident Popup
   const popupContentRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number, y: number } | null>(null);
 
   useEffect(() => {
     if (residentPopupState.isOpen) {
@@ -342,24 +343,47 @@ function App() {
       const originalStyle = window.getComputedStyle(document.body).overflow;
       document.body.style.overflow = 'hidden';
 
-      // 2. Attach Non-passive Touch Listener
       const node = popupContentRef.current;
+
+      // 2. Track Touch Start for Direction Detection
+      const handleTouchStart = (e: TouchEvent) => {
+        touchStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY
+        };
+      };
+
+      // 3. Attach Non-passive Touch Listener
       const handleTouchMove = (e: TouchEvent) => {
-        e.stopPropagation();
-        const target = e.currentTarget as HTMLElement;
-        // If content is not scrollable (no overflow), prevent background scroll
-        if (target.scrollHeight <= target.clientHeight) {
-          if (e.cancelable) e.preventDefault();
+        if (!touchStartRef.current) return;
+        const touch = e.touches[0];
+        const diffX = touch.clientX - touchStartRef.current.x;
+        const diffY = touch.clientY - touchStartRef.current.y;
+
+        // Simple Direction Check
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          // Horizontal: Likely Record Swipe. Allow bubbling.
+          // Do NOT stopPropagation, Do NOT preventDefault.
+          return;
         }
+
+        // Vertical: Scroll Logic
+        e.stopPropagation(); // Keep vertical scroll inside popup
+
+        // We rely on overscroll-behavior: contain (CSS) + forced overflow to handle locking vs bounce.
+        // So we strictly avoid preventing default here to allow the bounce.
+        // background scroll is prevented by body overflow: hidden.
       };
 
       if (node) {
+        node.addEventListener('touchstart', handleTouchStart, { passive: true });
         node.addEventListener('touchmove', handleTouchMove, { passive: false });
       }
 
       return () => {
         document.body.style.overflow = originalStyle;
         if (node) {
+          node.removeEventListener('touchstart', handleTouchStart);
           node.removeEventListener('touchmove', handleTouchMove);
         }
       };
@@ -2941,6 +2965,8 @@ function App() {
                     : (residentPopupState.position.bottom != null
                       ? `calc(100vh - ${Math.max(10, residentPopupState.position.bottom)}px - 10px)`
                       : `calc(100vh - 20px)`),
+                  // Force overflow to enable bounce/overscroll-behavior
+                  minHeight: 'calc(100% + 1px)',
                   background: '#fff',
                   borderRadius: 16,
                   boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
