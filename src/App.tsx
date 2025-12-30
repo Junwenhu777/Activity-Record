@@ -283,7 +283,11 @@ function App() {
   const [showCardResidentDropdown, setShowCardResidentDropdown] = useState<string | null>(null); // 'now' | 'today-{idx}' | '{date}-{idx}'
   const [cardNewResidentName, setCardNewResidentName] = useState('');
   const [isAddingNewCardResident, setIsAddingNewCardResident] = useState(false); // 是否正在输入新名字
-  const [cardDropdownPosition, setCardDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [cardDropdownPosition, setCardDropdownPosition] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
+  const [isResidentSearching, setIsResidentSearching] = useState(false);
+  const [residentSearchQuery, setResidentSearchQuery] = useState('');
+  const [cardIsSearching, setCardIsSearching] = useState(false);
+  const [cardSearchQuery, setCardSearchQuery] = useState('');
 
   // 新增 Summary popup 相关状态
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
@@ -2316,7 +2320,15 @@ function App() {
                             setCardDropdownPosition(null);
                           } else {
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                            setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                            const MENU_HEIGHT = 320;
+                            const viewportHeight = window.innerHeight;
+                            if (rect.bottom + MENU_HEIGHT > viewportHeight) {
+                              // Place above
+                              setCardDropdownPosition({ bottom: viewportHeight - rect.top + 4, left: rect.left });
+                            } else {
+                              // Place below
+                              setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                            }
                             setShowCardResidentDropdown('now');
                           }
                           setIsAddingNewCardResident(false);
@@ -2345,6 +2357,8 @@ function App() {
                               setShowCardResidentDropdown(null);
                               setCardNewResidentName('');
                               setIsAddingNewCardResident(false);
+                              setCardIsSearching(false);
+                              setCardSearchQuery('');
                             }}
                             onTouchMove={(e) => {
                               e.preventDefault();
@@ -2358,6 +2372,7 @@ function App() {
                             style={{
                               position: 'fixed',
                               top: cardDropdownPosition.top,
+                              bottom: cardDropdownPosition.bottom,
                               left: 48,
                               right: 48,
                               width: 'auto', // 自适应宽度
@@ -2369,7 +2384,8 @@ function App() {
                               overflowY: 'auto',
                               zIndex: 999999,
                               display: 'flex',
-                              flexDirection: 'column'
+                              flexDirection: 'column',
+                              overscrollBehavior: 'contain'
                             }}
                             onClick={e => e.stopPropagation()}
                             onTouchMove={e => e.stopPropagation()}
@@ -2391,34 +2407,60 @@ function App() {
                                 Resident
                               </div>
 
-                              {/* Add Button */}
-                              {!isAddingNewCardResident && (
-                                <button
-                                  style={{
-                                    width: 24,
-                                    height: 24,
-                                    border: 'none',
-                                    background: 'transparent',
-                                    cursor: 'pointer',
-                                    padding: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsAddingNewCardResident(true);
-                                  }}
-                                >
-                                  <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
-                                  </svg>
-                                </button>
-                              )}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                {/* Search Button */}
+                                {!isAddingNewCardResident && !cardIsSearching && (
+                                  <button
+                                    style={{
+                                      width: 24,
+                                      height: 24,
+                                      border: 'none',
+                                      background: 'transparent',
+                                      cursor: 'pointer',
+                                      padding: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCardIsSearching(true);
+                                      setIsAddingNewCardResident(false);
+                                    }}
+                                  >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(2, 48, 59, 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                  </button>
+                                )}
+                                {/* Add Button */}
+                                {!cardIsSearching && !isAddingNewCardResident && (
+                                  <button
+                                    style={{
+                                      width: 24,
+                                      height: 24,
+                                      border: 'none',
+                                      background: 'transparent',
+                                      cursor: 'pointer',
+                                      padding: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsAddingNewCardResident(true);
+                                      setCardIsSearching(false);
+                                    }}
+                                  >
+                                    <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
-                            {/* Add New Input */}
-                            {isAddingNewCardResident && (
+                            {/* Shared Input Area */}
+                            {(cardIsSearching || isAddingNewCardResident) && (
                               <div style={{ marginBottom: 12 }}>
                                 <input
                                   style={{
@@ -2434,33 +2476,52 @@ function App() {
                                     background: '#f5f9fa',
                                     color: '#222'
                                   }}
-                                  placeholder="Enter resident name"
-                                  value={cardNewResidentName}
-                                  onChange={e => setCardNewResidentName(e.target.value)}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter' && cardNewResidentName.trim()) {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const newName = cardNewResidentName.trim();
-                                      // Logic update: Remove duplicates and move to top (match bottom sheet)
-                                      setResidents(prev => {
-                                        const filtered = prev.filter(r => r !== newName);
-                                        return [newName, ...filtered];
-                                      });
-
-                                      const newResidentEntry = { name: newName, addedAt: new Date() };
-                                      const currentResidents = current.residents || [];
-                                      if (!currentResidents.some((r: any) => (typeof r === 'string' ? r : r.name) === newName)) {
-                                        setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
-                                      }
-                                      setCardNewResidentName('');
-                                      setIsAddingNewCardResident(false);
-                                    } else if (e.key === 'Escape') {
-                                      setCardNewResidentName('');
-                                      setIsAddingNewCardResident(false);
+                                  placeholder={cardIsSearching ? "Search resident..." : "Enter resident name"}
+                                  value={cardIsSearching ? cardSearchQuery : cardNewResidentName}
+                                  autoFocus
+                                  onChange={e => {
+                                    if (cardIsSearching) {
+                                      setCardSearchQuery(e.target.value);
+                                    } else {
+                                      setCardNewResidentName(e.target.value);
                                     }
                                   }}
-                                  autoFocus
+                                  onBlur={() => {
+                                    // Optional: logic to close or keep open, prioritizing user intent
+                                    // If empty, maybe close?
+                                    if (cardIsSearching && !cardSearchQuery) setCardIsSearching(false);
+                                    if (isAddingNewCardResident && !cardNewResidentName) setIsAddingNewCardResident(false);
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Escape') {
+                                      if (cardIsSearching) {
+                                        setCardSearchQuery('');
+                                        setCardIsSearching(false);
+                                      } else {
+                                        setCardNewResidentName('');
+                                        setIsAddingNewCardResident(false);
+                                      }
+                                    } else if (e.key === 'Enter') {
+                                      if (isAddingNewCardResident && cardNewResidentName.trim()) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        const newName = cardNewResidentName.trim();
+                                        // Logic update: Remove duplicates and move to top
+                                        setResidents(prev => {
+                                          const filtered = prev.filter(r => r !== newName);
+                                          return [newName, ...filtered];
+                                        });
+
+                                        const newResidentEntry = { name: newName, addedAt: new Date() };
+                                        const currentResidents = current.residents || [];
+                                        if (!currentResidents.some((r: any) => (typeof r === 'string' ? r : r.name) === newName)) {
+                                          setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
+                                        }
+                                        setCardNewResidentName('');
+                                        setIsAddingNewCardResident(false);
+                                      }
+                                    }
+                                  }}
                                   onClick={e => e.stopPropagation()}
                                 />
                               </div>
@@ -2472,7 +2533,7 @@ function App() {
                               flexDirection: 'column',
                               gap: 12
                             }}>
-                              {residents.map(resident => {
+                              {residents.filter(r => !cardIsSearching || r.toLowerCase().includes(cardSearchQuery.toLowerCase())).map(resident => {
                                 const currentResidents = current.residents || [];
                                 const isSelected = currentResidents.some((cr: any) => (typeof cr === 'string' ? cr : cr.name) === resident);
                                 return (
@@ -2756,7 +2817,15 @@ function App() {
                                   setCardDropdownPosition(null);
                                 } else {
                                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                  setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                  const MENU_HEIGHT = 320;
+                                  const viewportHeight = window.innerHeight;
+                                  if (rect.bottom + MENU_HEIGHT > viewportHeight) {
+                                    // Place above
+                                    setCardDropdownPosition({ bottom: viewportHeight - rect.top + 4, left: rect.left });
+                                  } else {
+                                    // Place below
+                                    setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                  }
                                   setShowCardResidentDropdown(`today-${idx}`);
                                 }
                                 setIsAddingNewCardResident(false);
@@ -2785,6 +2854,8 @@ function App() {
                                     setShowCardResidentDropdown(null);
                                     setCardNewResidentName('');
                                     setIsAddingNewCardResident(false);
+                                    setCardIsSearching(false);
+                                    setCardSearchQuery('');
                                   }}
                                   onTouchMove={(e) => {
                                     e.preventDefault();
@@ -2798,6 +2869,7 @@ function App() {
                                   style={{
                                     position: 'fixed',
                                     top: cardDropdownPosition.top,
+                                    bottom: cardDropdownPosition.bottom,
                                     left: 48,
                                     right: 48,
                                     width: 'auto',
@@ -2809,11 +2881,13 @@ function App() {
                                     overflowY: 'auto',
                                     zIndex: 999999,
                                     display: 'flex',
-                                    flexDirection: 'column'
+                                    flexDirection: 'column',
+                                    overscrollBehavior: 'contain'
                                   }}
                                   onClick={e => e.stopPropagation()}
                                   onTouchMove={e => e.stopPropagation()}
                                 >
+                                  {/* 标题栏 */}
                                   {/* 标题栏 */}
                                   <div style={{
                                     display: 'flex',
@@ -2830,33 +2904,60 @@ function App() {
                                     }}>
                                       Resident
                                     </div>
-                                    {!isAddingNewCardResident && (
-                                      <button
-                                        style={{
-                                          width: 24,
-                                          height: 24,
-                                          border: 'none',
-                                          background: 'transparent',
-                                          cursor: 'pointer',
-                                          padding: 0,
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center'
-                                        }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setIsAddingNewCardResident(true);
-                                        }}
-                                      >
-                                        <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                          <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
-                                        </svg>
-                                      </button>
-                                    )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                      {/* Search Button */}
+                                      {!isAddingNewCardResident && !cardIsSearching && (
+                                        <button
+                                          style={{
+                                            width: 24,
+                                            height: 24,
+                                            border: 'none',
+                                            background: 'transparent',
+                                            cursor: 'pointer',
+                                            padding: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                          }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCardIsSearching(true);
+                                            setIsAddingNewCardResident(false);
+                                          }}
+                                        >
+                                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(2, 48, 59, 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                        </button>
+                                      )}
+                                      {/* Add Button */}
+                                      {!cardIsSearching && !isAddingNewCardResident && (
+                                        <button
+                                          style={{
+                                            width: 24,
+                                            height: 24,
+                                            border: 'none',
+                                            background: 'transparent',
+                                            cursor: 'pointer',
+                                            padding: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                          }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsAddingNewCardResident(true);
+                                            setCardIsSearching(false);
+                                          }}
+                                        >
+                                          <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
+                                          </svg>
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
 
-                                  {/* 输入框 */}
-                                  {isAddingNewCardResident && (
+                                  {/* Shared Input Area */}
+                                  {(cardIsSearching || isAddingNewCardResident) && (
                                     <div style={{ marginBottom: 12 }}>
                                       <input
                                         style={{
@@ -2872,38 +2973,55 @@ function App() {
                                           background: '#f5f9fa',
                                           color: '#222'
                                         }}
-                                        placeholder="Enter resident name"
-                                        value={cardNewResidentName}
-                                        onChange={e => setCardNewResidentName(e.target.value)}
-                                        onKeyDown={e => {
-                                          if (e.key === 'Enter' && cardNewResidentName.trim()) {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            const newName = cardNewResidentName.trim();
-                                            // Deduplicate logic
-                                            setResidents(prev => {
-                                              const filtered = prev.filter(r => r !== newName);
-                                              return [newName, ...filtered];
-                                            });
-
-                                            const newHistory = [...history];
-                                            const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                            if (histIdx !== -1) {
-                                              const currentResidents = newHistory[histIdx].residents || [];
-                                              const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
-                                              if (!residentNames.includes(newName)) {
-                                                newHistory[histIdx].residents = [newName, ...currentResidents];
-                                                setHistory(newHistory);
-                                              }
-                                            }
-                                            setCardNewResidentName('');
-                                            setIsAddingNewCardResident(false);
-                                          } else if (e.key === 'Escape') {
-                                            setCardNewResidentName('');
-                                            setIsAddingNewCardResident(false);
+                                        placeholder={cardIsSearching ? "Search resident..." : "Enter resident name"}
+                                        value={cardIsSearching ? cardSearchQuery : cardNewResidentName}
+                                        autoFocus
+                                        onChange={e => {
+                                          if (cardIsSearching) {
+                                            setCardSearchQuery(e.target.value);
+                                          } else {
+                                            setCardNewResidentName(e.target.value);
                                           }
                                         }}
-                                        autoFocus
+                                        onBlur={() => {
+                                          if (cardIsSearching && !cardSearchQuery) setCardIsSearching(false);
+                                          if (isAddingNewCardResident && !cardNewResidentName) setIsAddingNewCardResident(false);
+                                        }}
+                                        onKeyDown={e => {
+                                          if (e.key === 'Escape') {
+                                            if (cardIsSearching) {
+                                              setCardSearchQuery('');
+                                              setCardIsSearching(false);
+                                            } else {
+                                              setCardNewResidentName('');
+                                              setIsAddingNewCardResident(false);
+                                            }
+                                          } else if (e.key === 'Enter') {
+                                            if (isAddingNewCardResident && cardNewResidentName.trim()) {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              const newName = cardNewResidentName.trim();
+                                              // Deduplicate logic
+                                              setResidents(prev => {
+                                                const filtered = prev.filter(r => r !== newName);
+                                                return [newName, ...filtered];
+                                              });
+
+                                              const newHistory = [...history];
+                                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                              if (histIdx !== -1) {
+                                                const currentResidents = newHistory[histIdx].residents || [];
+                                                const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
+                                                if (!residentNames.includes(newName)) {
+                                                  newHistory[histIdx].residents = [newName, ...currentResidents];
+                                                  setHistory(newHistory);
+                                                }
+                                              }
+                                              setCardNewResidentName('');
+                                              setIsAddingNewCardResident(false);
+                                            }
+                                          }
+                                        }}
                                         onClick={e => e.stopPropagation()}
                                       />
                                     </div>
@@ -2915,7 +3033,7 @@ function App() {
                                     flexDirection: 'column',
                                     gap: 12
                                   }}>
-                                    {residents.map(resident => {
+                                    {residents.filter(r => !cardIsSearching || r.toLowerCase().includes(cardSearchQuery.toLowerCase())).map(resident => {
                                       const itemResidents = item.residents || [];
                                       const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
                                       return (
@@ -2941,20 +3059,22 @@ function App() {
                                           }}
                                           onClick={(e) => {
                                             e.stopPropagation();
+                                            if (isSelected) return; // Prevent removal
+
+                                            // Add Logic
                                             const newHistory = [...history];
                                             const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
                                             if (histIdx !== -1) {
                                               const currentResidents = newHistory[histIdx].residents || [];
-                                              if (isSelected) {
-                                                newHistory[histIdx].residents = currentResidents.filter((r: any) => {
-                                                  const name = typeof r === 'string' ? r : r.name;
-                                                  return name !== resident;
-                                                });
-                                              } else {
-                                                newHistory[histIdx].residents = [resident, ...currentResidents];
-                                              }
+                                              newHistory[histIdx].residents = [resident, ...currentResidents];
                                               setHistory(newHistory);
                                             }
+
+                                            // Move to top logic
+                                            setResidents(prev => {
+                                              const filtered = prev.filter(r => r !== resident);
+                                              return [resident, ...filtered];
+                                            });
                                           }}
                                         >
                                           <span style={{
@@ -3188,7 +3308,15 @@ function App() {
                                     setCardDropdownPosition(null);
                                   } else {
                                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                    setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                    const MENU_HEIGHT = 320;
+                                    const viewportHeight = window.innerHeight;
+                                    if (rect.bottom + MENU_HEIGHT > viewportHeight) {
+                                      // Place above
+                                      setCardDropdownPosition({ bottom: viewportHeight - rect.top + 4, left: rect.left });
+                                    } else {
+                                      // Place below
+                                      setCardDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+                                    }
                                     setShowCardResidentDropdown(`${date}-${idx}`);
                                   }
                                   setIsAddingNewCardResident(false);
@@ -3217,6 +3345,8 @@ function App() {
                                       setShowCardResidentDropdown(null);
                                       setCardNewResidentName('');
                                       setIsAddingNewCardResident(false);
+                                      setCardIsSearching(false);
+                                      setCardSearchQuery('');
                                     }}
                                     onTouchMove={(e) => {
                                       e.preventDefault();
@@ -3230,6 +3360,7 @@ function App() {
                                     style={{
                                       position: 'fixed',
                                       top: cardDropdownPosition.top,
+                                      bottom: cardDropdownPosition.bottom,
                                       left: 48,
                                       right: 48,
                                       width: 'auto',
@@ -3241,7 +3372,8 @@ function App() {
                                       overflowY: 'auto',
                                       zIndex: 999999,
                                       display: 'flex',
-                                      flexDirection: 'column'
+                                      flexDirection: 'column',
+                                      overscrollBehavior: 'contain'
                                     }}
                                     onClick={e => e.stopPropagation()}
                                     onTouchMove={e => e.stopPropagation()}
@@ -3262,33 +3394,60 @@ function App() {
                                       }}>
                                         Resident
                                       </div>
-                                      {!isAddingNewCardResident && (
-                                        <button
-                                          style={{
-                                            width: 24,
-                                            height: 24,
-                                            border: 'none',
-                                            background: 'transparent',
-                                            cursor: 'pointer',
-                                            padding: 0,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                          }}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsAddingNewCardResident(true);
-                                          }}
-                                        >
-                                          <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
-                                          </svg>
-                                        </button>
-                                      )}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        {/* Search Button */}
+                                        {!isAddingNewCardResident && !cardIsSearching && (
+                                          <button
+                                            style={{
+                                              width: 24,
+                                              height: 24,
+                                              border: 'none',
+                                              background: 'transparent',
+                                              cursor: 'pointer',
+                                              padding: 0,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center'
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setCardIsSearching(true);
+                                              setIsAddingNewCardResident(false);
+                                            }}
+                                          >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(2, 48, 59, 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                          </button>
+                                        )}
+                                        {/* Add Button */}
+                                        {!cardIsSearching && !isAddingNewCardResident && (
+                                          <button
+                                            style={{
+                                              width: 24,
+                                              height: 24,
+                                              border: 'none',
+                                              background: 'transparent',
+                                              cursor: 'pointer',
+                                              padding: 0,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center'
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setIsAddingNewCardResident(true);
+                                              setCardIsSearching(false);
+                                            }}
+                                          >
+                                            <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                              <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
+                                            </svg>
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
 
-                                    {/* 输入框 */}
-                                    {isAddingNewCardResident && (
+                                    {/* Shared Input Area */}
+                                    {(cardIsSearching || isAddingNewCardResident) && (
                                       <div style={{ marginBottom: 12 }}>
                                         <input
                                           style={{
@@ -3304,39 +3463,56 @@ function App() {
                                             background: '#f5f9fa',
                                             color: '#222'
                                           }}
-                                          placeholder="Enter resident name"
-                                          value={cardNewResidentName}
-                                          onChange={e => setCardNewResidentName(e.target.value)}
-                                          onKeyDown={e => {
-                                            if (e.key === 'Enter' && cardNewResidentName.trim()) {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                              const newName = cardNewResidentName.trim();
-                                              // Deduplicate logic
-                                              setResidents(prev => {
-                                                const filtered = prev.filter(r => r !== newName);
-                                                return [newName, ...filtered];
-                                              });
-
-                                              // Update history item
-                                              const newHistory = [...history];
-                                              const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
-                                              if (histIdx !== -1) {
-                                                const currentResidents = newHistory[histIdx].residents || [];
-                                                const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
-                                                if (!residentNames.includes(newName)) {
-                                                  newHistory[histIdx].residents = [newName, ...currentResidents];
-                                                  setHistory(newHistory);
-                                                }
-                                              }
-                                              setCardNewResidentName('');
-                                              setIsAddingNewCardResident(false);
-                                            } else if (e.key === 'Escape') {
-                                              setCardNewResidentName('');
-                                              setIsAddingNewCardResident(false);
+                                          placeholder={cardIsSearching ? "Search resident..." : "Enter resident name"}
+                                          value={cardIsSearching ? cardSearchQuery : cardNewResidentName}
+                                          autoFocus
+                                          onChange={e => {
+                                            if (cardIsSearching) {
+                                              setCardSearchQuery(e.target.value);
+                                            } else {
+                                              setCardNewResidentName(e.target.value);
                                             }
                                           }}
-                                          autoFocus
+                                          onBlur={() => {
+                                            if (cardIsSearching && !cardSearchQuery) setCardIsSearching(false);
+                                            if (isAddingNewCardResident && !cardNewResidentName) setIsAddingNewCardResident(false);
+                                          }}
+                                          onKeyDown={e => {
+                                            if (e.key === 'Escape') {
+                                              if (cardIsSearching) {
+                                                setCardSearchQuery('');
+                                                setCardIsSearching(false);
+                                              } else {
+                                                setCardNewResidentName('');
+                                                setIsAddingNewCardResident(false);
+                                              }
+                                            } else if (e.key === 'Enter') {
+                                              if (isAddingNewCardResident && cardNewResidentName.trim()) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                const newName = cardNewResidentName.trim();
+                                                // Deduplicate logic
+                                                setResidents(prev => {
+                                                  const filtered = prev.filter(r => r !== newName);
+                                                  return [newName, ...filtered];
+                                                });
+
+                                                // Update history item
+                                                const newHistory = [...history];
+                                                const histIdx = history.findIndex(h => h.endAt === item.endAt && h.startAt === item.startAt);
+                                                if (histIdx !== -1) {
+                                                  const currentResidents = newHistory[histIdx].residents || [];
+                                                  const residentNames = currentResidents.map((r: any) => typeof r === 'string' ? r : r.name);
+                                                  if (!residentNames.includes(newName)) {
+                                                    newHistory[histIdx].residents = [newName, ...currentResidents];
+                                                    setHistory(newHistory);
+                                                  }
+                                                }
+                                                setCardNewResidentName('');
+                                                setIsAddingNewCardResident(false);
+                                              }
+                                            }
+                                          }}
                                           onClick={e => e.stopPropagation()}
                                         />
                                       </div>
@@ -3348,7 +3524,7 @@ function App() {
                                       flexDirection: 'column',
                                       gap: 12
                                     }}>
-                                      {residents.map(resident => {
+                                      {residents.filter(r => !cardIsSearching || r.toLowerCase().includes(cardSearchQuery.toLowerCase())).map(resident => {
                                         const itemResidents = item.residents || [];
                                         const isSelected = itemResidents.some((ir: any) => (typeof ir === 'string' ? ir : ir.name) === resident);
                                         return (
@@ -3500,6 +3676,10 @@ function App() {
                   setEditingRecentName('');
                   setIsBottomSheetClosing(false);
                   setPopupRendered(false);
+                  setIsResidentSearching(false);
+                  setResidentSearchQuery('');
+                  setIsAddingResident(false);
+                  setNewResidentName('');
                   setTimeout(() => {
                     setShowStartButton(true);
                   }, 100);
@@ -3573,6 +3753,10 @@ function App() {
                       setEditingRecentName('');
                       setIsBottomSheetClosing(false);
                       setPopupRendered(false);
+                      setIsResidentSearching(false);
+                      setResidentSearchQuery('');
+                      setIsAddingResident(false);
+                      setNewResidentName('');
                       setTimeout(() => {
                         setShowStartButton(true);
                       }, 100);
@@ -3633,6 +3817,7 @@ function App() {
               {/* RESIDENT Section */}
               <div style={{ marginBottom: 28, marginTop: 28 }}>
                 {/* 标题栏 - 包含 Resident 标题和添加按钮 */}
+                {/* 标题栏 - 包含 Resident 标题和操作按钮 */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -3648,42 +3833,67 @@ function App() {
                   }}>
                     Resident
                   </div>
-                  {/* 有 residents 时显示加号按钮 - 20px图标 */}
-                  {residents.length > 0 && !isAddingResident && (
-                    <button
-                      style={{
-                        width: 24,
-                        height: 24,
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // 设置交互标记，防止popup被关闭
-                        const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
-                        if (popupContainer) {
-                          popupContainer.setAttribute('data-recent-interaction', 'true');
-                          setTimeout(() => {
-                            popupContainer.removeAttribute('data-recent-interaction');
-                          }, 1000);
-                        }
-                        setIsAddingResident(true);
-                      }}
-                    >
-                      <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
-                      </svg>
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {/* 搜索按钮 - 仅在有 residents 且未添加/搜索时显示 */}
+                    {residents.length > 0 && !isAddingResident && !isResidentSearching && (
+                      <button
+                        style={{
+                          width: 24,
+                          height: 24,
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsResidentSearching(true);
+                          setIsAddingResident(false);
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(2, 48, 59, 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      </button>
+                    )}
+                    {/* Add button */}
+                    {residents.length > 0 && !isAddingResident && !isResidentSearching && (
+                      <button
+                        style={{
+                          width: 24,
+                          height: 24,
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const popupContainer = document.querySelector('.activity-bottom-sheet-fixed');
+                          if (popupContainer) {
+                            popupContainer.setAttribute('data-recent-interaction', 'true');
+                            setTimeout(() => {
+                              popupContainer.removeAttribute('data-recent-interaction');
+                            }, 1000);
+                          }
+                          setIsAddingResident(true);
+                          setIsResidentSearching(false);
+                        }}
+                      >
+                        <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10.0004 1.90845C14.469 1.9088 18.0921 5.53156 18.0921 10.0002C18.0918 14.4686 14.4687 18.0917 10.0004 18.092C5.53166 18.092 1.90891 14.4688 1.90855 10.0002C1.90855 5.53134 5.53145 1.90845 10.0004 1.90845ZM10.0004 3.50806C6.4151 3.50806 3.50816 6.415 3.50816 10.0002C3.50852 13.5852 6.41532 16.4915 10.0004 16.4915C13.5851 16.4911 16.4912 13.585 16.4916 10.0002C16.4916 6.41521 13.5853 3.50841 10.0004 3.50806ZM10.7992 9.19946H13.6459V10.7991H10.7992V13.6458H9.19957V10.7991H6.35387V9.19946H9.19957V6.35376H10.7992V9.19946Z" fill="rgba(2, 48, 59, 0.85)" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* 输入框 - 添加新 resident */}
-                {isAddingResident && (
+                {/* Shared Search/Add Input */}
+                {(isResidentSearching || isAddingResident) && (
                   <input
                     style={{
                       width: '100%',
@@ -3697,14 +3907,20 @@ function App() {
                       boxSizing: 'border-box',
                       background: '#f5f9fa',
                       marginBottom: 12,
-                      color: '#222' // 确保深色文字
+                      color: '#222'
                     }}
-                    placeholder="Enter resident name"
+                    placeholder={isResidentSearching ? "Search resident..." : "Enter resident name"}
+                    value={isResidentSearching ? residentSearchQuery : newResidentName}
                     enterKeyHint="done"
                     autoComplete="off"
-                    value={newResidentName}
                     autoFocus
-                    onChange={e => setNewResidentName(e.target.value)}
+                    onChange={e => {
+                      if (isResidentSearching) {
+                        setResidentSearchQuery(e.target.value);
+                      } else {
+                        setNewResidentName(e.target.value);
+                      }
+                    }}
                     onFocus={(e) => {
                       e.stopPropagation();
                     }}
@@ -3712,17 +3928,21 @@ function App() {
                       e.stopPropagation();
                     }}
                     onBlur={(e) => {
-                      e.stopPropagation(); // 阻止冒泡防止关闭popup
-                      if (newResidentName.trim()) {
-                        setResidents(prev => {
-                          const name = newResidentName.trim();
-                          const filtered = prev.filter(r => r !== name);
-                          return [name, ...filtered];
-                        });
-                        // 同时也可能需要自动选中刚添加的 resident? 当前逻辑只添加到列表。
+                      e.stopPropagation();
+                      if (isResidentSearching && !residentSearchQuery) {
+                        setIsResidentSearching(false);
                       }
-                      setNewResidentName('');
-                      setIsAddingResident(false);
+                      if (isAddingResident) {
+                        if (newResidentName.trim()) {
+                          setResidents(prev => {
+                            const name = newResidentName.trim();
+                            const filtered = prev.filter(r => r !== name);
+                            return [name, ...filtered];
+                          });
+                        }
+                        setNewResidentName('');
+                        setIsAddingResident(false);
+                      }
                     }}
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
@@ -3732,8 +3952,13 @@ function App() {
                       } else if (e.key === 'Escape') {
                         e.preventDefault();
                         e.stopPropagation();
-                        setNewResidentName('');
-                        setIsAddingResident(false);
+                        if (isResidentSearching) {
+                          setResidentSearchQuery('');
+                          setIsResidentSearching(false);
+                        } else {
+                          setNewResidentName('');
+                          setIsAddingResident(false);
+                        }
                       }
                     }}
                   />
@@ -3757,7 +3982,7 @@ function App() {
                       padding: 4, // 防止input被截断
                       paddingBottom: 4
                     }}>
-                      {residents.map(resident => (
+                      {residents.filter(r => !isResidentSearching || r.toLowerCase().includes(residentSearchQuery.toLowerCase())).map(resident => (
                         editingResident === resident ? (
                           <input
                             key={resident}
