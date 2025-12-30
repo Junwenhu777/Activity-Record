@@ -262,8 +262,10 @@ function App() {
     cardId: string | null;  // 'today-{idx}' 或 '{date}-{idx}'
     offset: number;         // 当前偏移量 (负数表示向左滑)
     startX: number;         // 触摸起始 X 坐标
+    startY: number;         // 触摸起始 Y 坐标
     isDragging: boolean;    // 是否正在拖动
-  }>({ cardId: null, offset: 0, startX: 0, isDragging: false });
+    isVertical: boolean | null; // null=undecided, true=vertical scroll, false=horizontal swipe
+  }>({ cardId: null, offset: 0, startX: 0, startY: 0, isDragging: false, isVertical: null });
   // 新增state用于编辑recent activity
   const [editingRecentActivity, setEditingRecentActivity] = useState<string | null>(null);
   const [editingRecentName, setEditingRecentName] = useState('');
@@ -328,7 +330,7 @@ function App() {
   const handleSwipeTouchStart = (e: React.TouchEvent, cardId: string) => {
     // 如果点击其他卡片，先关闭当前展开的卡片
     if (swipeState.cardId && swipeState.cardId !== cardId && swipeState.offset !== 0) {
-      setSwipeState({ cardId: null, offset: 0, startX: 0, isDragging: false });
+      setSwipeState({ cardId: null, offset: 0, startX: 0, startY: 0, isDragging: false, isVertical: null });
       return;
     }
     const touch = e.touches[0];
@@ -338,16 +340,34 @@ function App() {
       cardId,
       offset: currentOffset,
       startX: touch.clientX - currentOffset, // 调整startX以保持连续性
-      isDragging: true
+      startY: touch.clientY,
+      isDragging: true,
+      isVertical: null // Reset direction detection
     });
   };
 
   const handleSwipeTouchMove = (e: React.TouchEvent, cardId: string) => {
     if (!swipeState.isDragging || swipeState.cardId !== cardId) return;
     const touch = e.touches[0];
-    const diff = touch.clientX - swipeState.startX;
+    const diffX = touch.clientX - swipeState.startX;
+    const diffY = touch.clientY - swipeState.startY;
+
+    // Determine direction if not yet decided
+    if (swipeState.isVertical === null) {
+      const THRESHOLD = 10; // Minimum movement to decide direction
+      if (Math.abs(diffX) > THRESHOLD || Math.abs(diffY) > THRESHOLD) {
+        const isVertical = Math.abs(diffY) > Math.abs(diffX) * 1.5; // Favor vertical if Y movement is 1.5x greater
+        setSwipeState(prev => ({ ...prev, isVertical }));
+        if (isVertical) return; // Cancel swipe, let natural scroll happen
+      }
+      return; // Wait for threshold
+    }
+
+    // If vertical scrolling, do nothing
+    if (swipeState.isVertical) return;
+
     // 只允许向左滑动，最大滑动距离为 SWIPE_ACTION_WIDTH
-    const newOffset = Math.max(-SWIPE_ACTION_WIDTH, Math.min(0, diff));
+    const newOffset = Math.max(-SWIPE_ACTION_WIDTH, Math.min(0, diffX));
     setSwipeState(prev => ({ ...prev, offset: newOffset }));
   };
 
@@ -357,13 +377,13 @@ function App() {
     if (swipeState.offset < -SWIPE_THRESHOLD) {
       setSwipeState(prev => ({ ...prev, offset: -SWIPE_ACTION_WIDTH, isDragging: false }));
     } else {
-      setSwipeState({ cardId: null, offset: 0, startX: 0, isDragging: false });
+      setSwipeState({ cardId: null, offset: 0, startX: 0, startY: 0, isDragging: false, isVertical: null });
     }
   };
 
   // 关闭滑动操作
   const closeSwipe = () => {
-    setSwipeState({ cardId: null, offset: 0, startX: 0, isDragging: false });
+    setSwipeState({ cardId: null, offset: 0, startX: 0, startY: 0, isDragging: false, isVertical: null });
   };
 
   // 点击外部关闭下载选项
