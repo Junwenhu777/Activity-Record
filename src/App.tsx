@@ -2909,9 +2909,18 @@ function App() {
                   background: 'transparent'
                 }}
                 onClick={() => setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' })}
-                onTouchStart={(e) => e.preventDefault()}
-                onTouchMove={(e) => e.preventDefault()}
-                onWheel={(e) => e.preventDefault()}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' });
+                }}
+                onTouchMove={(e) => {
+                  e.preventDefault();
+                  setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' });
+                }}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' });
+                }}
               />
 
               {/* Popup Content */}
