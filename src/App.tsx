@@ -224,6 +224,12 @@ function formatTimeKey(timeKey: string, granularity: 'Day' | 'Week' | 'Month' | 
   }
 }
 
+declare global {
+  interface Window {
+    _isCancellingExtraInput?: boolean;
+  }
+}
+
 function App() {
   useRegisterSW(); // 在组件体内调用
   const [activityName, setActivityName] = useState('');
@@ -3121,6 +3127,15 @@ function App() {
                                     (e.target as HTMLElement).blur();
                                   }
                                 }}
+                                onBlur={() => {
+                                  // Small delay to check if cancel button was clicked
+                                  setTimeout(() => {
+                                    if (!window._isCancellingExtraInput) {
+                                      handleAddExtra();
+                                    }
+                                    window._isCancellingExtraInput = false;
+                                  }, 100);
+                                }}
                                 inputMode="text"
                                 value={extraActivityInputValue}
                                 onChange={(e) => setExtraActivityInputValue(e.target.value)}
@@ -3142,6 +3157,8 @@ function App() {
                                   setExtraActivityInputMode(null);
                                   setExtraActivityInputValue('');
                                 }}
+                                onMouseDown={() => { window._isCancellingExtraInput = true; }}
+                                onTouchStart={() => { window._isCancellingExtraInput = true; }}
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006D49" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <line x1="18" y1="6" x2="6" y2="18"></line>
