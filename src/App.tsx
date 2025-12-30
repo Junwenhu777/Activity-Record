@@ -3458,7 +3458,8 @@ function App() {
                       )}
 
                       {/* No Record state - Only for History Popup */}
-                      {records.length === 0 && isHistoryPopup && (
+                      {/* No Record state - Strictly Only for History Popup */}
+                      {records.length === 0 && residentPopupState.popupType === 'history' && (
                         <div style={{ padding: '20px 0', textAlign: 'center', color: '#999', fontSize: 14 }}>
                           No records
                         </div>
