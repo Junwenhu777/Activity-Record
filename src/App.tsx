@@ -302,6 +302,7 @@ function App() {
   const [selectedFilterResidents, setSelectedFilterResidents] = useState<string[]>([]);
   const [showStartButton, setShowStartButton] = useState(true); // 默认显示按钮
   const [popupRendered, setPopupRendered] = useState(false); // 默认不渲染popup
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
@@ -930,6 +931,26 @@ function App() {
 
   return (
     <div className="activity-bg">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: 60,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0, 49, 60, 0.92)',
+          color: '#fff',
+          padding: '10px 20px',
+          borderRadius: 20,
+          fontSize: 14,
+          fontWeight: 500,
+          zIndex: 999999,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          {toastMessage}
+        </div>
+      )}
       <div className="activity-container">
         <div className="activity-header-fixed">
           <div style={{
@@ -2560,11 +2581,9 @@ function App() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (isSelected) {
-                                        const newResidents = currentResidents.filter((r: any) => {
-                                          const name = typeof r === 'string' ? r : r.name;
-                                          return name !== resident;
-                                        });
-                                        setCurrent({ ...current, residents: newResidents });
+                                        // Show toast hint instead of removing
+                                        setToastMessage('Click name on the card to do more.');
+                                        setTimeout(() => setToastMessage(null), 2500);
                                       } else {
                                         const newResidentEntry = { name: resident, addedAt: new Date() };
                                         setCurrent({ ...current, residents: [newResidentEntry, ...currentResidents] });
