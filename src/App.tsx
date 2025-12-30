@@ -3051,6 +3051,242 @@ function App() {
                         </div>
                       </div>
 
+                      {/* Action Buttons (Only for active residents) */}
+                      {isActive && (
+                        <>
+                          {isInputMode ? (
+                            <div style={{
+                              width: '100%',
+                              marginBottom: 12,
+                              padding: '12px 16px',
+                              borderRadius: 12,
+                              background: '#D8EACE',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              boxSizing: 'border-box'
+                            }}>
+                              <input
+                                autoFocus
+                                placeholder="Enter extra activity description"
+                                style={{
+                                  flex: 1,
+                                  border: 'none',
+                                  background: 'transparent',
+                                  outline: 'none',
+                                  fontSize: 14,
+                                  color: '#006D49'
+                                }}
+                                value={extraActivityInputValue}
+                                onChange={(e) => setExtraActivityInputValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === 'Done') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (extraActivityInputValue.trim()) {
+                                      const newResidents = current.residents.map((r: any) => {
+                                        const name = typeof r === 'string' ? r : r.name;
+                                        if (name === residentName) {
+                                          return {
+                                            ...r,
+                                            extraActivity: {
+                                              name: extraActivityInputValue.trim(),
+                                              startAt: new Date()
+                                            }
+                                          };
+                                        }
+                                        return r;
+                                      });
+                                      setCurrent({ ...current, residents: newResidents });
+                                      setExtraActivityInputMode(null);
+                                      setExtraActivityInputValue('');
+                                      (e.target as HTMLInputElement).blur();
+                                    }
+                                  }
+                                }}
+                              />
+                              <button
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  border: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                onClick={() => {
+                                  setExtraActivityInputMode(null);
+                                  setExtraActivityInputValue('');
+                                }}
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006D49" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                              </button>
+                            </div>
+                          ) : hasActiveExtra ? (
+                            <div style={{
+                              width: '100%',
+                              marginBottom: 12,
+                              padding: '12px 16px',
+                              borderRadius: 12,
+                              background: '#D8EACE',
+                              boxSizing: 'border-box',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 12
+                            }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: '#006D49', marginBottom: 4 }}>
+                                  Extra: {resident.extraActivity.name}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#006D49' }}>
+                                  Start At: {new Date(resident.extraActivity.startAt).toLocaleTimeString('en-US', { hour12: false })}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#006D49' }}>
+                                  Duration: {formatHMS(Math.floor((now.getTime() - new Date(resident.extraActivity.startAt).getTime()) / 1000))}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#006D49' }}>
+                                  End At: -
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                style={{
+                                  width: 50,
+                                  height: 50,
+                                  borderRadius: '50%',
+                                  border: '1px solid #E0E0E0',
+                                  background: '#fff',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  WebkitTapHighlightColor: 'transparent',
+                                  padding: 0
+                                }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleEndExtra();
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleEndExtra();
+                                }}
+                              >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="#C62828">
+                                  <rect x="4" y="4" width="16" height="16" rx="3" />
+                                </svg>
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              style={{
+                                width: '100%',
+                                marginBottom: 12,
+                                padding: '14px 20px',
+                                borderRadius: 12,
+                                border: 'none',
+                                background: '#D8EACE',
+                                color: '#006D49',
+                                fontSize: 15,
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 8
+                              }}
+                              onClick={() => {
+                                setExtraActivityInputMode(residentName);
+                                setExtraActivityInputValue('');
+                              }}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                              Add extra activity
+                            </button>
+                          )}
+
+                          {/* Leave main activity */}
+                          <button
+                            style={{
+                              width: '100%',
+                              marginBottom: 12,
+                              padding: '14px 20px',
+                              borderRadius: 12,
+                              border: 'none',
+                              background: '#FFEBEE',
+                              color: '#C62828',
+                              fontSize: 15,
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 8
+                            }}
+                            onClick={handleLeaveMain}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleLeaveMain();
+                            }}
+                          >
+                            <span style={{ width: 14, height: 14, background: '#C62828', borderRadius: 2 }}></span>
+                            Leave main activity
+                          </button>
+                        </>
+                      )}
+
+                      {!isActive && !isHistoryPopup && (
+                        <button
+                          style={{
+                            width: '100%',
+                            marginBottom: 12,
+                            padding: '14px 20px',
+                            borderRadius: 12,
+                            border: 'none',
+                            background: '#E3F2FD',
+                            color: '#1565C0',
+                            fontSize: 15,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8
+                          }}
+                          onClick={() => {
+                            const newResidents = current.residents.map((r: any) => {
+                              const name = typeof r === 'string' ? r : r.name;
+                              if (name === residentName) {
+                                const existingRecords = typeof r === 'string' ? [] : (r.records || []);
+                                const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
+                                return {
+                                  name,
+                                  addedAt,
+                                  status: 'active',
+                                  records: [...existingRecords, { type: 'backed', time: new Date() }]
+                                };
+                              }
+                              return r;
+                            });
+                            setCurrent({ ...current, residents: newResidents });
+                          }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+                          Back
+                        </button>
+                      )}
+
                       {/* Records */}
                       {records.length > 0 && (
                         <>
@@ -3243,236 +3479,7 @@ function App() {
                         </>
                       )}
 
-                      {/* Action Buttons (Only for active residents) */}
-                      {isActive && (
-                        <>
-                          {isInputMode ? (
-                            <div style={{
-                              width: '100%',
-                              padding: '12px 16px',
-                              borderRadius: 12,
-                              background: '#D8EACE',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              boxSizing: 'border-box'
-                            }}>
-                              <input
-                                autoFocus
-                                placeholder="Enter extra activity description"
-                                style={{
-                                  flex: 1,
-                                  border: 'none',
-                                  background: 'transparent',
-                                  outline: 'none',
-                                  fontSize: 14,
-                                  color: '#006D49'
-                                }}
-                                value={extraActivityInputValue}
-                                onChange={(e) => setExtraActivityInputValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === 'Done') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    if (extraActivityInputValue.trim()) {
-                                      const newResidents = current.residents.map((r: any) => {
-                                        const name = typeof r === 'string' ? r : r.name;
-                                        if (name === residentName) {
-                                          return {
-                                            ...r,
-                                            extraActivity: {
-                                              name: extraActivityInputValue.trim(),
-                                              startAt: new Date()
-                                            }
-                                          };
-                                        }
-                                        return r;
-                                      });
-                                      setCurrent({ ...current, residents: newResidents });
-                                      setExtraActivityInputMode(null);
-                                      setExtraActivityInputValue('');
-                                      (e.target as HTMLInputElement).blur();
-                                    }
-                                  }
-                                }}
-                              />
-                              <button
-                                style={{
-                                  width: 24,
-                                  height: 24,
-                                  border: 'none',
-                                  background: 'transparent',
-                                  cursor: 'pointer',
-                                  padding: 0,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}
-                                onClick={() => {
-                                  setExtraActivityInputMode(null);
-                                  setExtraActivityInputValue('');
-                                }}
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006D49" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                              </button>
-                            </div>
-                          ) : hasActiveExtra ? (
-                            <div style={{
-                              width: '100%',
-                              padding: '12px 16px',
-                              borderRadius: 12,
-                              background: '#D8EACE',
-                              boxSizing: 'border-box',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: 12
-                            }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 14, fontWeight: 600, color: '#006D49', marginBottom: 4 }}>
-                                  Extra: {resident.extraActivity.name}
-                                </div>
-                                <div style={{ fontSize: 12, color: '#006D49' }}>
-                                  Start At: {new Date(resident.extraActivity.startAt).toLocaleTimeString('en-US', { hour12: false })}
-                                </div>
-                                <div style={{ fontSize: 12, color: '#006D49' }}>
-                                  Duration: {formatHMS(Math.floor((now.getTime() - new Date(resident.extraActivity.startAt).getTime()) / 1000))}
-                                </div>
-                                <div style={{ fontSize: 12, color: '#006D49' }}>
-                                  End At: -
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                style={{
-                                  width: 50,
-                                  height: 50,
-                                  borderRadius: '50%',
-                                  border: '1px solid #E0E0E0',
-                                  background: '#fff',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flexShrink: 0,
-                                  WebkitTapHighlightColor: 'transparent',
-                                  padding: 0
-                                }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleEndExtra();
-                                }}
-                                onTouchEnd={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleEndExtra();
-                                }}
-                              >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="#C62828">
-                                  <rect x="4" y="4" width="16" height="16" rx="3" />
-                                </svg>
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              style={{
-                                width: '100%',
-                                padding: '14px 20px',
-                                borderRadius: 12,
-                                border: 'none',
-                                background: '#D8EACE',
-                                color: '#006D49',
-                                fontSize: 15,
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 8
-                              }}
-                              onClick={() => {
-                                setExtraActivityInputMode(residentName);
-                                setExtraActivityInputValue('');
-                              }}
-                            >
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                              Add extra activity
-                            </button>
-                          )}
 
-                          {/* Leave main activity */}
-                          <button
-                            style={{
-                              width: '100%',
-                              padding: '14px 20px',
-                              borderRadius: 12,
-                              border: 'none',
-                              background: '#FFEBEE',
-                              color: '#C62828',
-                              fontSize: 15,
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 8
-                            }}
-                            onClick={handleLeaveMain}
-                            onTouchEnd={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleLeaveMain();
-                            }}
-                          >
-                            <span style={{ width: 14, height: 14, background: '#C62828', borderRadius: 2 }}></span>
-                            Leave main activity
-                          </button>
-                        </>
-                      )}
-
-                      {!isActive && !isHistoryPopup && (
-                        <button
-                          style={{
-                            width: '100%',
-                            padding: '14px 20px',
-                            borderRadius: 12,
-                            border: 'none',
-                            background: '#E3F2FD',
-                            color: '#1565C0',
-                            fontSize: 15,
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8
-                          }}
-                          onClick={() => {
-                            const newResidents = current.residents.map((r: any) => {
-                              const name = typeof r === 'string' ? r : r.name;
-                              if (name === residentName) {
-                                const existingRecords = typeof r === 'string' ? [] : (r.records || []);
-                                const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
-                                return {
-                                  name,
-                                  addedAt,
-                                  status: 'active',
-                                  records: [...existingRecords, { type: 'backed', time: new Date() }]
-                                };
-                              }
-                              return r;
-                            });
-                            setCurrent({ ...current, residents: newResidents });
-                          }}
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
-                          Back
-                        </button>
-                      )}
                     </>
                   );
                 })()}
