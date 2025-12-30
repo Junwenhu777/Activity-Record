@@ -3431,6 +3431,46 @@ function App() {
                           </button>
                         </>
                       )}
+
+                      {!isActive && !isHistoryPopup && (
+                        <button
+                          style={{
+                            width: '100%',
+                            padding: '14px 20px',
+                            borderRadius: 12,
+                            border: 'none',
+                            background: '#E3F2FD',
+                            color: '#1565C0',
+                            fontSize: 15,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8
+                          }}
+                          onClick={() => {
+                            const newResidents = current.residents.map((r: any) => {
+                              const name = typeof r === 'string' ? r : r.name;
+                              if (name === residentName) {
+                                const existingRecords = typeof r === 'string' ? [] : (r.records || []);
+                                const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
+                                return {
+                                  name,
+                                  addedAt,
+                                  status: 'active',
+                                  records: [...existingRecords, { type: 'backed', time: new Date() }]
+                                };
+                              }
+                              return r;
+                            });
+                            setCurrent({ ...current, residents: newResidents });
+                          }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+                          Back
+                        </button>
+                      )}
                     </>
                   );
                 })()}
