@@ -1307,10 +1307,28 @@ function App() {
 
                                       activeRecords.forEach((record: any) => {
                                         if (record.type === 'extra') {
-                                          // Extra activity record - create composite row
+                                          // Extra activity record - first create main activity segment before extra
                                           const extraStartAt = new Date(record.startAt);
                                           const extraEndAt = new Date(record.endAt);
-                                          const duration = extraEndAt.getTime() - extraStartAt.getTime();
+
+                                          // Create main activity row from currentStartTime to extra start
+                                          if (currentStartTime.getTime() < extraStartAt.getTime()) {
+                                            const beforeDuration = extraStartAt.getTime() - currentStartTime.getTime();
+                                            rows.push({
+                                              'Resident Name': residentName,
+                                              Activity: item.name,
+                                              'Start Date': getDateString(currentStartTime),
+                                              'Start At': formatTime(currentStartTime),
+                                              'End Date': getDateString(extraStartAt),
+                                              'End At': formatTime(extraStartAt),
+                                              Duration: formatHMS(Math.round(beforeDuration / 1000)),
+                                              Seconds: Math.round(beforeDuration / 1000),
+                                              Deleted: item.deleted ? 'true' : 'false'
+                                            });
+                                          }
+
+                                          // Create composite row for the extra activity period
+                                          const extraDuration = extraEndAt.getTime() - extraStartAt.getTime();
                                           rows.push({
                                             'Resident Name': residentName,
                                             Activity: `${item.name} while ${record.name}`,
@@ -1318,10 +1336,13 @@ function App() {
                                             'Start At': formatTime(extraStartAt),
                                             'End Date': getDateString(extraEndAt),
                                             'End At': formatTime(extraEndAt),
-                                            Duration: formatHMS(Math.round(duration / 1000)),
-                                            Seconds: Math.round(duration / 1000),
+                                            Duration: formatHMS(Math.round(extraDuration / 1000)),
+                                            Seconds: Math.round(extraDuration / 1000),
                                             Deleted: item.deleted ? 'true' : 'false'
                                           });
+
+                                          // Update currentStartTime to after extra activity
+                                          currentStartTime = extraEndAt;
                                         } else if (record.type === 'leaved') {
                                           const recordTime = new Date(record.time);
                                           // Create a record from currentStartTime to this leave time
@@ -2916,12 +2937,13 @@ function App() {
                         {records.length > 0 ? (
                           <>
                             <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
-                            {records.filter((r: any) => !r.deleted).slice().reverse().map((record: any, idx: number) => {
-                              const originalIdx = records.length - 1 - records.filter((r: any) => !r.deleted).slice().reverse().indexOf(record);
+                            {records.slice().reverse().map((record: any, idx: number) => {
+                              const originalIdx = records.length - 1 - idx;
                               const recordTime = record.time ? new Date(record.time) : null;
                               const isLeaved = record.type === 'leaved';
                               const isBacked = record.type === 'backed';
                               const isExtra = record.type === 'extra';
+                              const isDeleted = record.deleted === true;
 
                               // Swipe state for this record
                               const isSwipeActive = recordSwipeState.residentName === residentName && recordSwipeState.recordIdx === originalIdx;
@@ -2963,25 +2985,25 @@ function App() {
                                   key={idx}
                                   style={{
                                     position: 'relative',
-                                    overflow: 'hidden',
                                     marginBottom: 4,
                                     borderRadius: 8
                                   }}
                                 >
-                                  {/* Delete button behind */}
+                                  {/* Delete/Restore button behind */}
                                   <div style={{
                                     position: 'absolute',
                                     top: 0,
                                     right: 0,
                                     bottom: 0,
                                     width: 80,
-                                    background: '#E53935',
+                                    background: isDeleted ? '#4CAF50' : '#E53935',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     color: '#fff',
                                     fontWeight: 600,
                                     fontSize: 14,
+                                    borderRadius: 8,
                                     opacity: Math.min(1, Math.abs(currentOffset) / 40),
                                     visibility: currentOffset === 0 ? 'hidden' : 'visible'
                                   }}>
@@ -2997,12 +3019,12 @@ function App() {
                                         height: '100%'
                                       }}
                                       onClick={() => {
-                                        // Delete record permanently
+                                        // Toggle deleted state
                                         const newResidents = current.residents.map((r: any) => {
                                           const name = typeof r === 'string' ? r : r.name;
                                           if (name === residentName) {
                                             const newRecords = [...(r.records || [])];
-                                            newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: true };
+                                            newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
                                             return { ...r, records: newRecords };
                                           }
                                           return r;
@@ -3011,7 +3033,7 @@ function App() {
                                         setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
                                       }}
                                     >
-                                      Delete
+                                      {isDeleted ? 'Restore' : 'Delete'}
                                     </button>
                                   </div>
 
@@ -3022,7 +3044,9 @@ function App() {
                                       transition: recordSwipeState.isDragging ? 'none' : 'transform 0.2s ease',
                                       background: '#fff',
                                       padding: '12px 0',
-                                      borderBottom: idx < records.filter((r: any) => !r.deleted).length - 1 ? '1px solid #f5f5f5' : 'none'
+                                      borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none',
+                                      textDecoration: isDeleted ? 'line-through' : 'none',
+                                      opacity: isDeleted ? 0.5 : 1
                                     }}
                                     onTouchStart={(e) => {
                                       const touch = e.touches[0];
@@ -3259,28 +3283,39 @@ function App() {
                                   padding: '12px 16px',
                                   borderRadius: 12,
                                   background: '#D8EACE',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: 4
+                                  boxSizing: 'border-box'
                                 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#006D49' }}>
-                                      Extra: {resident.extraActivity.name}
+                                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontSize: 12, fontWeight: 600, color: '#006D49', marginBottom: 4 }}>
+                                        Extra: {resident.extraActivity.name}
+                                      </div>
+                                      <div style={{ fontSize: 12, color: '#006D49' }}>
+                                        Start At: {extraStart.toLocaleTimeString('en-US', { hour12: false })}
+                                      </div>
+                                      <div style={{ fontSize: 12, color: '#006D49' }}>
+                                        Duration: {formatHMS(extraDuration)}
+                                      </div>
+                                      <div style={{ fontSize: 12, color: '#006D49' }}>
+                                        End At: -
+                                      </div>
                                     </div>
                                     <button
                                       style={{
-                                        width: 32,
-                                        height: 32,
-                                        borderRadius: 8,
-                                        border: 'none',
-                                        background: 'rgba(255,255,255,0.5)',
+                                        width: 30,
+                                        height: 30,
+                                        borderRadius: '50%',
+                                        border: '1px solid #E0E0E0',
+                                        background: '#fff',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        flexShrink: 0
                                       }}
                                       onClick={() => {
                                         // End extra activity and add record
+                                        const endTime = new Date();
                                         const newResidents = current.residents.map((r: any) => {
                                           const name = typeof r === 'string' ? r : r.name;
                                           if (name === residentName && r.extraActivity) {
@@ -3294,7 +3329,7 @@ function App() {
                                                   type: 'extra',
                                                   name: r.extraActivity.name,
                                                   startAt: r.extraActivity.startAt,
-                                                  endAt: new Date()
+                                                  endAt: endTime
                                                 }
                                               ]
                                             };
@@ -3304,19 +3339,10 @@ function App() {
                                         setCurrent({ ...current, residents: newResidents });
                                       }}
                                     >
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#C62828">
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#C62828">
                                         <rect x="4" y="4" width="16" height="16" rx="2" />
                                       </svg>
                                     </button>
-                                  </div>
-                                  <div style={{ fontSize: 12, color: '#006D49' }}>
-                                    Start At: {extraStart.toLocaleTimeString('en-US', { hour12: false })}
-                                  </div>
-                                  <div style={{ fontSize: 12, color: '#006D49' }}>
-                                    Duration: {formatHMS(extraDuration)}
-                                  </div>
-                                  <div style={{ fontSize: 12, color: '#006D49' }}>
-                                    End At: -
                                   </div>
                                 </div>
                               );
