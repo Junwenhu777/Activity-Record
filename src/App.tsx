@@ -2360,7 +2360,7 @@ function App() {
                 {/* 当前活动卡片名称可编辑 */}
                 {editingCurrentName ? (
                   <input
-                    style={{ fontSize: 24, fontWeight: 600, width: '100%', marginBottom: 8 }}
+                    style={{ fontSize: 24, fontWeight: 600, width: '100%', marginBottom: 8, border: 'none', background: 'transparent', outline: 'none' }}
                     value={editingName}
                     autoFocus
                     onChange={e => setEditingName(e.target.value)}
@@ -3250,7 +3250,7 @@ function App() {
                     >
                       {editingHistory && editingHistory.idx === idx && editingHistory.date === 'today' ? (
                         <input
-                          style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6 }}
+                          style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6, border: 'none', background: 'transparent', outline: 'none' }}
                           value={editingName}
                           autoFocus
                           onChange={e => setEditingName(e.target.value)}
@@ -3772,7 +3772,7 @@ function App() {
                       >
                         {editingHistory && editingHistory.idx === idx && editingHistory.date === date ? (
                           <input
-                            style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6 }}
+                            style={{ fontSize: 16, fontWeight: 600, width: '100%', marginBottom: 6, border: 'none', background: 'transparent', outline: 'none' }}
                             value={editingName}
                             autoFocus
                             onChange={e => setEditingName(e.target.value)}
