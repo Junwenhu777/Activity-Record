@@ -3007,7 +3007,7 @@ function App() {
                       return r;
                     });
                     setCurrent({ ...current, residents: newResidents });
-                    setResidentPopupState({ isOpen: false, residentName: null, position: null, popupType: 'now' });
+
                   };
 
                   return (
@@ -3495,23 +3495,10 @@ function App() {
                                         {duration && <div>Duration: {duration}</div>}
                                       </>
                                     ) : isBacked ? (
-                                      <div>Start At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                      <div>Backed At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
                                     ) : (
                                       <>
-                                        <div>Start At: {(() => {
-                                          const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
-                                          let startTime = addedAt ? new Date(addedAt) : null;
-                                          const recordsBeforeThis = records.slice(0, originalIdx);
-                                          for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
-                                            if (recordsBeforeThis[i].type === 'backed') {
-                                              startTime = new Date(recordsBeforeThis[i].time);
-                                              break;
-                                            }
-                                          }
-                                          return startTime && !isNaN(startTime.getTime()) ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
-                                        })()}</div>
-                                        <div>End At: {recordTime && !isNaN(recordTime.getTime()) ? recordTime.toLocaleTimeString('en-US', { hour12: false }) : '-'}</div>
-                                        {duration && <div>Duration: {duration}</div>}
+                                        <div>Leaved At: {recordTime && !isNaN(recordTime.getTime()) ? recordTime.toLocaleTimeString('en-US', { hour12: false }) : '-'}</div>
                                       </>
                                     )}
                                   </div>
