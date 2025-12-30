@@ -1358,6 +1358,8 @@ function App() {
                                             Seconds: Math.round(duration / 1000),
                                             Deleted: item.deleted ? 'true' : 'false'
                                           });
+                                          // Update currentStartTime to this leave time to prevent gap filling
+                                          currentStartTime = recordTime;
                                         } else if (record.type === 'backed') {
                                           // Update currentStartTime to this backed time
                                           currentStartTime = new Date(record.time);
