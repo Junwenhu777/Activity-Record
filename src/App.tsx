@@ -315,6 +315,17 @@ function App() {
     residentData?: any; // The full resident object for history cards
   }>({ isOpen: false, residentName: null, position: null, popupType: 'now' });
 
+  // Extra Activity State
+  const [extraActivityInputMode, setExtraActivityInputMode] = useState<string | null>(null); // residentName when in input mode
+  const [extraActivityInputValue, setExtraActivityInputValue] = useState('');
+  const [recordSwipeState, setRecordSwipeState] = useState<{
+    residentName: string | null;
+    recordIdx: number | null;
+    offset: number;
+    startX: number;
+    isDragging: boolean;
+  }>({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+
   // 活动颜色映射 - 确保同一活动在不同时间和图表中使用相同颜色
   const activityColors = useRef<Record<string, string>>({});
   const colorPalette = [
@@ -588,13 +599,36 @@ function App() {
     if (!current) return;
     const endAt = new Date();
     const duration = endAt.getTime() - current.startAt.getTime();
+
+    // Auto-end any active extra activities for all residents
+    const residentsWithEndedExtras = (current.residents || []).map((r: any) => {
+      if (typeof r === 'string') return r;
+      if (r.extraActivity) {
+        const records = r.records || [];
+        return {
+          ...r,
+          extraActivity: null,
+          records: [
+            ...records,
+            {
+              type: 'extra',
+              name: r.extraActivity.name,
+              startAt: r.extraActivity.startAt,
+              endAt: endAt
+            }
+          ]
+        };
+      }
+      return r;
+    });
+
     const newHistoryItem = {
       name: current.name,
       startAt: current.startAt,
       endAt,
       duration,
       deleted: false,
-      residents: current.residents || []
+      residents: residentsWithEndedExtras
     };
     setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
     setCurrent(null);
@@ -1265,12 +1299,31 @@ function App() {
                                       });
                                     } else {
                                       // Has records - expand each leave cycle into separate rows
+                                      // Also handle extra activity records
                                       let currentStartTime = addedAt;
 
-                                      records.forEach((record: any) => {
-                                        const recordTime = new Date(record.time);
+                                      // Filter out deleted records
+                                      const activeRecords = records.filter((rec: any) => !rec.deleted);
 
-                                        if (record.type === 'leaved') {
+                                      activeRecords.forEach((record: any) => {
+                                        if (record.type === 'extra') {
+                                          // Extra activity record - create composite row
+                                          const extraStartAt = new Date(record.startAt);
+                                          const extraEndAt = new Date(record.endAt);
+                                          const duration = extraEndAt.getTime() - extraStartAt.getTime();
+                                          rows.push({
+                                            'Resident Name': residentName,
+                                            Activity: `${item.name} while ${record.name}`,
+                                            'Start Date': getDateString(extraStartAt),
+                                            'Start At': formatTime(extraStartAt),
+                                            'End Date': getDateString(extraEndAt),
+                                            'End At': formatTime(extraEndAt),
+                                            Duration: formatHMS(Math.round(duration / 1000)),
+                                            Seconds: Math.round(duration / 1000),
+                                            Deleted: item.deleted ? 'true' : 'false'
+                                          });
+                                        } else if (record.type === 'leaved') {
+                                          const recordTime = new Date(record.time);
                                           // Create a record from currentStartTime to this leave time
                                           const duration = recordTime.getTime() - currentStartTime.getTime();
                                           rows.push({
@@ -1286,7 +1339,7 @@ function App() {
                                           });
                                         } else if (record.type === 'backed') {
                                           // Update currentStartTime to this backed time
-                                          currentStartTime = recordTime;
+                                          currentStartTime = new Date(record.time);
                                         }
                                       });
 
@@ -2711,12 +2764,16 @@ function App() {
                           const residentName = typeof resident === 'string' ? resident : resident.name;
                           const residentStatus = typeof resident === 'string' ? 'active' : (resident.status || 'active');
                           const isActive = residentStatus === 'active';
+                          const hasExtraActivity = resident?.extraActivity != null;
+                          // Green if has extra activity, otherwise normal colors
+                          const tagBg = hasExtraActivity ? '#D8EACE' : (isActive ? '#CEE6EA' : '#E1E1E1');
+                          const tagColor = hasExtraActivity ? '#006D49' : (isActive ? '#02303B' : '#333333');
                           return (
                             <span
                               key={residentName}
                               style={{
-                                background: isActive ? '#CEE6EA' : '#E1E1E1',
-                                color: isActive ? '#02303B' : '#333333',
+                                background: tagBg,
+                                color: tagColor,
                                 padding: '4px 12px',
                                 borderRadius: 12,
                                 fontSize: 12,
@@ -2859,17 +2916,23 @@ function App() {
                         {records.length > 0 ? (
                           <>
                             <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
-                            {records.slice().reverse().map((record: any, idx: number) => {
-                              const recordTime = new Date(record.time);
+                            {records.filter((r: any) => !r.deleted).slice().reverse().map((record: any, idx: number) => {
+                              const originalIdx = records.length - 1 - records.filter((r: any) => !r.deleted).slice().reverse().indexOf(record);
+                              const recordTime = record.time ? new Date(record.time) : null;
                               const isLeaved = record.type === 'leaved';
                               const isBacked = record.type === 'backed';
+                              const isExtra = record.type === 'extra';
+
+                              // Swipe state for this record
+                              const isSwipeActive = recordSwipeState.residentName === residentName && recordSwipeState.recordIdx === originalIdx;
+                              const currentOffset = isSwipeActive ? recordSwipeState.offset : 0;
 
                               // Calculate duration for leaved records
                               let duration = '';
-                              if (isLeaved) {
+                              if (isLeaved && recordTime) {
                                 const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
                                 let startTime = addedAt ? new Date(addedAt) : null;
-                                const recordsBeforeThis = records.slice(0, records.length - 1 - idx);
+                                const recordsBeforeThis = records.slice(0, originalIdx);
                                 for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
                                   if (recordsBeforeThis[i].type === 'backed') {
                                     startTime = new Date(recordsBeforeThis[i].time);
@@ -2882,41 +2945,146 @@ function App() {
                                 }
                               }
 
+                              // Extra duration
+                              if (isExtra && record.startAt && record.endAt) {
+                                const startAt = new Date(record.startAt);
+                                const endAt = new Date(record.endAt);
+                                const durationMs = endAt.getTime() - startAt.getTime();
+                                duration = formatDuration(durationMs);
+                              }
+
+                              // Tag colors
+                              const tagBg = isExtra ? '#D8EACE' : (isBacked ? '#CEE6EA' : '#E1E1E1');
+                              const tagColor = isExtra ? '#006D49' : (isBacked ? '#02303B' : '#333333');
+                              const tagText = isExtra ? `Extra: ${record.name}` : (isBacked ? 'Backed' : 'Leaved');
+
                               return (
-                                <div key={idx} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
-                                  <span style={{
-                                    display: 'inline-block',
-                                    background: isBacked ? '#CEE6EA' : '#E1E1E1',
-                                    color: isBacked ? '#02303B' : '#333333',
-                                    padding: '4px 10px',
-                                    borderRadius: 6,
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    marginBottom: 8
+                                <div
+                                  key={idx}
+                                  style={{
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    marginBottom: 4,
+                                    borderRadius: 8
+                                  }}
+                                >
+                                  {/* Delete button behind */}
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    width: 80,
+                                    background: '#E53935',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontWeight: 600,
+                                    fontSize: 14,
+                                    opacity: Math.min(1, Math.abs(currentOffset) / 40),
+                                    visibility: currentOffset === 0 ? 'hidden' : 'visible'
                                   }}>
-                                    {isBacked ? 'Backed' : 'Leaved'}
-                                  </span>
-                                  <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
-                                    {isBacked ? (
-                                      <div>Start At: {recordTime.toLocaleTimeString('en-US', { hour12: false })}</div>
-                                    ) : (
-                                      <>
-                                        <div>Start At: {(() => {
-                                          const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
-                                          let startTime = addedAt ? new Date(addedAt) : null;
-                                          const recordsBeforeThis = records.slice(0, records.length - 1 - idx);
-                                          for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
-                                            if (recordsBeforeThis[i].type === 'backed') {
-                                              startTime = new Date(recordsBeforeThis[i].time);
-                                              break;
-                                            }
+                                    <button
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#fff',
+                                        fontWeight: 600,
+                                        fontSize: 14,
+                                        cursor: 'pointer',
+                                        width: '100%',
+                                        height: '100%'
+                                      }}
+                                      onClick={() => {
+                                        // Delete record permanently
+                                        const newResidents = current.residents.map((r: any) => {
+                                          const name = typeof r === 'string' ? r : r.name;
+                                          if (name === residentName) {
+                                            const newRecords = [...(r.records || [])];
+                                            newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: true };
+                                            return { ...r, records: newRecords };
                                           }
-                                          return startTime ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
-                                        })()}</div>
-                                        <div>End At: {recordTime.toLocaleTimeString('en-US', { hour12: false })}</div>
-                                        {duration && <div>Duration: {duration}</div>}
-                                      </>
-                                    )}
+                                          return r;
+                                        });
+                                        setCurrent({ ...current, residents: newResidents });
+                                        setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+
+                                  {/* Record content */}
+                                  <div
+                                    style={{
+                                      transform: `translateX(${currentOffset}px)`,
+                                      transition: recordSwipeState.isDragging ? 'none' : 'transform 0.2s ease',
+                                      background: '#fff',
+                                      padding: '12px 0',
+                                      borderBottom: idx < records.filter((r: any) => !r.deleted).length - 1 ? '1px solid #f5f5f5' : 'none'
+                                    }}
+                                    onTouchStart={(e) => {
+                                      const touch = e.touches[0];
+                                      setRecordSwipeState({ residentName, recordIdx: originalIdx, offset: 0, startX: touch.clientX, isDragging: true });
+                                    }}
+                                    onTouchMove={(e) => {
+                                      if (!recordSwipeState.isDragging || recordSwipeState.recordIdx !== originalIdx) return;
+                                      const touch = e.touches[0];
+                                      const diff = touch.clientX - recordSwipeState.startX;
+                                      // Only allow swipe left
+                                      setRecordSwipeState(prev => ({ ...prev, offset: Math.min(0, Math.max(-80, diff)) }));
+                                    }}
+                                    onTouchEnd={() => {
+                                      if (recordSwipeState.recordIdx !== originalIdx) return;
+                                      // Snap to open or closed
+                                      if (recordSwipeState.offset < -40) {
+                                        setRecordSwipeState(prev => ({ ...prev, offset: -80, isDragging: false }));
+                                      } else {
+                                        setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+                                      }
+                                    }}
+                                  >
+                                    <span style={{
+                                      display: 'inline-block',
+                                      background: tagBg,
+                                      color: tagColor,
+                                      padding: '4px 10px',
+                                      borderRadius: 6,
+                                      fontSize: 12,
+                                      fontWeight: 500,
+                                      marginBottom: 8
+                                    }}>
+                                      {tagText}
+                                    </span>
+                                    <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
+                                      {isExtra ? (
+                                        <>
+                                          <div>Start At: {new Date(record.startAt).toLocaleTimeString('en-US', { hour12: false })}</div>
+                                          <div>End At: {new Date(record.endAt).toLocaleTimeString('en-US', { hour12: false })}</div>
+                                          {duration && <div>Duration: {duration}</div>}
+                                        </>
+                                      ) : isBacked ? (
+                                        <div>Start At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                      ) : (
+                                        <>
+                                          <div>Start At: {(() => {
+                                            const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                                            let startTime = addedAt ? new Date(addedAt) : null;
+                                            const recordsBeforeThis = records.slice(0, originalIdx);
+                                            for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                              if (recordsBeforeThis[i].type === 'backed') {
+                                                startTime = new Date(recordsBeforeThis[i].time);
+                                                break;
+                                              }
+                                            }
+                                            return startTime ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
+                                          })()}</div>
+                                          <div>End At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                          {duration && <div>Duration: {duration}</div>}
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -2977,31 +3145,211 @@ function App() {
                       {isActive ? (
                         <>
                           {/* Add extra activity - Green */}
-                          <button
-                            style={{
-                              width: '100%',
-                              padding: '14px 20px',
-                              borderRadius: 12,
-                              border: 'none',
-                              background: '#E8F5E9',
-                              color: '#2E7D32',
-                              fontSize: 15,
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 8
-                            }}
-                            onClick={() => {
-                              // TODO: Implement add extra activity
-                              setToastMessage('Add extra activity - coming soon');
-                              setTimeout(() => setToastMessage(null), 2000);
-                            }}
-                          >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                            Add extra activity
-                          </button>
+                          {(() => {
+                            const hasActiveExtra = resident?.extraActivity != null;
+                            const isInputMode = extraActivityInputMode === residentName;
+
+                            // Input mode
+                            if (isInputMode) {
+                              return (
+                                <div style={{
+                                  width: '100%',
+                                  padding: '12px 16px',
+                                  borderRadius: 12,
+                                  background: '#D8EACE',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 8
+                                }}>
+                                  <input
+                                    autoFocus
+                                    placeholder="Enter extra activity description"
+                                    style={{
+                                      flex: 1,
+                                      border: 'none',
+                                      background: 'transparent',
+                                      outline: 'none',
+                                      fontSize: 14,
+                                      color: '#006D49'
+                                    }}
+                                    value={extraActivityInputValue}
+                                    onChange={(e) => setExtraActivityInputValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === 'Done') {
+                                        if (extraActivityInputValue.trim()) {
+                                          // Start extra activity
+                                          const newResidents = current.residents.map((r: any) => {
+                                            const name = typeof r === 'string' ? r : r.name;
+                                            if (name === residentName) {
+                                              return {
+                                                ...r,
+                                                extraActivity: {
+                                                  name: extraActivityInputValue.trim(),
+                                                  startAt: new Date()
+                                                }
+                                              };
+                                            }
+                                            return r;
+                                          });
+                                          setCurrent({ ...current, residents: newResidents });
+                                          setExtraActivityInputMode(null);
+                                          setExtraActivityInputValue('');
+                                        } else {
+                                          // Cancel if empty
+                                          setExtraActivityInputMode(null);
+                                          setExtraActivityInputValue('');
+                                        }
+                                      }
+                                    }}
+                                    onBlur={() => {
+                                      if (extraActivityInputValue.trim()) {
+                                        // Start extra activity on blur with content
+                                        const newResidents = current.residents.map((r: any) => {
+                                          const name = typeof r === 'string' ? r : r.name;
+                                          if (name === residentName) {
+                                            return {
+                                              ...r,
+                                              extraActivity: {
+                                                name: extraActivityInputValue.trim(),
+                                                startAt: new Date()
+                                              }
+                                            };
+                                          }
+                                          return r;
+                                        });
+                                        setCurrent({ ...current, residents: newResidents });
+                                      }
+                                      setExtraActivityInputMode(null);
+                                      setExtraActivityInputValue('');
+                                    }}
+                                  />
+                                  <button
+                                    style={{
+                                      width: 24,
+                                      height: 24,
+                                      border: 'none',
+                                      background: 'transparent',
+                                      cursor: 'pointer',
+                                      padding: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}
+                                    onClick={() => {
+                                      setExtraActivityInputMode(null);
+                                      setExtraActivityInputValue('');
+                                    }}
+                                  >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006D49" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            // Active extra activity card
+                            if (hasActiveExtra) {
+                              const extraStart = new Date(resident.extraActivity.startAt);
+                              const extraDuration = Math.floor((now.getTime() - extraStart.getTime()) / 1000);
+                              return (
+                                <div style={{
+                                  width: '100%',
+                                  padding: '12px 16px',
+                                  borderRadius: 12,
+                                  background: '#D8EACE',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 4
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#006D49' }}>
+                                      Extra: {resident.extraActivity.name}
+                                    </div>
+                                    <button
+                                      style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 8,
+                                        border: 'none',
+                                        background: 'rgba(255,255,255,0.5)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                      }}
+                                      onClick={() => {
+                                        // End extra activity and add record
+                                        const newResidents = current.residents.map((r: any) => {
+                                          const name = typeof r === 'string' ? r : r.name;
+                                          if (name === residentName && r.extraActivity) {
+                                            const records = r.records || [];
+                                            return {
+                                              ...r,
+                                              extraActivity: null,
+                                              records: [
+                                                ...records,
+                                                {
+                                                  type: 'extra',
+                                                  name: r.extraActivity.name,
+                                                  startAt: r.extraActivity.startAt,
+                                                  endAt: new Date()
+                                                }
+                                              ]
+                                            };
+                                          }
+                                          return r;
+                                        });
+                                        setCurrent({ ...current, residents: newResidents });
+                                      }}
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#C62828">
+                                        <rect x="4" y="4" width="16" height="16" rx="2" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#006D49' }}>
+                                    Start At: {extraStart.toLocaleTimeString('en-US', { hour12: false })}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#006D49' }}>
+                                    Duration: {formatHMS(extraDuration)}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#006D49' }}>
+                                    End At: -
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // Normal button
+                            return (
+                              <button
+                                style={{
+                                  width: '100%',
+                                  padding: '14px 20px',
+                                  borderRadius: 12,
+                                  border: 'none',
+                                  background: '#D8EACE',
+                                  color: '#006D49',
+                                  fontSize: 15,
+                                  fontWeight: 500,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: 8
+                                }}
+                                onClick={() => {
+                                  setExtraActivityInputMode(residentName);
+                                  setExtraActivityInputValue('');
+                                }}
+                              >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                                Add extra activity
+                              </button>
+                            );
+                          })()}
 
                           {/* Leave main activity - Red/Pink */}
                           <button
@@ -3027,11 +3375,24 @@ function App() {
                                 if (name === residentName) {
                                   const existingRecords = typeof r === 'string' ? [] : (r.records || []);
                                   const addedAt = typeof r === 'string' ? new Date() : (r.addedAt || new Date());
+                                  // Auto-end extra activity if exists
+                                  let newRecords = [...existingRecords];
+                                  if (r.extraActivity) {
+                                    newRecords.push({
+                                      type: 'extra',
+                                      name: r.extraActivity.name,
+                                      startAt: r.extraActivity.startAt,
+                                      endAt: new Date()
+                                    });
+                                  }
+                                  // Add leave record
+                                  newRecords.push({ type: 'leaved', time: new Date() });
                                   return {
                                     name,
                                     addedAt,
                                     status: 'leaved',
-                                    records: [...existingRecords, { type: 'leaved', time: new Date() }]
+                                    extraActivity: null,
+                                    records: newRecords
                                   };
                                 }
                                 return r;
