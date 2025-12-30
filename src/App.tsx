@@ -3051,6 +3051,201 @@ function App() {
                         </div>
                       </div>
 
+
+
+                      {/* Records */}
+                      {records.length > 0 && (
+                        <>
+                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
+                          {records.slice().reverse().map((record: any, idx: number) => {
+                            const originalIdx = records.length - 1 - idx;
+                            const recordTime = record.time ? new Date(record.time) : null;
+                            const isLeaved = record.type === 'leaved';
+                            const isBacked = record.type === 'backed';
+                            const isExtra = record.type === 'extra';
+                            const isDeleted = record.deleted === true;
+
+                            const isSwipeActive = recordSwipeState.residentName === residentName && recordSwipeState.recordIdx === originalIdx;
+                            const currentOffset = isSwipeActive ? recordSwipeState.offset : 0;
+
+                            let duration = '';
+                            if (isLeaved && recordTime && !isNaN(recordTime.getTime())) {
+                              const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                              let startTime = addedAt ? new Date(addedAt) : null;
+                              const recordsBeforeThis = records.slice(0, originalIdx);
+                              for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                if (recordsBeforeThis[i].type === 'backed') {
+                                  startTime = new Date(recordsBeforeThis[i].time);
+                                  break;
+                                }
+                              }
+                              if (startTime && !isNaN(startTime.getTime())) {
+                                const durationMs = recordTime.getTime() - startTime.getTime();
+                                duration = formatDuration(durationMs);
+                              }
+                            }
+
+                            if (isExtra && record.startAt && record.endAt) {
+                              const startAt = new Date(record.startAt);
+                              const endAt = new Date(record.endAt);
+                              if (!isNaN(startAt.getTime()) && !isNaN(endAt.getTime())) {
+                                const durationMs = endAt.getTime() - startAt.getTime();
+                                duration = formatDuration(durationMs);
+                              }
+                            }
+
+                            const tagBg = isExtra ? '#D8EACE' : (isBacked ? '#CEE6EA' : '#E1E1E1');
+                            const tagColor = isExtra ? '#006D49' : (isBacked ? '#02303B' : '#333333');
+                            const tagText = isExtra ? `Extra: ${record.name}` : (isBacked ? 'Backed' : 'Leaved');
+
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  position: 'relative',
+                                  marginBottom: 4,
+                                  borderRadius: 8
+                                }}
+                              >
+                                <div style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  width: 80,
+                                  background: isDeleted ? '#4CAF50' : '#E53935',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#fff',
+                                  fontWeight: 600,
+                                  fontSize: 14,
+                                  borderRadius: 8,
+                                  opacity: Math.min(1, Math.abs(currentOffset) / 40),
+                                  visibility: currentOffset === 0 ? 'hidden' : 'visible'
+                                }}>
+                                  <button
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      color: '#fff',
+                                      fontWeight: 600,
+                                      fontSize: 14,
+                                      cursor: 'pointer',
+                                      width: '100%',
+                                      height: '100%'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const newResidents = current.residents.map((r: any) => {
+                                        const name = typeof r === 'string' ? r : r.name;
+                                        if (name === residentName) {
+                                          const newRecords = [...(r.records || [])];
+                                          newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
+                                          return { ...r, records: newRecords };
+                                        }
+                                        return r;
+                                      });
+                                      setCurrent({ ...current, residents: newResidents });
+                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+                                    }}
+                                    onTouchEnd={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      const newResidents = current.residents.map((r: any) => {
+                                        const name = typeof r === 'string' ? r : r.name;
+                                        if (name === residentName) {
+                                          const newRecords = [...(r.records || [])];
+                                          newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
+                                          return { ...r, records: newRecords };
+                                        }
+                                        return r;
+                                      });
+                                      setCurrent({ ...current, residents: newResidents });
+                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+                                    }}
+                                  >
+                                    {isDeleted ? 'Restore' : 'Delete'}
+                                  </button>
+                                </div>
+
+                                <div
+                                  style={{
+                                    transform: `translateX(${currentOffset}px)`,
+                                    transition: recordSwipeState.isDragging ? 'none' : 'transform 0.2s ease',
+                                    background: '#fff',
+                                    padding: '12px 0',
+                                    borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none',
+                                    textDecoration: isDeleted ? 'line-through' : 'none',
+                                    opacity: isDeleted ? 0.5 : 1
+                                  }}
+                                  onTouchStart={(e) => {
+                                    const touch = e.touches[0];
+                                    setRecordSwipeState({ residentName, recordIdx: originalIdx, offset: 0, startX: touch.clientX, isDragging: true });
+                                  }}
+                                  onTouchMove={(e) => {
+                                    if (!recordSwipeState.isDragging || recordSwipeState.recordIdx !== originalIdx) return;
+                                    const touch = e.touches[0];
+                                    const diff = touch.clientX - recordSwipeState.startX;
+                                    setRecordSwipeState(prev => ({ ...prev, offset: Math.min(0, Math.max(-80, diff)) }));
+                                  }}
+                                  onTouchEnd={() => {
+                                    if (recordSwipeState.recordIdx !== originalIdx) return;
+                                    if (recordSwipeState.offset < -40) {
+                                      setRecordSwipeState(prev => ({ ...prev, offset: -80, isDragging: false }));
+                                    } else {
+                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
+                                    }
+                                  }}
+                                >
+                                  <span style={{
+                                    display: 'inline-block',
+                                    background: tagBg,
+                                    color: tagColor,
+                                    padding: '4px 10px',
+                                    borderRadius: 6,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    marginBottom: 8
+                                  }}>
+                                    {tagText}
+                                  </span>
+                                  <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
+                                    {isExtra ? (
+                                      <>
+                                        <div>Start At: {new Date(record.startAt).toLocaleTimeString('en-US', { hour12: false })}</div>
+                                        <div>End At: {new Date(record.endAt).toLocaleTimeString('en-US', { hour12: false })}</div>
+                                        {duration && <div>Duration: {duration}</div>}
+                                      </>
+                                    ) : isBacked ? (
+                                      <div>Start At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
+                                    ) : (
+                                      <>
+                                        <div>Start At: {(() => {
+                                          const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
+                                          let startTime = addedAt ? new Date(addedAt) : null;
+                                          const recordsBeforeThis = records.slice(0, originalIdx);
+                                          for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
+                                            if (recordsBeforeThis[i].type === 'backed') {
+                                              startTime = new Date(recordsBeforeThis[i].time);
+                                              break;
+                                            }
+                                          }
+                                          return startTime && !isNaN(startTime.getTime()) ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
+                                        })()}</div>
+                                        <div>End At: {recordTime && !isNaN(recordTime.getTime()) ? recordTime.toLocaleTimeString('en-US', { hour12: false }) : '-'}</div>
+                                        {duration && <div>Duration: {duration}</div>}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
+
+
                       {/* Action Buttons (Only for active residents) */}
                       {isActive && (
                         <>
@@ -3286,199 +3481,6 @@ function App() {
                           Back
                         </button>
                       )}
-
-                      {/* Records */}
-                      {records.length > 0 && (
-                        <>
-                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
-                          {records.slice().reverse().map((record: any, idx: number) => {
-                            const originalIdx = records.length - 1 - idx;
-                            const recordTime = record.time ? new Date(record.time) : null;
-                            const isLeaved = record.type === 'leaved';
-                            const isBacked = record.type === 'backed';
-                            const isExtra = record.type === 'extra';
-                            const isDeleted = record.deleted === true;
-
-                            const isSwipeActive = recordSwipeState.residentName === residentName && recordSwipeState.recordIdx === originalIdx;
-                            const currentOffset = isSwipeActive ? recordSwipeState.offset : 0;
-
-                            let duration = '';
-                            if (isLeaved && recordTime && !isNaN(recordTime.getTime())) {
-                              const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
-                              let startTime = addedAt ? new Date(addedAt) : null;
-                              const recordsBeforeThis = records.slice(0, originalIdx);
-                              for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
-                                if (recordsBeforeThis[i].type === 'backed') {
-                                  startTime = new Date(recordsBeforeThis[i].time);
-                                  break;
-                                }
-                              }
-                              if (startTime && !isNaN(startTime.getTime())) {
-                                const durationMs = recordTime.getTime() - startTime.getTime();
-                                duration = formatDuration(durationMs);
-                              }
-                            }
-
-                            if (isExtra && record.startAt && record.endAt) {
-                              const startAt = new Date(record.startAt);
-                              const endAt = new Date(record.endAt);
-                              if (!isNaN(startAt.getTime()) && !isNaN(endAt.getTime())) {
-                                const durationMs = endAt.getTime() - startAt.getTime();
-                                duration = formatDuration(durationMs);
-                              }
-                            }
-
-                            const tagBg = isExtra ? '#D8EACE' : (isBacked ? '#CEE6EA' : '#E1E1E1');
-                            const tagColor = isExtra ? '#006D49' : (isBacked ? '#02303B' : '#333333');
-                            const tagText = isExtra ? `Extra: ${record.name}` : (isBacked ? 'Backed' : 'Leaved');
-
-                            return (
-                              <div
-                                key={idx}
-                                style={{
-                                  position: 'relative',
-                                  marginBottom: 4,
-                                  borderRadius: 8
-                                }}
-                              >
-                                <div style={{
-                                  position: 'absolute',
-                                  top: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  width: 80,
-                                  background: isDeleted ? '#4CAF50' : '#E53935',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: '#fff',
-                                  fontWeight: 600,
-                                  fontSize: 14,
-                                  borderRadius: 8,
-                                  opacity: Math.min(1, Math.abs(currentOffset) / 40),
-                                  visibility: currentOffset === 0 ? 'hidden' : 'visible'
-                                }}>
-                                  <button
-                                    style={{
-                                      background: 'transparent',
-                                      border: 'none',
-                                      color: '#fff',
-                                      fontWeight: 600,
-                                      fontSize: 14,
-                                      cursor: 'pointer',
-                                      width: '100%',
-                                      height: '100%'
-                                    }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const newResidents = current.residents.map((r: any) => {
-                                        const name = typeof r === 'string' ? r : r.name;
-                                        if (name === residentName) {
-                                          const newRecords = [...(r.records || [])];
-                                          newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
-                                          return { ...r, records: newRecords };
-                                        }
-                                        return r;
-                                      });
-                                      setCurrent({ ...current, residents: newResidents });
-                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
-                                    }}
-                                    onTouchEnd={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const newResidents = current.residents.map((r: any) => {
-                                        const name = typeof r === 'string' ? r : r.name;
-                                        if (name === residentName) {
-                                          const newRecords = [...(r.records || [])];
-                                          newRecords[originalIdx] = { ...newRecords[originalIdx], deleted: !isDeleted };
-                                          return { ...r, records: newRecords };
-                                        }
-                                        return r;
-                                      });
-                                      setCurrent({ ...current, residents: newResidents });
-                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
-                                    }}
-                                  >
-                                    {isDeleted ? 'Restore' : 'Delete'}
-                                  </button>
-                                </div>
-
-                                <div
-                                  style={{
-                                    transform: `translateX(${currentOffset}px)`,
-                                    transition: recordSwipeState.isDragging ? 'none' : 'transform 0.2s ease',
-                                    background: '#fff',
-                                    padding: '12px 0',
-                                    borderBottom: idx < records.length - 1 ? '1px solid #f5f5f5' : 'none',
-                                    textDecoration: isDeleted ? 'line-through' : 'none',
-                                    opacity: isDeleted ? 0.5 : 1
-                                  }}
-                                  onTouchStart={(e) => {
-                                    const touch = e.touches[0];
-                                    setRecordSwipeState({ residentName, recordIdx: originalIdx, offset: 0, startX: touch.clientX, isDragging: true });
-                                  }}
-                                  onTouchMove={(e) => {
-                                    if (!recordSwipeState.isDragging || recordSwipeState.recordIdx !== originalIdx) return;
-                                    const touch = e.touches[0];
-                                    const diff = touch.clientX - recordSwipeState.startX;
-                                    setRecordSwipeState(prev => ({ ...prev, offset: Math.min(0, Math.max(-80, diff)) }));
-                                  }}
-                                  onTouchEnd={() => {
-                                    if (recordSwipeState.recordIdx !== originalIdx) return;
-                                    if (recordSwipeState.offset < -40) {
-                                      setRecordSwipeState(prev => ({ ...prev, offset: -80, isDragging: false }));
-                                    } else {
-                                      setRecordSwipeState({ residentName: null, recordIdx: null, offset: 0, startX: 0, isDragging: false });
-                                    }
-                                  }}
-                                >
-                                  <span style={{
-                                    display: 'inline-block',
-                                    background: tagBg,
-                                    color: tagColor,
-                                    padding: '4px 10px',
-                                    borderRadius: 6,
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    marginBottom: 8
-                                  }}>
-                                    {tagText}
-                                  </span>
-                                  <div style={{ fontSize: 14, color: '#333', marginTop: 6 }}>
-                                    {isExtra ? (
-                                      <>
-                                        <div>Start At: {new Date(record.startAt).toLocaleTimeString('en-US', { hour12: false })}</div>
-                                        <div>End At: {new Date(record.endAt).toLocaleTimeString('en-US', { hour12: false })}</div>
-                                        {duration && <div>Duration: {duration}</div>}
-                                      </>
-                                    ) : isBacked ? (
-                                      <div>Start At: {recordTime?.toLocaleTimeString('en-US', { hour12: false })}</div>
-                                    ) : (
-                                      <>
-                                        <div>Start At: {(() => {
-                                          const addedAt = typeof resident === 'string' ? null : resident?.addedAt;
-                                          let startTime = addedAt ? new Date(addedAt) : null;
-                                          const recordsBeforeThis = records.slice(0, originalIdx);
-                                          for (let i = recordsBeforeThis.length - 1; i >= 0; i--) {
-                                            if (recordsBeforeThis[i].type === 'backed') {
-                                              startTime = new Date(recordsBeforeThis[i].time);
-                                              break;
-                                            }
-                                          }
-                                          return startTime && !isNaN(startTime.getTime()) ? startTime.toLocaleTimeString('en-US', { hour12: false }) : '-';
-                                        })()}</div>
-                                        <div>End At: {recordTime && !isNaN(recordTime.getTime()) ? recordTime.toLocaleTimeString('en-US', { hour12: false }) : '-'}</div>
-                                        {duration && <div>Duration: {duration}</div>}
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
-
 
                     </>
                   );
