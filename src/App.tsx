@@ -2906,15 +2906,21 @@ function App() {
                   overflowY: 'auto',
                   overflowX: 'hidden',
                   overscrollBehavior: 'contain',
-                  zIndex: 999999,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6,
                   boxSizing: 'border-box'
                 }}
                 onClick={e => e.stopPropagation()}
                 onTouchStart={e => e.stopPropagation()}
-                onTouchMove={e => e.stopPropagation()}
+                onTouchMove={(e) => {
+                  e.stopPropagation();
+                  const target = e.currentTarget;
+                  // If content is not scrollable (no overflow), prevent background scroll
+                  if (target.scrollHeight <= target.clientHeight) {
+                    e.preventDefault();
+                  } else {
+                    // If scrollable, allow normal scroll behavior (don't prevent default)
+                    // But we must stopPropagation (done above) to keep it inside
+                  }
+                }}
                 onWheel={e => e.stopPropagation()}
               >
                 {(() => {
