@@ -3203,7 +3203,7 @@ function App() {
                             <button
                               style={{
                                 width: '100%',
-                                marginBottom: 12,
+                                marginBottom: 6,
                                 padding: '14px 20px',
                                 borderRadius: 12,
                                 border: 'none',
@@ -3231,7 +3231,7 @@ function App() {
                           <button
                             style={{
                               width: '100%',
-                              marginBottom: 12,
+                              marginBottom: 6,
                               padding: '14px 20px',
                               borderRadius: 12,
                               border: 'none',
@@ -3262,7 +3262,7 @@ function App() {
                         <button
                           style={{
                             width: '100%',
-                            marginBottom: 12,
+                            marginBottom: 6,
                             padding: '14px 20px',
                             borderRadius: 12,
                             border: 'none',
@@ -3305,7 +3305,7 @@ function App() {
                       {/* Records */}
                       {records.length > 0 && (
                         <>
-                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Records</div>
+                          <div style={{ fontSize: 12, fontWeight: 400, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>Records</div>
                           {records.slice().reverse().map((record: any, idx: number) => {
                             const originalIdx = records.length - 1 - idx;
                             const recordTime = record.time ? new Date(record.time) : null;
