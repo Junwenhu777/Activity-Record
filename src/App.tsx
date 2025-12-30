@@ -3113,6 +3113,15 @@ function App() {
                                   fontSize: 14,
                                   color: '#006D49'
                                 }}
+                                enterKeyHint="done"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddExtra();
+                                    (e.target as HTMLElement).blur();
+                                  }
+                                }}
+                                inputMode="text"
                                 value={extraActivityInputValue}
                                 onChange={(e) => setExtraActivityInputValue(e.target.value)}
                               />
